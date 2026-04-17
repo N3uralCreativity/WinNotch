@@ -10,8 +10,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type comp:MarqueeText}">
                     <Canvas x:Name="PART_Canvas" ClipToBounds="True"
-                            Height="{TemplateBinding FontSize}"
-                            Margin="0,2,0,0">
+                            Height="{TemplateBinding ActualHeight}">
                         <TextBlock x:Name="PART_Text"
                                    Foreground="{TemplateBinding Foreground}"
                                    FontSize="{TemplateBinding FontSize}"
