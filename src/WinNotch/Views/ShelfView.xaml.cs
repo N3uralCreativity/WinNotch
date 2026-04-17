@@ -62,9 +62,9 @@ public partial class ShelfView : UserControl
         _service?.Clear();
     }
 
-    private void OnItemClick(object sender, MouseButtonEventArgs e)
+    private void OnItemMouseDown(object sender, MouseButtonEventArgs e)
     {
-        if (sender is FrameworkElement fe && fe.DataContext is ShelfItem item)
+        if (e.ClickCount == 2 && sender is FrameworkElement fe && fe.DataContext is ShelfItem item)
         {
             try
             {

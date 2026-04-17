@@ -59,7 +59,7 @@
                                 Background="Transparent"
                                 Padding="4,4"
                                 Cursor="Hand"
-                                MouseLeftButtonDown="OnItemClick"
+                                MouseLeftButtonDown="OnItemMouseDown"
                                 MouseRightButtonDown="OnItemRightClick"
                                 MouseMove="OnItemMouseMove"
                                 ToolTip="{Binding FilePath}">

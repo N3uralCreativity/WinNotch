@@ -129,9 +129,8 @@ public partial class NotchWindow : Window
         // Click anywhere on closed/peeking content to open
         ContentGrid.PreviewMouseLeftButtonDown += OnContentGridClick;
 
-        // Scroll on notch changes volume
-        NotchPath.MouseWheel += OnNotchMouseWheel;
-        ContentGrid.MouseWheel += OnNotchMouseWheel;
+        // Scroll on notch changes volume (Preview to catch before children)
+        RootGrid.PreviewMouseWheel += OnNotchMouseWheel;
 
         // Right-click context menu
         NotchPath.MouseRightButtonDown += OnNotchRightClick;
@@ -278,10 +277,13 @@ public partial class NotchWindow : Window
         _isSettingsExpanded = false;
         InlineSettings.Visibility = Visibility.Collapsed;
 
-        // Shrink back to normal open height
+        // Shrink back to normal open height (account for shelf)
+        double targetH = _shelfService.HasItems
+            ? NotchConstants.OpenHeightWithShelf
+            : NotchConstants.OpenHeight;
         _heightSpring.Response = 0.42;
         _heightSpring.DampingFraction = 0.80;
-        _heightSpring.AnimateTo(NotchConstants.OpenHeight, _currentHeight);
+        _heightSpring.AnimateTo(targetH, _currentHeight);
     }
 
     /// <summary>
@@ -552,10 +554,14 @@ public partial class NotchWindow : Window
 
     private void OnNotchMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
     {
+        // Only adjust volume in closed/peeking state (open state scrolls content normally)
+        if (_vm.NotchState == NotchState.Open) return;
+
         if (_settings.ShowVolumeHud && _volumeService != null)
         {
             float current = _volumeService.Volume;
-            float delta = e.Delta > 0 ? 0.02f : -0.02f;
+            // e.Delta is typically 120 per notch; scale to ~5% per scroll tick
+            float delta = (e.Delta / 120f) * 0.05f;
             _volumeService.SetVolume(Math.Clamp(current + delta, 0f, 1f));
             e.Handled = true;
         }
@@ -615,6 +621,23 @@ public partial class NotchWindow : Window
         BatteryIndicator.Visibility = settings.ShowBattery ? Visibility.Visible : Visibility.Collapsed;
         CalendarPanel.Visibility = settings.ShowCalendar ? Visibility.Visible : Visibility.Collapsed;
         CompactVisualizer_SetVisible(settings.ShowVisualizer);
+
+        // Re-adjust notch size if currently open (calendar toggle changes width)
+        if (_vm.NotchState == NotchState.Open)
+        {
+            double targetW = settings.ShowCalendar
+                ? NotchConstants.OpenWidthWithCalendar
+                : NotchConstants.OpenWidth;
+            _widthSpring.AnimateTo(targetW, _currentWidth);
+
+            if (!_isSettingsExpanded)
+            {
+                double targetH = _shelfService.HasItems
+                    ? NotchConstants.OpenHeightWithShelf
+                    : NotchConstants.OpenHeight;
+                _heightSpring.AnimateTo(targetH, _currentHeight);
+            }
+        }
     }
 
     private void CompactVisualizer_SetVisible(bool visible)
