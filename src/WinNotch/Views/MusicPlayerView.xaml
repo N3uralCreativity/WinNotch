@@ -48,23 +48,23 @@
         </Grid.ColumnDefinitions>
 
         <!-- Album art with glow -->
-        <Grid Grid.Column="0" Margin="0,0,16,0">
+        <Grid Grid.Column="0" Margin="0,0,12,0">
             <!-- Background glow from album art -->
             <Border x:Name="AlbumGlow"
-                    Width="110" Height="110"
-                    CornerRadius="16"
+                    Width="90" Height="90"
+                    CornerRadius="14"
                     Opacity="0.4">
                 <Border.Background>
                     <ImageBrush x:Name="GlowBrush" Stretch="UniformToFill"/>
                 </Border.Background>
                 <Border.Effect>
-                    <BlurEffect Radius="30"/>
+                    <BlurEffect Radius="24"/>
                 </Border.Effect>
             </Border>
 
             <!-- Album art -->
-            <Border Width="110" Height="110"
-                    CornerRadius="14"
+            <Border Width="90" Height="90"
+                    CornerRadius="12"
                     ClipToBounds="True">
                 <Image x:Name="AlbumArtImage"
                        Stretch="UniformToFill"
@@ -84,23 +84,23 @@
             <!-- Song title (marquee) -->
             <comp:MarqueeText x:Name="TitleText"
                               Grid.Row="0"
-                              FontSize="15"
+                              FontSize="14"
                               FontWeight="Bold"
                               Foreground="White"
-                              Height="20"
-                              Margin="0,0,0,2"/>
+                              Height="18"
+                              Margin="0,0,0,1"/>
 
             <!-- Artist -->
             <comp:MarqueeText x:Name="ArtistText"
                               Grid.Row="1"
-                              FontSize="12"
+                              FontSize="11"
                               FontWeight="Normal"
                               Foreground="#AAAAAA"
-                              Height="16"
-                              Margin="0,0,0,8"/>
+                              Height="15"
+                              Margin="0,0,0,6"/>
 
             <!-- Progress bar -->
-            <Grid Grid.Row="2" Margin="0,0,0,6">
+            <Grid Grid.Row="2" Margin="0,0,0,4">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
@@ -165,9 +165,9 @@
                 <Button x:Name="PlayPauseButton"
                         Click="OnPlayPauseClick"
                         Style="{StaticResource TransportButton}"
-                        Width="36" Height="36"
+                        Width="32" Height="32"
                         ToolTip="Play/Pause">
-                    <TextBlock x:Name="PlayPauseIcon" Text="▶" FontSize="18"/>
+                    <TextBlock x:Name="PlayPauseIcon" Text="▶" FontSize="16"/>
                 </Button>
 
                 <!-- Next -->

@@ -39,7 +39,7 @@
                 </Grid>
 
                 <!-- Open state content -->
-                <Grid x:Name="OpenContent" Opacity="0" Margin="20,10,20,16">
+                <Grid x:Name="OpenContent" Opacity="0" Margin="12,6,12,10">
                     <views:MusicPlayerView x:Name="MusicPlayer"/>
                 </Grid>
             </Grid>

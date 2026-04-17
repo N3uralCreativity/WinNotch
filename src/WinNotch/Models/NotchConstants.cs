@@ -8,15 +8,15 @@ public static class NotchConstants
     public const double ClosedWidth = 200;
     public const double ClosedHeight = 32;
 
-    // Open dimensions
-    public const double OpenWidth = 620;
-    public const double OpenHeight = 340;
+    // Open dimensions (sized to fit music player content)
+    public const double OpenWidth = 460;
+    public const double OpenHeight = 160;
 
     // Corner radii
     public const double ClosedTopRadius = 6;
     public const double ClosedBottomRadius = 14;
-    public const double OpenTopRadius = 12;
-    public const double OpenBottomRadius = 24;
+    public const double OpenTopRadius = 10;
+    public const double OpenBottomRadius = 20;
 
     // Window padding around notch for shadow space
     public const double WindowPadding = 20;
