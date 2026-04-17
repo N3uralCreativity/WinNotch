@@ -135,9 +135,9 @@ public partial class NotchWindow : Window
         // Inline settings
         InlineSettings.SettingsChanged += s => ApplySettings(s);
         InlineSettings.BackRequested += CollapseSettings;
-        InlineSettings.ThemeChangeRequested += theme =>
+        InlineSettings.ThemeChangeRequested += async theme =>
         {
-            _themeService.Apply(theme);
+            await _themeService.ApplyWithTransition(theme, NotchCanvas);
         };
 
         // Toggle clock/live-activity visibility based on music state
