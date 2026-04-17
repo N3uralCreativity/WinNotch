@@ -8,6 +8,7 @@
                 <ResourceDictionary Source="Components/ToggleSwitchStyle.xaml"/>
                 <ResourceDictionary Source="Components/RoundedScrollBarStyle.xaml"/>
                 <ResourceDictionary Source="Components/SegmentedRadioStyle.xaml"/>
+                <ResourceDictionary Source="Components/IconButtonStyle.xaml"/>
             </ResourceDictionary.MergedDictionaries>
 
             <Style x:Key="SectionHeader" TargetType="TextBlock">
@@ -34,11 +35,10 @@
         <Grid Grid.Row="0" Margin="0,0,0,4">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                 <Button x:Name="BackButton" Click="OnBackClick"
-                        Background="Transparent" BorderThickness="0"
-                        Foreground="#888888" FontSize="14" Cursor="Hand"
-                        Width="24" Height="24" Padding="0"
+                        Style="{StaticResource IconButton}"
+                        Width="24" Height="24"
                         VerticalAlignment="Center" ToolTip="Back">
-                    <TextBlock Text="←" FontSize="14"/>
+                    <TextBlock Text="←" FontSize="14" Foreground="#888888"/>
                 </Button>
                 <TextBlock Text="Settings" Foreground="White"
                            FontSize="14" FontWeight="SemiBold"

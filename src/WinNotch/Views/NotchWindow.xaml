@@ -10,6 +10,14 @@
         ResizeMode="NoResize"
         Title="WinNotch">
 
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Components/IconButtonStyle.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+
     <!-- Fixed-size window; notch shape animates inside it. No window resizing. -->
     <Grid x:Name="RootGrid">
         <Canvas x:Name="NotchCanvas"
@@ -84,8 +92,8 @@
                         <Button x:Name="SettingsGearButton"
                                 Grid.Column="2"
                                 Click="OnSettingsGearClick"
-                                Background="Transparent" BorderThickness="0"
-                                Cursor="Hand" Width="24" Height="24"
+                                Style="{StaticResource IconButton}"
+                                Width="24" Height="24"
                                 VerticalAlignment="Top" Margin="4,0,0,0"
                                 ToolTip="Settings">
                             <TextBlock Text="⚙" FontSize="13" Foreground="#666666"/>
