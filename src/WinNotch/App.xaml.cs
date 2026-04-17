@@ -1,7 +1,10 @@
 using System;
+using System.Drawing;
 using System.Threading;
 using System.Windows;
+using WinNotch.Models;
 using WinNotch.Views;
+using Forms = System.Windows.Forms;
 
 namespace WinNotch;
 
@@ -9,6 +12,8 @@ public partial class App : Application
 {
     private static Mutex? _mutex;
     private NotchWindow? _notchWindow;
+    private Forms.NotifyIcon? _trayIcon;
+    private AppSettings _settings = null!;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -17,7 +22,8 @@ public partial class App : Application
         // Global exception handler for diagnostics
         DispatcherUnhandledException += (_, args) =>
         {
-            MessageBox.Show(args.Exception.ToString(), "WinNotch Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            System.Windows.MessageBox.Show(args.Exception.ToString(), "WinNotch Error",
+                MessageBoxButton.OK, MessageBoxImage.Error);
             args.Handled = true;
         };
 
@@ -30,13 +36,72 @@ public partial class App : Application
             return;
         }
 
+        // Load settings
+        _settings = AppSettings.Load();
+
+        // System tray icon
+        SetupTrayIcon();
+
         // Launch the notch window
-        _notchWindow = new NotchWindow();
+        _notchWindow = new NotchWindow(_settings);
         _notchWindow.Show();
+    }
+
+    private void SetupTrayIcon()
+    {
+        _trayIcon = new Forms.NotifyIcon
+        {
+            Icon = CreateDefaultIcon(),
+            Text = "WinNotch",
+            Visible = true
+        };
+
+        var menu = new Forms.ContextMenuStrip();
+        menu.Items.Add("Settings", null, (_, _) => OpenSettings());
+        menu.Items.Add(new Forms.ToolStripSeparator());
+        menu.Items.Add("Quit", null, (_, _) => QuitApp());
+
+        _trayIcon.ContextMenuStrip = menu;
+        _trayIcon.DoubleClick += (_, _) => OpenSettings();
+    }
+
+    private static Icon CreateDefaultIcon()
+    {
+        // Create a simple 16x16 black circle icon
+        using var bmp = new Bitmap(16, 16);
+        using var g = Graphics.FromImage(bmp);
+        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        g.FillEllipse(Brushes.White, 1, 1, 14, 14);
+        return System.Drawing.Icon.FromHandle(bmp.GetHicon());
+    }
+
+    private void OpenSettings()
+    {
+        // Find existing or create new
+        foreach (Window w in Windows)
+        {
+            if (w is SettingsWindow existing)
+            {
+                existing.Activate();
+                return;
+            }
+        }
+
+        var settingsWindow = new SettingsWindow(_settings);
+        settingsWindow.SettingsChanged += s => _notchWindow?.ApplySettings(s);
+        settingsWindow.Show();
+    }
+
+    private void QuitApp()
+    {
+        _trayIcon?.Dispose();
+        _notchWindow?.Close();
+        Shutdown();
     }
 
     protected override void OnExit(ExitEventArgs e)
     {
+        _trayIcon?.Dispose();
         _mutex?.ReleaseMutex();
         _mutex?.Dispose();
         base.OnExit(e);

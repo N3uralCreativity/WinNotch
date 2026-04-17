@@ -46,10 +46,14 @@ public partial class NotchWindow : Window
     private readonly BrightnessService _brightnessService;
     private readonly BatteryService _batteryService;
 
-    public NotchWindow()
+    // Settings
+    private AppSettings _settings;
+
+    public NotchWindow(AppSettings settings)
     {
         InitializeComponent();
 
+        _settings = settings;
         _vm = new NotchViewModel();
         DataContext = _vm;
 
@@ -298,6 +302,8 @@ public partial class NotchWindow : Window
         _isMouseOverNotch = true;
         _hoverCloseTimer?.Stop();
 
+        if (!_settings.OpenOnHover) return;
+
         if (_vm.NotchState == NotchState.Closed)
         {
             // Debounced open
@@ -374,5 +380,23 @@ public partial class NotchWindow : Window
         _brightnessService.Dispose();
         _batteryService.Dispose();
         base.OnClosed(e);
+    }
+
+    public void ApplySettings(AppSettings settings)
+    {
+        _settings = settings;
+
+        // Toggle visibility of components based on settings
+        LiveActivity.Visibility = settings.ShowMusicControls ? Visibility.Visible : Visibility.Collapsed;
+        MusicPlayer.Visibility = settings.ShowMusicControls ? Visibility.Visible : Visibility.Collapsed;
+        BatteryIndicator.Visibility = settings.ShowBattery ? Visibility.Visible : Visibility.Collapsed;
+        CompactVisualizer_SetVisible(settings.ShowVisualizer);
+    }
+
+    private void CompactVisualizer_SetVisible(bool visible)
+    {
+        // The visualizer is inside LiveActivity; toggle via its property
+        if (LiveActivity.FindName("CompactVisualizer") is UIElement viz)
+            viz.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
     }
 }
