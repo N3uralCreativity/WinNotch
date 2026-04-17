@@ -7,6 +7,7 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="Components/ToggleSwitchStyle.xaml"/>
                 <ResourceDictionary Source="Components/RoundedScrollBarStyle.xaml"/>
+                <ResourceDictionary Source="Components/SegmentedRadioStyle.xaml"/>
             </ResourceDictionary.MergedDictionaries>
 
             <Style x:Key="SectionHeader" TargetType="TextBlock">
@@ -63,20 +64,20 @@
 
                 <!-- Hover mode -->
                 <TextBlock Text="Hover behavior" Foreground="#666666" FontSize="10" Margin="0,4,0,2"/>
-                <Grid Height="24">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <RadioButton x:Name="HoverPeekRadio" Content="Peek + Click"
-                                 Grid.Column="0" Foreground="#AAAAAA" FontSize="10"
-                                 VerticalAlignment="Center"
-                                 Checked="OnHoverModeChanged"/>
-                    <RadioButton x:Name="LongHoverRadio" Content="Long hover"
-                                 Grid.Column="1" Foreground="#AAAAAA" FontSize="10"
-                                 VerticalAlignment="Center"
-                                 Checked="OnHoverModeChanged"/>
-                </Grid>
+                <Border Background="#1A1A1C" CornerRadius="10" Padding="2" Height="30">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <RadioButton x:Name="HoverPeekRadio" Content="Peek + Click"
+                                     Grid.Column="0" Style="{StaticResource SegmentedRadio}"
+                                     Checked="OnHoverModeChanged"/>
+                        <RadioButton x:Name="LongHoverRadio" Content="Long hover"
+                                     Grid.Column="1" Style="{StaticResource SegmentedRadio}"
+                                     Checked="OnHoverModeChanged"/>
+                    </Grid>
+                </Border>
 
                 <!-- Appearance -->
                 <TextBlock Text="APPEARANCE" Style="{StaticResource SectionHeader}"/>
