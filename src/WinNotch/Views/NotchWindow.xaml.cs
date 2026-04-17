@@ -44,6 +44,7 @@ public partial class NotchWindow : Window
     private readonly AudioCaptureService _audioCaptureService;
     private readonly VolumeService _volumeService;
     private readonly BrightnessService _brightnessService;
+    private readonly BatteryService _batteryService;
 
     public NotchWindow()
     {
@@ -73,6 +74,7 @@ public partial class NotchWindow : Window
         _audioCaptureService = new AudioCaptureService(bandCount: 12);
         _volumeService = new VolumeService();
         _brightnessService = new BrightnessService();
+        _batteryService = new BatteryService();
 
         SourceInitialized += OnSourceInitialized;
         Loaded += OnLoaded;
@@ -120,6 +122,10 @@ public partial class NotchWindow : Window
         _volumeService.Initialize();
         _brightnessService.Initialize();
         HudOverlay.Bind(_volumeService, _brightnessService);
+
+        // Battery
+        _batteryService.Initialize();
+        BatteryIndicator.Bind(_batteryService);
 
         // When HUD shows, temporarily hide live activity; restore when dismissed
         HudOverlay.HudShown += () => Dispatcher.Invoke(() =>
@@ -366,6 +372,7 @@ public partial class NotchWindow : Window
         _mediaService.Dispose();
         _volumeService.Dispose();
         _brightnessService.Dispose();
+        _batteryService.Dispose();
         base.OnClosed(e);
     }
 }
