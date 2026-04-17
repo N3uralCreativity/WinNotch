@@ -113,6 +113,9 @@ public partial class NotchWindow : Window
         ContentGrid.MouseEnter += OnNotchMouseEnter;
         ContentGrid.MouseLeave += OnNotchMouseLeave;
 
+        // Click anywhere on closed/peeking content to open
+        ContentGrid.PreviewMouseLeftButtonDown += OnContentGridClick;
+
         // Right-click context menu
         NotchPath.MouseRightButtonDown += OnNotchRightClick;
 
@@ -167,12 +170,15 @@ public partial class NotchWindow : Window
             {
                 LiveActivity.Visibility = Visibility.Collapsed;
                 ClockWidget.Visibility = Visibility.Collapsed;
+                BatteryIndicator.Visibility = Visibility.Collapsed;
                 _widthSpring.AnimateTo(NotchConstants.HudWidth, _currentWidth);
             }
         });
         HudOverlay.HudDismissed += () => Dispatcher.Invoke(() =>
         {
             UpdateClosedContentVisibility();
+            if (_settings.ShowBattery)
+                BatteryIndicator.Visibility = Visibility.Visible;
             if (_vm.NotchState != NotchState.Open)
             {
                 _widthSpring.AnimateTo(NotchConstants.ClosedWidth, _currentWidth);
@@ -477,6 +483,16 @@ public partial class NotchWindow : Window
     {
         if (_vm.NotchState == NotchState.Closed || _vm.NotchState == NotchState.Peeking)
             TransitionToOpen();
+    }
+
+    private void OnContentGridClick(object sender, MouseButtonEventArgs e)
+    {
+        // In closed/peeking state, clicking anywhere on the content should open
+        if (_vm.NotchState == NotchState.Closed || _vm.NotchState == NotchState.Peeking)
+        {
+            TransitionToOpen();
+            e.Handled = true;
+        }
     }
 
     private void OnNotchRightClick(object sender, MouseButtonEventArgs e)

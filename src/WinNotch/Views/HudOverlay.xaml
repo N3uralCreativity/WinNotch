@@ -5,7 +5,7 @@
 
     <!-- Compact inline HUD shown in closed notch for volume/brightness changes -->
     <Grid HorizontalAlignment="Stretch" VerticalAlignment="Center"
-          Margin="4,0,4,0">
+          Margin="6,0,6,0">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="*"/>
@@ -44,7 +44,7 @@
                    FontSize="10"
                    VerticalAlignment="Center"
                    Margin="8,0,0,0"
-                   MinWidth="28"
+                   MinWidth="34"
                    TextAlignment="Right"/>
     </Grid>
 </UserControl>
