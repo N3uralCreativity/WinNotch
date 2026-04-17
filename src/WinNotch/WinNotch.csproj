@@ -4,9 +4,9 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <ApplicationIcon>Assets\Icons\winnotch.ico</ApplicationIcon>
     <RootNamespace>WinNotch</RootNamespace>
     <AssemblyName>WinNotch</AssemblyName>
   </PropertyGroup>
