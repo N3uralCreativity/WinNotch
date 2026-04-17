@@ -1,0 +1,43 @@
+# Build results
+bin/
+obj/
+out/
+publish/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# VS Code
+.vscode/
+
+# Rider
+.idea/
+
+# Visual Studio
+.vs/
+*.rsuser
+
+# NuGet
+packages/
+*.nupkg
+
+# Build
+*.dll
+*.exe
+*.pdb
+*.cache
+
+# OS files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# Logs
+*.log
+
+# Qodo
+.qodo/
