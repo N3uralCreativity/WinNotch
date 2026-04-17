@@ -45,6 +45,7 @@ public partial class NotchWindow : Window
     private readonly VolumeService _volumeService;
     private readonly BrightnessService _brightnessService;
     private readonly BatteryService _batteryService;
+    private readonly CalendarService _calendarService;
 
     // Settings
     private AppSettings _settings;
@@ -79,6 +80,7 @@ public partial class NotchWindow : Window
         _volumeService = new VolumeService();
         _brightnessService = new BrightnessService();
         _batteryService = new BatteryService();
+        _calendarService = new CalendarService();
 
         SourceInitialized += OnSourceInitialized;
         Loaded += OnLoaded;
@@ -141,6 +143,11 @@ public partial class NotchWindow : Window
         _batteryService.Initialize();
         BatteryIndicator.Bind(_batteryService);
 
+        // Calendar
+        _calendarService.Initialize();
+        CalendarPanel_View.Bind(_calendarService);
+        CalendarPanel.Visibility = _settings.ShowCalendar ? Visibility.Visible : Visibility.Collapsed;
+
         // When HUD shows, expand notch horizontally and hide other content
         HudOverlay.HudShown += () => Dispatcher.Invoke(() =>
         {
@@ -193,7 +200,8 @@ public partial class NotchWindow : Window
     private void PositionFixedWindow()
     {
         double padding = NotchConstants.WindowPadding;
-        _fixedWindowWidth = NotchConstants.OpenWidth + padding * 2;
+        double maxOpenWidth = Math.Max(NotchConstants.OpenWidth, NotchConstants.OpenWidthWithCalendar);
+        _fixedWindowWidth = maxOpenWidth + padding * 2;
         _fixedWindowHeight = NotchConstants.OpenHeight + padding + 10;
 
         var screenBounds = ScreenHelper.GetPrimaryScreenBounds(this);
@@ -307,7 +315,11 @@ public partial class NotchWindow : Window
         _heightSpring.Response = 0.42;
         _heightSpring.DampingFraction = 0.80;
 
-        _widthSpring.AnimateTo(NotchConstants.OpenWidth, _currentWidth);
+        double openW = _settings.ShowCalendar
+            ? NotchConstants.OpenWidthWithCalendar
+            : NotchConstants.OpenWidth;
+
+        _widthSpring.AnimateTo(openW, _currentWidth);
         _heightSpring.AnimateTo(NotchConstants.OpenHeight, _currentHeight);
         _topRadiusSpring.AnimateTo(NotchConstants.OpenTopRadius, _currentTopRadius);
         _bottomRadiusSpring.AnimateTo(NotchConstants.OpenBottomRadius, _currentBottomRadius);
@@ -461,6 +473,7 @@ public partial class NotchWindow : Window
         LiveActivity.Visibility = settings.ShowMusicControls ? Visibility.Visible : Visibility.Collapsed;
         MusicPlayer.Visibility = settings.ShowMusicControls ? Visibility.Visible : Visibility.Collapsed;
         BatteryIndicator.Visibility = settings.ShowBattery ? Visibility.Visible : Visibility.Collapsed;
+        CalendarPanel.Visibility = settings.ShowCalendar ? Visibility.Visible : Visibility.Collapsed;
         CompactVisualizer_SetVisible(settings.ShowVisualizer);
     }
 

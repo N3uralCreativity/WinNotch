@@ -140,6 +140,16 @@
                                   Checked="OnSettingChanged" Unchecked="OnSettingChanged"/>
                     </Grid>
 
+                    <!-- CALENDAR -->
+                    <TextBlock Text="Calendar" Style="{StaticResource SectionHeader}"/>
+
+                    <Grid Style="{StaticResource SettingRow}">
+                        <TextBlock Text="Show calendar panel" Style="{StaticResource SettingLabel}"/>
+                        <CheckBox x:Name="ShowCalendarCheck" Style="{StaticResource ToggleSwitch}"
+                                  HorizontalAlignment="Right" VerticalAlignment="Center"
+                                  Checked="OnSettingChanged" Unchecked="OnSettingChanged"/>
+                    </Grid>
+
                     <!-- ABOUT -->
                     <TextBlock Text="About" Style="{StaticResource SectionHeader}"/>
 

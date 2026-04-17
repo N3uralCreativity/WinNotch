@@ -41,6 +41,9 @@ public class AppSettings
     public bool ShowVolumeHud { get; set; } = true;
     public bool ShowBrightnessHud { get; set; } = true;
 
+    // Calendar
+    public bool ShowCalendar { get; set; } = true;
+
     // Battery
     public bool ShowBattery { get; set; } = true;
 

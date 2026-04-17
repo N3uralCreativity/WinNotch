@@ -59,7 +59,18 @@
 
                 <!-- Open state content -->
                 <Grid x:Name="OpenContent" Opacity="0" Margin="12,6,12,10">
-                    <views:MusicPlayerView x:Name="MusicPlayer"/>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <views:MusicPlayerView x:Name="MusicPlayer" Grid.Column="0"/>
+
+                    <!-- Calendar panel (separated by thin divider) -->
+                    <StackPanel x:Name="CalendarPanel" Grid.Column="1" Orientation="Horizontal">
+                        <Border Width="1" Background="#2A2A2A" Margin="8,4,8,4"/>
+                        <views:CalendarView x:Name="CalendarPanel_View"/>
+                    </StackPanel>
                 </Grid>
             </Grid>
         </Canvas>

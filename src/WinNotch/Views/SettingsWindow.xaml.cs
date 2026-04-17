@@ -33,6 +33,7 @@ public partial class SettingsWindow : Window
         VolumeHudCheck.IsChecked = _settings.ShowVolumeHud;
         BrightnessHudCheck.IsChecked = _settings.ShowBrightnessHud;
         ShowBatteryCheck.IsChecked = _settings.ShowBattery;
+        ShowCalendarCheck.IsChecked = _settings.ShowCalendar;
 
         // Hover mode radio buttons
         if (_settings.HoverMode == HoverMode.LongHoverOpen)
@@ -52,6 +53,7 @@ public partial class SettingsWindow : Window
         _settings.ShowVolumeHud = VolumeHudCheck.IsChecked == true;
         _settings.ShowBrightnessHud = BrightnessHudCheck.IsChecked == true;
         _settings.ShowBattery = ShowBatteryCheck.IsChecked == true;
+        _settings.ShowCalendar = ShowCalendarCheck.IsChecked == true;
 
         _settings.ApplyStartOnBoot();
         _settings.Save();

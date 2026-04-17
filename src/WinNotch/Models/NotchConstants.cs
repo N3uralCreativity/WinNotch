@@ -17,6 +17,7 @@ public static class NotchConstants
 
     // Open dimensions (sized to fit music player content)
     public const double OpenWidth = 460;
+    public const double OpenWidthWithCalendar = 640;
     public const double OpenHeight = 160;
 
     // Corner radii
