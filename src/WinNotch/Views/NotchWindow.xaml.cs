@@ -42,6 +42,8 @@ public partial class NotchWindow : Window
     // Services
     private readonly MediaService _mediaService;
     private readonly AudioCaptureService _audioCaptureService;
+    private readonly VolumeService _volumeService;
+    private readonly BrightnessService _brightnessService;
 
     public NotchWindow()
     {
@@ -69,6 +71,8 @@ public partial class NotchWindow : Window
         // Services
         _mediaService = new MediaService();
         _audioCaptureService = new AudioCaptureService(bandCount: 12);
+        _volumeService = new VolumeService();
+        _brightnessService = new BrightnessService();
 
         SourceInitialized += OnSourceInitialized;
         Loaded += OnLoaded;
@@ -111,6 +115,22 @@ public partial class NotchWindow : Window
         // Bind views to services
         MusicPlayer.Bind(_mediaService);
         LiveActivity.Bind(_mediaService, _audioCaptureService);
+
+        // Volume & Brightness
+        _volumeService.Initialize();
+        _brightnessService.Initialize();
+        HudOverlay.Bind(_volumeService, _brightnessService);
+
+        // When HUD shows, temporarily hide live activity; restore when dismissed
+        HudOverlay.HudShown += () => Dispatcher.Invoke(() =>
+        {
+            if (_vm.NotchState == NotchState.Closed)
+                LiveActivity.Visibility = Visibility.Collapsed;
+        });
+        HudOverlay.HudDismissed += () => Dispatcher.Invoke(() =>
+        {
+            LiveActivity.Visibility = Visibility.Visible;
+        });
     }
 
     /// <summary>
@@ -344,6 +364,8 @@ public partial class NotchWindow : Window
         CompositionTarget.Rendering -= OnRendering;
         _audioCaptureService.Dispose();
         _mediaService.Dispose();
+        _volumeService.Dispose();
+        _brightnessService.Dispose();
         base.OnClosed(e);
     }
 }

@@ -36,6 +36,9 @@
                     <views:MusicLiveActivity x:Name="LiveActivity"
                                              VerticalAlignment="Center"
                                              Margin="6,0,6,0"/>
+                    <views:HudOverlay x:Name="HudOverlay"
+                                      VerticalAlignment="Center"
+                                      Margin="6,0,6,0"/>
                 </Grid>
 
                 <!-- Open state content -->
