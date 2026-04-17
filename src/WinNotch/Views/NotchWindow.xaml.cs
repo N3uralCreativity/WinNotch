@@ -6,7 +6,6 @@ using WinNotch.Helpers;
 using WinNotch.Models;
 using MouseEventArgs = System.Windows.Input.MouseEventArgs;
 using MouseButtonEventArgs = System.Windows.Input.MouseButtonEventArgs;
-using Canvas = System.Windows.Controls.Canvas;
 
 namespace WinNotch.Views;
 
@@ -29,6 +28,10 @@ public partial class NotchWindow : Window
     private double _currentBottomRadius;
     private double _currentShadowOpacity;
     private double _currentContentOpacity;
+
+    // Fixed window dimensions (large enough for open state + shadow padding)
+    private double _fixedWindowWidth;
+    private double _fixedWindowHeight;
 
     // Hover debounce
     private DispatcherTimer? _hoverOpenTimer;
@@ -69,7 +72,7 @@ public partial class NotchWindow : Window
 
     private void OnLoaded(object? sender, RoutedEventArgs e)
     {
-        _vm.UpdateWindowPosition();
+        PositionFixedWindow();
         UpdateNotchVisuals();
 
         // Register for per-frame rendering
@@ -86,6 +89,25 @@ public partial class NotchWindow : Window
 
         // Right-click context menu
         NotchPath.MouseRightButtonDown += OnNotchRightClick;
+    }
+
+    /// <summary>
+    /// Position the window once: centered at top of primary screen,
+    /// sized to fit the largest notch state (open) + shadow padding.
+    /// The window never moves or resizes after this.
+    /// </summary>
+    private void PositionFixedWindow()
+    {
+        double padding = NotchConstants.WindowPadding;
+        _fixedWindowWidth = NotchConstants.OpenWidth + padding * 2;
+        _fixedWindowHeight = NotchConstants.OpenHeight + padding + 10;
+
+        var screenBounds = ScreenHelper.GetPrimaryScreenBounds(this);
+
+        Width = _fixedWindowWidth;
+        Height = _fixedWindowHeight;
+        Left = screenBounds.Left + (screenBounds.Width - _fixedWindowWidth) / 2;
+        Top = screenBounds.Top - 2;
     }
 
     #region Animation Loop
@@ -127,13 +149,6 @@ public partial class NotchWindow : Window
 
         if (anyAnimating)
         {
-            _vm.NotchWidth = _currentWidth;
-            _vm.NotchHeight = _currentHeight;
-            _vm.TopCornerRadius = _currentTopRadius;
-            _vm.BottomCornerRadius = _currentBottomRadius;
-            _vm.ShadowOpacity = _currentShadowOpacity;
-            _vm.ContentOpacity = _currentContentOpacity;
-
             UpdateNotchVisuals();
         }
     }
@@ -144,7 +159,6 @@ public partial class NotchWindow : Window
         double h = _currentHeight;
         double topR = _currentTopRadius;
         double bottomR = _currentBottomRadius;
-        double padding = NotchConstants.WindowPadding;
 
         // Generate notch geometry
         var rect = new Rect(0, 0, w, h);
@@ -153,9 +167,9 @@ public partial class NotchWindow : Window
         NotchPath.Data = geometry;
         ShadowPath.Data = geometry;
 
-        // Position paths centered in canvas with padding offset
-        double offsetX = padding;
-        double offsetY = 0; // Notch sits at top
+        // Center the notch horizontally within the fixed-size window
+        double offsetX = (_fixedWindowWidth - w) / 2;
+        double offsetY = 0; // Notch anchored at top edge
 
         System.Windows.Controls.Canvas.SetLeft(NotchPath, offsetX);
         System.Windows.Controls.Canvas.SetTop(NotchPath, offsetY);
@@ -165,22 +179,24 @@ public partial class NotchWindow : Window
         // Shadow opacity
         ShadowPath.Opacity = _currentShadowOpacity;
 
-        // Content grid: positioned inside the notch
-        System.Windows.Controls.Canvas.SetLeft(ContentGrid, offsetX + topR);
-        System.Windows.Controls.Canvas.SetTop(ContentGrid, offsetY + topR);
-        ContentGrid.Width = Math.Max(0, w - topR * 2);
-        ContentGrid.Height = Math.Max(0, h - topR);
+        // Content grid: positioned inside the notch shape (inset from corners)
+        double contentLeft = offsetX + topR + bottomR;
+        double contentTop = offsetY + topR;
+        double contentWidth = Math.Max(0, w - (topR + bottomR) * 2);
+        double contentHeight = Math.Max(0, h - topR - bottomR);
+
+        System.Windows.Controls.Canvas.SetLeft(ContentGrid, contentLeft);
+        System.Windows.Controls.Canvas.SetTop(ContentGrid, contentTop);
+        ContentGrid.Width = contentWidth;
+        ContentGrid.Height = contentHeight;
 
         // Content opacity
         OpenContent.Opacity = _currentContentOpacity;
         ClosedContent.Opacity = 1.0 - _currentContentOpacity;
 
-        // Canvas sizing
-        NotchCanvas.Width = w + padding * 2;
-        NotchCanvas.Height = h + padding;
-
-        // Update window position (centered on screen)
-        _vm.UpdateWindowPosition();
+        // Canvas covers the full fixed window
+        NotchCanvas.Width = _fixedWindowWidth;
+        NotchCanvas.Height = _fixedWindowHeight;
     }
 
     #endregion

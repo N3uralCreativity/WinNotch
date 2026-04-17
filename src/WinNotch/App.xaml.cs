@@ -14,12 +14,18 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        // Global exception handler for diagnostics
+        DispatcherUnhandledException += (_, args) =>
+        {
+            MessageBox.Show(args.Exception.ToString(), "WinNotch Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            args.Handled = true;
+        };
+
         // Single instance enforcement
         const string mutexName = "WinNotch_SingleInstance_Mutex";
         _mutex = new Mutex(true, mutexName, out bool createdNew);
         if (!createdNew)
         {
-            MessageBox.Show("WinNotch is already running.", "WinNotch", MessageBoxButton.OK, MessageBoxImage.Information);
             Shutdown();
             return;
         }
