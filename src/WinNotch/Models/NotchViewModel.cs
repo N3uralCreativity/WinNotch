@@ -18,6 +18,12 @@ public partial class NotchViewModel : ObservableObject
     }
 
     [RelayCommand]
+    public void Peek()
+    {
+        NotchState = NotchState.Peeking;
+    }
+
+    [RelayCommand]
     public void Close()
     {
         NotchState = NotchState.Closed;

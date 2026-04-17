@@ -42,6 +42,11 @@
                                              Grid.Column="0"
                                              VerticalAlignment="Center"
                                              Margin="6,0,2,0"/>
+                    <views:ClockWidget x:Name="ClockWidget"
+                                       Grid.Column="0"
+                                       VerticalAlignment="Center"
+                                       Margin="8,0,2,0"
+                                       Visibility="Visible"/>
                     <views:BatteryIndicator x:Name="BatteryIndicator"
                                             Grid.Column="1"
                                             VerticalAlignment="Center"

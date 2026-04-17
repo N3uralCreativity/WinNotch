@@ -1,5 +1,6 @@
 using System;
 using System.Windows;
+using System.Windows.Input;
 using WinNotch.Models;
 
 namespace WinNotch.Views;
@@ -18,18 +19,26 @@ public partial class SettingsWindow : Window
         _settings = settings;
         LoadSettings();
         _isLoading = false;
+
+        // Allow dragging the borderless window
+        MouseLeftButtonDown += (_, _) => DragMove();
     }
 
     private void LoadSettings()
     {
         StartOnBootCheck.IsChecked = _settings.StartOnBoot;
-        OpenOnHoverCheck.IsChecked = _settings.OpenOnHover;
         ShowShadowCheck.IsChecked = _settings.ShowShadow;
         ShowMusicCheck.IsChecked = _settings.ShowMusicControls;
         ShowVisualizerCheck.IsChecked = _settings.ShowVisualizer;
         VolumeHudCheck.IsChecked = _settings.ShowVolumeHud;
         BrightnessHudCheck.IsChecked = _settings.ShowBrightnessHud;
         ShowBatteryCheck.IsChecked = _settings.ShowBattery;
+
+        // Hover mode radio buttons
+        if (_settings.HoverMode == HoverMode.LongHoverOpen)
+            LongHoverRadio.IsChecked = true;
+        else
+            HoverPeekRadio.IsChecked = true;
     }
 
     private void OnSettingChanged(object sender, RoutedEventArgs e)
@@ -37,7 +46,6 @@ public partial class SettingsWindow : Window
         if (_isLoading) return;
 
         _settings.StartOnBoot = StartOnBootCheck.IsChecked == true;
-        _settings.OpenOnHover = OpenOnHoverCheck.IsChecked == true;
         _settings.ShowShadow = ShowShadowCheck.IsChecked == true;
         _settings.ShowMusicControls = ShowMusicCheck.IsChecked == true;
         _settings.ShowVisualizer = ShowVisualizerCheck.IsChecked == true;
@@ -48,5 +56,22 @@ public partial class SettingsWindow : Window
         _settings.ApplyStartOnBoot();
         _settings.Save();
         SettingsChanged?.Invoke(_settings);
+    }
+
+    private void OnHoverModeChanged(object sender, RoutedEventArgs e)
+    {
+        if (_isLoading) return;
+
+        _settings.HoverMode = LongHoverRadio.IsChecked == true
+            ? HoverMode.LongHoverOpen
+            : HoverMode.HoverPeekClickOpen;
+
+        _settings.Save();
+        SettingsChanged?.Invoke(_settings);
+    }
+
+    private void OnCloseClick(object sender, RoutedEventArgs e)
+    {
+        Close();
     }
 }

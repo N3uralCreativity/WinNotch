@@ -8,6 +8,13 @@ public static class NotchConstants
     public const double ClosedWidth = 200;
     public const double ClosedHeight = 32;
 
+    // Peek dimensions (slightly expanded on hover)
+    public const double PeekWidth = 220;
+    public const double PeekHeight = 34;
+
+    // HUD dimensions (wider for volume/brightness slider)
+    public const double HudWidth = 280;
+
     // Open dimensions (sized to fit music player content)
     public const double OpenWidth = 460;
     public const double OpenHeight = 160;

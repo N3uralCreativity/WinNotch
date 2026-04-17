@@ -120,7 +120,17 @@ public partial class NotchWindow : Window
 
         // Bind views to services
         MusicPlayer.Bind(_mediaService);
+        MusicPlayer.SettingsRequested += OpenSettings;
         LiveActivity.Bind(_mediaService, _audioCaptureService);
+
+        // Toggle clock/live-activity visibility based on music state
+        _mediaService.MediaInfo.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(MediaInfo.HasMedia) or nameof(MediaInfo.IsPlaying))
+                Dispatcher.Invoke(UpdateClosedContentVisibility);
+        };
+        _mediaService.SessionChanged += () => Dispatcher.Invoke(UpdateClosedContentVisibility);
+        UpdateClosedContentVisibility();
 
         // Volume & Brightness
         _volumeService.Initialize();
@@ -131,16 +141,48 @@ public partial class NotchWindow : Window
         _batteryService.Initialize();
         BatteryIndicator.Bind(_batteryService);
 
-        // When HUD shows, temporarily hide live activity; restore when dismissed
+        // When HUD shows, expand notch horizontally and hide other content
         HudOverlay.HudShown += () => Dispatcher.Invoke(() =>
         {
-            if (_vm.NotchState == NotchState.Closed)
+            if (_vm.NotchState != NotchState.Open)
+            {
                 LiveActivity.Visibility = Visibility.Collapsed;
+                ClockWidget.Visibility = Visibility.Collapsed;
+                _widthSpring.AnimateTo(NotchConstants.HudWidth, _currentWidth);
+            }
         });
         HudOverlay.HudDismissed += () => Dispatcher.Invoke(() =>
         {
-            LiveActivity.Visibility = Visibility.Visible;
+            UpdateClosedContentVisibility();
+            if (_vm.NotchState != NotchState.Open)
+            {
+                _widthSpring.AnimateTo(NotchConstants.ClosedWidth, _currentWidth);
+            }
         });
+    }
+
+    private void UpdateClosedContentVisibility()
+    {
+        var info = _mediaService.MediaInfo;
+        bool hasMusic = info.HasMedia && info.IsPlaying;
+        LiveActivity.Visibility = hasMusic ? Visibility.Visible : Visibility.Collapsed;
+        ClockWidget.Visibility = hasMusic ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    private void OpenSettings()
+    {
+        foreach (Window w in Application.Current.Windows)
+        {
+            if (w is SettingsWindow existing)
+            {
+                existing.Activate();
+                return;
+            }
+        }
+
+        var settingsWindow = new SettingsWindow(_settings);
+        settingsWindow.SettingsChanged += s => ApplySettings(s);
+        settingsWindow.Show();
     }
 
     /// <summary>
@@ -260,7 +302,6 @@ public partial class NotchWindow : Window
         if (_vm.NotchState == NotchState.Open) return;
         _vm.Open();
 
-        // Animate to open dimensions with opening spring (slightly bouncy)
         _widthSpring.Response = 0.42;
         _widthSpring.DampingFraction = 0.80;
         _heightSpring.Response = 0.42;
@@ -274,12 +315,25 @@ public partial class NotchWindow : Window
         _contentOpacitySpring.AnimateTo(1.0, _currentContentOpacity);
     }
 
+    private void TransitionToPeek()
+    {
+        if (_vm.NotchState == NotchState.Peeking || _vm.NotchState == NotchState.Open) return;
+        _vm.Peek();
+
+        _widthSpring.Response = 0.30;
+        _widthSpring.DampingFraction = 0.90;
+        _heightSpring.Response = 0.30;
+        _heightSpring.DampingFraction = 0.90;
+
+        _widthSpring.AnimateTo(NotchConstants.PeekWidth, _currentWidth);
+        _heightSpring.AnimateTo(NotchConstants.PeekHeight, _currentHeight);
+    }
+
     private void TransitionToClose()
     {
         if (_vm.NotchState == NotchState.Closed) return;
         _vm.Close();
 
-        // Animate to closed dimensions with closing spring (less bouncy, smoother)
         _widthSpring.Response = 0.45;
         _widthSpring.DampingFraction = 1.0;
         _heightSpring.Response = 0.45;
@@ -302,23 +356,40 @@ public partial class NotchWindow : Window
         _isMouseOverNotch = true;
         _hoverCloseTimer?.Stop();
 
-        if (!_settings.OpenOnHover) return;
-
         if (_vm.NotchState == NotchState.Closed)
         {
-            // Debounced open
             _hoverOpenTimer?.Stop();
-            _hoverOpenTimer = new DispatcherTimer
+
+            if (_settings.HoverMode == HoverMode.HoverPeekClickOpen)
             {
-                Interval = TimeSpan.FromMilliseconds(NotchConstants.HoverOpenDelayMs)
-            };
-            _hoverOpenTimer.Tick += (_, _) =>
+                // Peek mode: slight expand on hover, click to fully open
+                _hoverOpenTimer = new DispatcherTimer
+                {
+                    Interval = TimeSpan.FromMilliseconds(100)
+                };
+                _hoverOpenTimer.Tick += (_, _) =>
+                {
+                    _hoverOpenTimer!.Stop();
+                    if (_isMouseOverNotch && _vm.NotchState == NotchState.Closed)
+                        TransitionToPeek();
+                };
+                _hoverOpenTimer.Start();
+            }
+            else // LongHoverOpen
             {
-                _hoverOpenTimer.Stop();
-                if (_isMouseOverNotch)
-                    TransitionToOpen();
-            };
-            _hoverOpenTimer.Start();
+                // Long hover: wait longer then fully open
+                _hoverOpenTimer = new DispatcherTimer
+                {
+                    Interval = TimeSpan.FromMilliseconds(_settings.LongHoverDelayMs)
+                };
+                _hoverOpenTimer.Tick += (_, _) =>
+                {
+                    _hoverOpenTimer!.Stop();
+                    if (_isMouseOverNotch)
+                        TransitionToOpen();
+                };
+                _hoverOpenTimer.Start();
+            }
         }
     }
 
@@ -327,17 +398,17 @@ public partial class NotchWindow : Window
         _isMouseOverNotch = false;
         _hoverOpenTimer?.Stop();
 
-        if (_vm.NotchState == NotchState.Open)
+        if (_vm.NotchState == NotchState.Open || _vm.NotchState == NotchState.Peeking)
         {
-            // Debounced close
             _hoverCloseTimer?.Stop();
             _hoverCloseTimer = new DispatcherTimer
             {
-                Interval = TimeSpan.FromMilliseconds(NotchConstants.HoverCloseDelayMs)
+                Interval = TimeSpan.FromMilliseconds(
+                    _vm.NotchState == NotchState.Peeking ? 80 : NotchConstants.HoverCloseDelayMs)
             };
             _hoverCloseTimer.Tick += (_, _) =>
             {
-                _hoverCloseTimer.Stop();
+                _hoverCloseTimer!.Stop();
                 if (!_isMouseOverNotch)
                     TransitionToClose();
             };
@@ -347,7 +418,7 @@ public partial class NotchWindow : Window
 
     private void OnNotchClick(object sender, MouseButtonEventArgs e)
     {
-        if (_vm.NotchState == NotchState.Closed)
+        if (_vm.NotchState == NotchState.Closed || _vm.NotchState == NotchState.Peeking)
             TransitionToOpen();
     }
 
@@ -356,7 +427,7 @@ public partial class NotchWindow : Window
         var menu = new System.Windows.Controls.ContextMenu();
 
         var settingsItem = new System.Windows.Controls.MenuItem { Header = "Settings" };
-        settingsItem.Click += (_, _) => { /* TODO: open settings */ };
+        settingsItem.Click += (_, _) => OpenSettings();
         menu.Items.Add(settingsItem);
 
         menu.Items.Add(new System.Windows.Controls.Separator());

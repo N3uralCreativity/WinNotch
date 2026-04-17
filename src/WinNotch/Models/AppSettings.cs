@@ -6,15 +6,28 @@ using System.Text.Json.Serialization;
 namespace WinNotch.Models;
 
 /// <summary>
+/// Hover interaction mode for the notch.
+/// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum HoverMode
+{
+    /// <summary>Hover slightly expands, click fully opens.</summary>
+    HoverPeekClickOpen,
+    /// <summary>Long hover fully opens, click also opens.</summary>
+    LongHoverOpen
+}
+
+/// <summary>
 /// User-configurable settings, persisted to %AppData%/WinNotch/settings.json.
 /// </summary>
 public class AppSettings
 {
     // General
     public bool StartOnBoot { get; set; }
-    public bool OpenOnHover { get; set; } = true;
+    public HoverMode HoverMode { get; set; } = HoverMode.HoverPeekClickOpen;
     public int HoverOpenDelayMs { get; set; } = 200;
     public int HoverCloseDelayMs { get; set; } = 150;
+    public int LongHoverDelayMs { get; set; } = 600;
 
     // Appearance
     public double CornerRadiusScale { get; set; } = 1.0;
