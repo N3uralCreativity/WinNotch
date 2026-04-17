@@ -33,16 +33,14 @@
             <Grid x:Name="ContentGrid" ClipToBounds="True">
                 <!-- Closed state content -->
                 <Grid x:Name="ClosedContent" Opacity="1">
+                    <views:MusicLiveActivity x:Name="LiveActivity"
+                                             VerticalAlignment="Center"
+                                             Margin="6,0,6,0"/>
                 </Grid>
 
                 <!-- Open state content -->
                 <Grid x:Name="OpenContent" Opacity="0" Margin="20,10,20,16">
-                    <TextBlock Text="WinNotch"
-                               Foreground="#888888"
-                               FontSize="14"
-                               FontWeight="SemiBold"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center"/>
+                    <views:MusicPlayerView x:Name="MusicPlayer"/>
                 </Grid>
             </Grid>
         </Canvas>

@@ -1,0 +1,45 @@
+<UserControl x:Class="WinNotch.Views.MusicLiveActivity"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:comp="clr-namespace:WinNotch.Views.Components">
+
+    <!-- Compact music indicator shown in the closed notch -->
+    <Grid HorizontalAlignment="Stretch" VerticalAlignment="Center">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Small album art -->
+        <Border Grid.Column="0"
+                Width="20" Height="20"
+                CornerRadius="4"
+                ClipToBounds="True"
+                Margin="2,0,6,0">
+            <Image x:Name="CompactAlbumArt"
+                   Stretch="UniformToFill"
+                   RenderOptions.BitmapScalingMode="HighQuality"/>
+        </Border>
+
+        <!-- Song title (truncated) -->
+        <TextBlock x:Name="CompactTitle"
+                   Grid.Column="1"
+                   Foreground="#CCCCCC"
+                   FontSize="11"
+                   TextTrimming="CharacterEllipsis"
+                   TextWrapping="NoWrap"
+                   VerticalAlignment="Center"
+                   Margin="0,0,6,0"/>
+
+        <!-- Audio visualizer bars -->
+        <comp:AudioVisualizer x:Name="CompactVisualizer"
+                              Grid.Column="2"
+                              Width="36" Height="18"
+                              BarCount="5"
+                              BarGap="2"
+                              BarRadius="1"
+                              VerticalAlignment="Center"
+                              Margin="0,0,2,0"/>
+    </Grid>
+</UserControl>

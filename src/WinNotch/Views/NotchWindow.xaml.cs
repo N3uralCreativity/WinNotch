@@ -4,6 +4,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using WinNotch.Helpers;
 using WinNotch.Models;
+using WinNotch.Services;
 using MouseEventArgs = System.Windows.Input.MouseEventArgs;
 using MouseButtonEventArgs = System.Windows.Input.MouseButtonEventArgs;
 
@@ -38,6 +39,10 @@ public partial class NotchWindow : Window
     private DispatcherTimer? _hoverCloseTimer;
     private bool _isMouseOverNotch;
 
+    // Services
+    private readonly MediaService _mediaService;
+    private readonly AudioCaptureService _audioCaptureService;
+
     public NotchWindow()
     {
         InitializeComponent();
@@ -60,6 +65,10 @@ public partial class NotchWindow : Window
         _currentBottomRadius = NotchConstants.ClosedBottomRadius;
         _currentShadowOpacity = 0.0;
         _currentContentOpacity = 0.0;
+
+        // Services
+        _mediaService = new MediaService();
+        _audioCaptureService = new AudioCaptureService(bandCount: 12);
 
         SourceInitialized += OnSourceInitialized;
         Loaded += OnLoaded;
@@ -89,6 +98,19 @@ public partial class NotchWindow : Window
 
         // Right-click context menu
         NotchPath.MouseRightButtonDown += OnNotchRightClick;
+
+        // Initialize media services
+        _ = InitializeServicesAsync();
+    }
+
+    private async System.Threading.Tasks.Task InitializeServicesAsync()
+    {
+        await _mediaService.InitializeAsync();
+        _audioCaptureService.Start();
+
+        // Bind views to services
+        MusicPlayer.Bind(_mediaService);
+        LiveActivity.Bind(_mediaService, _audioCaptureService);
     }
 
     /// <summary>
@@ -320,6 +342,8 @@ public partial class NotchWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         CompositionTarget.Rendering -= OnRendering;
+        _audioCaptureService.Dispose();
+        _mediaService.Dispose();
         base.OnClosed(e);
     }
 }
