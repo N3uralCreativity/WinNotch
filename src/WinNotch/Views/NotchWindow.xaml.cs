@@ -47,17 +47,21 @@ public partial class NotchWindow : Window
     private readonly BrightnessService _brightnessService;
     private readonly BatteryService _batteryService;
     private readonly CalendarService _calendarService;
+    private readonly ThemeService _themeService;
 
     // Settings
     private AppSettings _settings;
 
-    public NotchWindow(AppSettings settings)
+    public NotchWindow(AppSettings settings, ThemeService themeService)
     {
         InitializeComponent();
 
         _settings = settings;
         _vm = new NotchViewModel();
         DataContext = _vm;
+
+        // Theme
+        _themeService = themeService;
 
         // Initialize springs
         _widthSpring = new SpringAnimator(0.42, 0.82);
@@ -128,6 +132,10 @@ public partial class NotchWindow : Window
         // Inline settings
         InlineSettings.SettingsChanged += s => ApplySettings(s);
         InlineSettings.BackRequested += CollapseSettings;
+        InlineSettings.ThemeChangeRequested += theme =>
+        {
+            _themeService.Apply(theme);
+        };
 
         // Toggle clock/live-activity visibility based on music state
         _mediaService.MediaInfo.PropertyChanged += (_, e) =>

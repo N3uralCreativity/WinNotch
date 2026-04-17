@@ -13,19 +13,19 @@
         <StackPanel Grid.Row="0" Margin="0,0,0,6">
             <TextBlock x:Name="DayOfWeekText"
                        Text="Thursday"
-                       Foreground="#888888"
+                       Foreground="{DynamicResource TextMutedBrush}"
                        FontSize="10"
                        FontWeight="Medium"/>
             <StackPanel Orientation="Horizontal">
                 <TextBlock x:Name="DayNumberText"
                            Text="17"
-                           Foreground="White"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
                            FontSize="26"
                            FontWeight="Bold"
                            VerticalAlignment="Bottom"/>
                 <TextBlock x:Name="MonthText"
                            Text="Jul"
-                           Foreground="#666666"
+                           Foreground="{DynamicResource TextSubtleBrush}"
                            FontSize="12"
                            VerticalAlignment="Bottom"
                            Margin="6,0,0,4"/>
@@ -40,7 +40,7 @@
                 <!-- "No events" placeholder -->
                 <TextBlock x:Name="NoEventsText"
                            Text="No upcoming events"
-                           Foreground="#555555"
+                           Foreground="{DynamicResource TextFaintBrush}"
                            FontSize="10"
                            FontStyle="Italic"
                            Margin="0,4,0,0"/>

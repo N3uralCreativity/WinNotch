@@ -17,7 +17,7 @@
                    Grid.Column="0"
                    Text="🔊"
                    FontSize="14"
-                   Foreground="White"
+                   Foreground="{DynamicResource HudIconBrush}"
                    VerticalAlignment="Center"
                    Margin="0,0,8,0"/>
 
@@ -25,14 +25,14 @@
         <Border Grid.Column="1"
                 Height="4"
                 CornerRadius="2"
-                Background="#333333"
+                Background="{DynamicResource ProgressTrackBrush}"
                 VerticalAlignment="Center"
                 Cursor="Hand"
                 MouseLeftButtonDown="OnSliderClick">
             <Border x:Name="SliderFill"
                     Height="4"
                     CornerRadius="2"
-                    Background="White"
+                    Background="{DynamicResource HudSliderFillBrush}"
                     HorizontalAlignment="Left"/>
         </Border>
 
@@ -40,7 +40,7 @@
         <TextBlock x:Name="HudPercent"
                    Grid.Column="2"
                    Text="50%"
-                   Foreground="#AAAAAA"
+                   Foreground="{DynamicResource TextTertiaryBrush}"
                    FontSize="10"
                    VerticalAlignment="Center"
                    Margin="8,0,0,0"

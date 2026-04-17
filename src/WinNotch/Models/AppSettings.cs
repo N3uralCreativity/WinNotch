@@ -17,6 +17,14 @@ public enum HoverMode
     LongHoverOpen
 }
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum AppTheme
+{
+    Dark,
+    Light,
+    Auto
+}
+
 /// <summary>
 /// User-configurable settings, persisted to %AppData%/WinNotch/settings.json.
 /// </summary>
@@ -30,6 +38,7 @@ public class AppSettings
     public int LongHoverDelayMs { get; set; } = 600;
 
     // Appearance
+    public AppTheme Theme { get; set; } = AppTheme.Dark;
     public double CornerRadiusScale { get; set; } = 1.0;
     public bool ShowShadow { get; set; } = true;
 

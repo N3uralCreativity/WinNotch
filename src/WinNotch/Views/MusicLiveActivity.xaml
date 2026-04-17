@@ -25,7 +25,7 @@
         <!-- Song title (truncated) -->
         <TextBlock x:Name="CompactTitle"
                    Grid.Column="1"
-                   Foreground="#CCCCCC"
+                   Foreground="{DynamicResource TextSecondaryBrush}"
                    FontSize="11"
                    TextTrimming="CharacterEllipsis"
                    TextWrapping="NoWrap"

@@ -26,7 +26,7 @@
 
             <!-- Shadow layer (below the notch) -->
             <Path x:Name="ShadowPath"
-                  Fill="Black">
+                  Fill="{DynamicResource NotchShadowBrush}">
                 <Path.Effect>
                     <BlurEffect Radius="12" KernelType="Gaussian"/>
                 </Path.Effect>
@@ -34,7 +34,7 @@
 
             <!-- Main notch shape -->
             <Path x:Name="NotchPath"
-                  Fill="Black"
+                  Fill="{DynamicResource NotchFillBrush}"
                   Cursor="Hand"/>
 
             <!-- Clip region for content (matches notch shape) -->
@@ -84,7 +84,7 @@
 
                         <!-- Calendar panel -->
                         <StackPanel x:Name="CalendarPanel" Grid.Column="1" Orientation="Horizontal">
-                            <Border Width="1" Background="#2A2A2A" Margin="8,4,8,4"/>
+                            <Border Width="1" Background="{DynamicResource SeparatorBrush}" Margin="8,4,8,4"/>
                             <views:CalendarView x:Name="CalendarPanel_View"/>
                         </StackPanel>
 
@@ -96,7 +96,7 @@
                                 Width="24" Height="24"
                                 VerticalAlignment="Top" Margin="4,0,0,0"
                                 ToolTip="Settings">
-                            <TextBlock Text="⚙" FontSize="13" Foreground="#666666"/>
+                            <TextBlock Text="⚙" FontSize="13" Foreground="{DynamicResource TextSubtleBrush}"/>
                         </Button>
                     </Grid>
 

@@ -15,6 +15,9 @@ public partial class InlineSettingsView : System.Windows.Controls.UserControl
     /// <summary>Fired when the user clicks the back arrow.</summary>
     public event Action? BackRequested;
 
+    /// <summary>Fired when theme changes (passes new AppTheme).</summary>
+    public event Action<AppTheme>? ThemeChangeRequested;
+
     public InlineSettingsView()
     {
         InitializeComponent();
@@ -38,6 +41,14 @@ public partial class InlineSettingsView : System.Windows.Controls.UserControl
             LongHoverRadio.IsChecked = true;
         else
             HoverPeekRadio.IsChecked = true;
+
+        // Theme
+        switch (settings.Theme)
+        {
+            case AppTheme.Light: ThemeLightRadio.IsChecked = true; break;
+            case AppTheme.Auto: ThemeAutoRadio.IsChecked = true; break;
+            default: ThemeDarkRadio.IsChecked = true; break;
+        }
 
         _isLoading = false;
     }
@@ -75,5 +86,17 @@ public partial class InlineSettingsView : System.Windows.Controls.UserControl
     private void OnBackClick(object sender, RoutedEventArgs e)
     {
         BackRequested?.Invoke();
+    }
+
+    private void OnThemeChanged(object sender, RoutedEventArgs e)
+    {
+        if (_isLoading || _settings == null) return;
+
+        _settings.Theme = ThemeAutoRadio.IsChecked == true ? AppTheme.Auto
+            : ThemeLightRadio.IsChecked == true ? AppTheme.Light
+            : AppTheme.Dark;
+
+        _settings.Save();
+        ThemeChangeRequested?.Invoke(_settings.Theme);
     }
 }

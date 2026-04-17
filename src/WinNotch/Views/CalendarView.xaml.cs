@@ -41,16 +41,23 @@ public partial class CalendarView : UserControl
         var events = _calendarService?.TodayEvents;
         if (events == null || events.Count == 0)
         {
+            var faintBrush = TryFindResource("TextFaintBrush") as SolidColorBrush
+                ?? new SolidColorBrush(Color.FromRgb(0x55, 0x55, 0x55));
             EventsPanel.Children.Add(new TextBlock
             {
                 Text = "No upcoming events",
-                Foreground = new SolidColorBrush(Color.FromRgb(0x55, 0x55, 0x55)),
+                Foreground = faintBrush,
                 FontSize = 10,
                 FontStyle = FontStyles.Italic,
                 Margin = new Thickness(0, 4, 0, 0)
             });
             return;
         }
+
+        var mutedBrush = TryFindResource("TextMutedBrush") as SolidColorBrush
+            ?? new SolidColorBrush(Color.FromRgb(0x88, 0x88, 0x88));
+        var primaryBrush = TryFindResource("TextPrimaryBrush") as SolidColorBrush
+            ?? new SolidColorBrush(Colors.White);
 
         foreach (var ev in events)
         {
@@ -83,7 +90,7 @@ public partial class CalendarView : UserControl
             item.Children.Add(new TextBlock
             {
                 Text = ev.TimeDisplay,
-                Foreground = new SolidColorBrush(Color.FromRgb(0x88, 0x88, 0x88)),
+                Foreground = mutedBrush,
                 FontSize = 10,
                 VerticalAlignment = VerticalAlignment.Center,
                 Margin = new Thickness(0, 0, 6, 0),
@@ -94,7 +101,7 @@ public partial class CalendarView : UserControl
             item.Children.Add(new TextBlock
             {
                 Text = ev.Title,
-                Foreground = new SolidColorBrush(Colors.White),
+                Foreground = primaryBrush,
                 FontSize = 10,
                 TextTrimming = TextTrimming.CharacterEllipsis,
                 VerticalAlignment = VerticalAlignment.Center,

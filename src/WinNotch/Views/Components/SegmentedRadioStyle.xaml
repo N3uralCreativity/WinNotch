@@ -20,17 +20,17 @@
                         <ContentPresenter x:Name="Content"
                                           HorizontalAlignment="Center"
                                           VerticalAlignment="Center"
-                                          TextBlock.Foreground="#777777"
+                                          TextBlock.Foreground="{DynamicResource SegmentedTextBrush}"
                                           TextBlock.FontWeight="Normal"/>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bg" Property="Background" Value="#22FFFFFF"/>
-                            <Setter TargetName="Content" Property="TextBlock.Foreground" Value="#AAAAAA"/>
+                            <Setter TargetName="Bg" Property="Background" Value="{DynamicResource SegmentedHoverBgBrush}"/>
+                            <Setter TargetName="Content" Property="TextBlock.Foreground" Value="{DynamicResource SegmentedHoverTextBrush}"/>
                         </Trigger>
                         <Trigger Property="IsChecked" Value="True">
-                            <Setter TargetName="Bg" Property="Background" Value="#2A2A2E"/>
-                            <Setter TargetName="Content" Property="TextBlock.Foreground" Value="#FFFFFF"/>
+                            <Setter TargetName="Bg" Property="Background" Value="{DynamicResource SegmentedCheckedBgBrush}"/>
+                            <Setter TargetName="Content" Property="TextBlock.Foreground" Value="{DynamicResource SegmentedCheckedTextBrush}"/>
                             <Setter TargetName="Content" Property="TextBlock.FontWeight" Value="SemiBold"/>
                         </Trigger>
                     </ControlTemplate.Triggers>

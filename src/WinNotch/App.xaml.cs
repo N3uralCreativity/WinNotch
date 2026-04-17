@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Threading;
 using System.Windows;
 using WinNotch.Models;
+using WinNotch.Services;
 using WinNotch.Views;
 using Forms = System.Windows.Forms;
 
@@ -14,6 +15,7 @@ public partial class App : Application
     private NotchWindow? _notchWindow;
     private Forms.NotifyIcon? _trayIcon;
     private AppSettings _settings = null!;
+    private ThemeService _themeService = null!;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -39,11 +41,16 @@ public partial class App : Application
         // Load settings
         _settings = AppSettings.Load();
 
+        // Initialize theme
+        _themeService = new ThemeService();
+        _themeService.Apply(_settings.Theme);
+        _themeService.StartWatchingSystemTheme();
+
         // System tray icon
         SetupTrayIcon();
 
         // Launch the notch window
-        _notchWindow = new NotchWindow(_settings);
+        _notchWindow = new NotchWindow(_settings, _themeService);
         _notchWindow.Show();
     }
 
@@ -82,6 +89,7 @@ public partial class App : Application
 
     private void QuitApp()
     {
+        _themeService?.StopWatchingSystemTheme();
         _trayIcon?.Dispose();
         _notchWindow?.Close();
         Shutdown();

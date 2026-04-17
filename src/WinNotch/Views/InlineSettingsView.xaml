@@ -12,13 +12,13 @@
             </ResourceDictionary.MergedDictionaries>
 
             <Style x:Key="SectionHeader" TargetType="TextBlock">
-                <Setter Property="Foreground" Value="#888888"/>
+                <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
                 <Setter Property="FontSize" Value="10"/>
                 <Setter Property="FontWeight" Value="SemiBold"/>
                 <Setter Property="Margin" Value="0,8,0,4"/>
             </Style>
             <Style x:Key="SettingLabel" TargetType="TextBlock">
-                <Setter Property="Foreground" Value="#B0B0B0"/>
+                <Setter Property="Foreground" Value="{DynamicResource SettingLabelBrush}"/>
                 <Setter Property="FontSize" Value="12"/>
                 <Setter Property="VerticalAlignment" Value="Center"/>
             </Style>
@@ -38,9 +38,9 @@
                         Style="{StaticResource IconButton}"
                         Width="24" Height="24"
                         VerticalAlignment="Center" ToolTip="Back">
-                    <TextBlock Text="←" FontSize="14" Foreground="#888888"/>
+                    <TextBlock Text="←" FontSize="14" Foreground="{DynamicResource TextMutedBrush}"/>
                 </Button>
-                <TextBlock Text="Settings" Foreground="White"
+                <TextBlock Text="Settings" Foreground="{DynamicResource TextPrimaryBrush}"
                            FontSize="14" FontWeight="SemiBold"
                            VerticalAlignment="Center" Margin="4,0,0,0"/>
             </StackPanel>
@@ -63,8 +63,8 @@
                 </Grid>
 
                 <!-- Hover mode -->
-                <TextBlock Text="Hover behavior" Foreground="#666666" FontSize="10" Margin="0,4,0,2"/>
-                <Border Background="#1A1A1C" CornerRadius="10" Padding="2" Height="30">
+                <TextBlock Text="Hover behavior" Foreground="{DynamicResource TextSubtleBrush}" FontSize="10" Margin="0,4,0,2"/>
+                <Border Background="{DynamicResource SegmentedBgBrush}" CornerRadius="10" Padding="2" Height="30">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -81,6 +81,27 @@
 
                 <!-- Appearance -->
                 <TextBlock Text="APPEARANCE" Style="{StaticResource SectionHeader}"/>
+
+                <!-- Theme selector -->
+                <TextBlock Text="Theme" Foreground="{DynamicResource TextSubtleBrush}" FontSize="10" Margin="0,4,0,2"/>
+                <Border Background="{DynamicResource SegmentedBgBrush}" CornerRadius="10" Padding="2" Height="30">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <RadioButton x:Name="ThemeDarkRadio" Content="Dark"
+                                     Grid.Column="0" Style="{StaticResource SegmentedRadio}"
+                                     Checked="OnThemeChanged"/>
+                        <RadioButton x:Name="ThemeLightRadio" Content="Light"
+                                     Grid.Column="1" Style="{StaticResource SegmentedRadio}"
+                                     Checked="OnThemeChanged"/>
+                        <RadioButton x:Name="ThemeAutoRadio" Content="Auto"
+                                     Grid.Column="2" Style="{StaticResource SegmentedRadio}"
+                                     Checked="OnThemeChanged"/>
+                    </Grid>
+                </Border>
 
                 <Grid Height="28" Margin="0,2">
                     <TextBlock Text="Show shadow" Style="{StaticResource SettingLabel}"/>
@@ -142,8 +163,8 @@
 
                 <!-- About -->
                 <TextBlock Text="ABOUT" Style="{StaticResource SectionHeader}"/>
-                <TextBlock Foreground="#555555" FontSize="10" Text="WinNotch v0.1" Margin="0,0,0,2"/>
-                <TextBlock Foreground="#444444" FontSize="9" Text="Inspired by boring.notch for macOS"
+                <TextBlock Foreground="{DynamicResource TextFaintBrush}" FontSize="10" Text="WinNotch v0.1" Margin="0,0,0,2"/>
+                <TextBlock Foreground="{DynamicResource TextFaintestBrush}" FontSize="9" Text="Inspired by boring.notch for macOS"
                            Margin="0,0,0,8"/>
 
             </StackPanel>

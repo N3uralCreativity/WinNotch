@@ -4,7 +4,7 @@
 
     <Style TargetType="{x:Type comp:MarqueeText}">
         <Setter Property="ClipToBounds" Value="True"/>
-        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
         <Setter Property="FontSize" Value="13"/>
         <Setter Property="Template">
             <Setter.Value>

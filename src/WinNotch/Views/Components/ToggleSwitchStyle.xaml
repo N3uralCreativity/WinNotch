@@ -16,12 +16,12 @@
                         <Border x:Name="Track"
                                 Width="40" Height="22"
                                 CornerRadius="11"
-                                Background="#3A3A3C"/>
+                                Background="{DynamicResource ToggleTrackOffBrush}"/>
                         <!-- Thumb -->
                         <Border x:Name="Thumb"
                                 Width="18" Height="18"
                                 CornerRadius="9"
-                                Background="White"
+                                Background="{DynamicResource ToggleThumbBrush}"
                                 HorizontalAlignment="Left"
                                 Margin="2,0,0,0"
                                 VerticalAlignment="Center">
@@ -32,6 +32,11 @@
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Track" Property="Background">
+                                <Setter.Value>
+                                    <SolidColorBrush Color="#34C759"/>
+                                </Setter.Value>
+                            </Setter>
                             <Trigger.EnterActions>
                                 <BeginStoryboard>
                                     <Storyboard>
@@ -39,9 +44,6 @@
                                                          Storyboard.TargetProperty="X"
                                                          To="18" Duration="0:0:0.15"
                                                          EasingFunction="{StaticResource SwitchEase}"/>
-                                        <ColorAnimation Storyboard.TargetName="Track"
-                                                        Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                                        To="#34C759" Duration="0:0:0.15"/>
                                     </Storyboard>
                                 </BeginStoryboard>
                             </Trigger.EnterActions>
@@ -52,9 +54,6 @@
                                                          Storyboard.TargetProperty="X"
                                                          To="0" Duration="0:0:0.15"
                                                          EasingFunction="{StaticResource SwitchEase}"/>
-                                        <ColorAnimation Storyboard.TargetName="Track"
-                                                        Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                                        To="#3A3A3C" Duration="0:0:0.15"/>
                                     </Storyboard>
                                 </BeginStoryboard>
                             </Trigger.ExitActions>

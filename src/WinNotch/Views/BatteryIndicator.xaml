@@ -9,7 +9,7 @@
         <!-- Battery icon (drawn with borders) -->
         <Grid Width="18" Height="10" VerticalAlignment="Center">
             <!-- Battery body -->
-            <Border BorderBrush="#888888" BorderThickness="1" CornerRadius="1.5"
+            <Border BorderBrush="{DynamicResource BatteryBorderBrush}" BorderThickness="1" CornerRadius="1.5"
                     Margin="0,0,2,0">
                 <Border x:Name="BatteryFill"
                         Background="#4CAF50"
@@ -19,7 +19,7 @@
             </Border>
             <!-- Battery tip -->
             <Border Width="2" Height="5"
-                    Background="#888888" CornerRadius="0,1,1,0"
+                    Background="{DynamicResource BatteryBorderBrush}" CornerRadius="0,1,1,0"
                     HorizontalAlignment="Right" VerticalAlignment="Center"/>
         </Grid>
 
@@ -27,7 +27,7 @@
         <TextBlock x:Name="PercentText"
                    Text="100%"
                    FontSize="9"
-                   Foreground="#999999"
+                   Foreground="{DynamicResource BatteryTextBrush}"
                    VerticalAlignment="Center"
                    Margin="3,0,0,0"/>
     </StackPanel>

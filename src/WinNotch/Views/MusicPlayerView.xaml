@@ -12,7 +12,7 @@
             <Style x:Key="TransportButton" TargetType="Button">
                 <Setter Property="Background" Value="Transparent"/>
                 <Setter Property="BorderThickness" Value="0"/>
-                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
                 <Setter Property="Cursor" Value="Hand"/>
                 <Setter Property="Width" Value="30"/>
                 <Setter Property="Height" Value="30"/>
@@ -20,7 +20,7 @@
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="Button">
-                            <Border Background="{TemplateBinding Background}"
+                            <Border x:Name="Bg" Background="{TemplateBinding Background}"
                                     CornerRadius="15"
                                     Padding="{TemplateBinding Padding}">
                                 <ContentPresenter HorizontalAlignment="Center"
@@ -28,10 +28,10 @@
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="#33FFFFFF"/>
+                                    <Setter TargetName="Bg" Property="Background" Value="{DynamicResource TransportHoverBrush}"/>
                                 </Trigger>
                                 <Trigger Property="IsPressed" Value="True">
-                                    <Setter Property="Background" Value="#55FFFFFF"/>
+                                    <Setter TargetName="Bg" Property="Background" Value="{DynamicResource TransportPressedBrush}"/>
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
@@ -86,7 +86,7 @@
                               Grid.Row="0"
                               FontSize="14"
                               FontWeight="Bold"
-                              Foreground="White"
+                              Foreground="{DynamicResource TextPrimaryBrush}"
                               Height="22"
                               Margin="0,0,0,1"/>
 
@@ -95,7 +95,7 @@
                               Grid.Row="1"
                               FontSize="11"
                               FontWeight="Normal"
-                              Foreground="#AAAAAA"
+                              Foreground="{DynamicResource TextTertiaryBrush}"
                               Height="17"
                               Margin="0,0,0,5"/>
 
@@ -110,7 +110,7 @@
                 <TextBlock x:Name="ElapsedText"
                            Grid.Column="0"
                            Text="0:00"
-                           Foreground="#777777"
+                           Foreground="{DynamicResource TextDimBrush}"
                            FontSize="10"
                            VerticalAlignment="Center"
                            Margin="0,0,6,0"/>
@@ -118,21 +118,21 @@
                 <Border Grid.Column="1"
                         Height="4"
                         CornerRadius="2"
-                        Background="#333333"
+                        Background="{DynamicResource ProgressTrackBrush}"
                         VerticalAlignment="Center"
                         Cursor="Hand"
                         MouseLeftButtonDown="OnProgressBarClick">
                     <Border x:Name="ProgressFill"
                             Height="4"
                             CornerRadius="2"
-                            Background="#FFFFFF"
+                            Background="{DynamicResource ProgressFillBrush}"
                             HorizontalAlignment="Left"/>
                 </Border>
 
                 <TextBlock x:Name="DurationText"
                            Grid.Column="2"
                            Text="0:00"
-                           Foreground="#777777"
+                           Foreground="{DynamicResource TextDimBrush}"
                            FontSize="10"
                            VerticalAlignment="Center"
                            Margin="6,0,0,0"/>
@@ -194,7 +194,7 @@
         <TextBlock x:Name="NoMediaText"
                    Grid.ColumnSpan="2"
                    Text="No music playing"
-                   Foreground="#555555"
+                   Foreground="{DynamicResource TextFaintBrush}"
                    FontSize="14"
                    HorizontalAlignment="Center"
                    VerticalAlignment="Center"

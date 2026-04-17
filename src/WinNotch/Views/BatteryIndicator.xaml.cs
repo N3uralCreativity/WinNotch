@@ -58,15 +58,21 @@ public partial class BatteryIndicator : UserControl
             fillColor = Color.FromRgb(0xF4, 0x43, 0x36); // Red
         else if (percent <= 20)
             fillColor = Color.FromRgb(0xFF, 0x98, 0x00); // Orange
+        else if (TryFindResource("BatteryNormalFillBrush") is SolidColorBrush normalBrush)
+            fillColor = normalBrush.Color;
         else
-            fillColor = Color.FromRgb(0xFF, 0xFF, 0xFF); // White
+            fillColor = Color.FromRgb(0xFF, 0xFF, 0xFF);
 
         BatteryFill.Background = new SolidColorBrush(fillColor);
 
         // Percent text color
-        PercentText.Foreground = new SolidColorBrush(
-            percent <= 10 ? Color.FromRgb(0xF4, 0x43, 0x36) :
-            percent <= 20 ? Color.FromRgb(0xFF, 0x98, 0x00) :
-            Color.FromRgb(0x99, 0x99, 0x99));
+        if (percent <= 10)
+            PercentText.Foreground = new SolidColorBrush(Color.FromRgb(0xF4, 0x43, 0x36));
+        else if (percent <= 20)
+            PercentText.Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0x98, 0x00));
+        else if (TryFindResource("BatteryTextBrush") is SolidColorBrush textBrush)
+            PercentText.Foreground = textBrush;
+        else
+            PercentText.Foreground = new SolidColorBrush(Color.FromRgb(0x99, 0x99, 0x99));
     }
 }

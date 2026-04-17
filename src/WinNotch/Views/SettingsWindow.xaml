@@ -5,7 +5,7 @@
         Width="400" Height="500"
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize"
-        Background="#1A1A1A"
+        Background="{DynamicResource NotchFillBrush}"
         WindowStyle="None"
         AllowsTransparency="True">
 
@@ -19,7 +19,7 @@
             </ResourceDictionary.MergedDictionaries>
 
             <Style x:Key="SectionHeader" TargetType="TextBlock">
-                <Setter Property="Foreground" Value="#FFFFFF"/>
+                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
                 <Setter Property="FontSize" Value="13"/>
                 <Setter Property="FontWeight" Value="SemiBold"/>
                 <Setter Property="Margin" Value="0,18,0,10"/>
@@ -29,14 +29,14 @@
                 <Setter Property="Height" Value="32"/>
             </Style>
             <Style x:Key="SettingLabel" TargetType="TextBlock">
-                <Setter Property="Foreground" Value="#B0B0B0"/>
+                <Setter Property="Foreground" Value="{DynamicResource SettingLabelBrush}"/>
                 <Setter Property="FontSize" Value="13"/>
                 <Setter Property="VerticalAlignment" Value="Center"/>
             </Style>
         </ResourceDictionary>
     </Window.Resources>
 
-    <Border CornerRadius="12" Background="#1A1A1A" BorderBrush="#333333" BorderThickness="1">
+    <Border CornerRadius="12" Background="{DynamicResource NotchFillBrush}" BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="1">
         <Grid Margin="24,16,24,16">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -46,14 +46,14 @@
             <!-- Title bar with close button -->
             <Grid Grid.Row="0" Margin="0,0,0,4">
                 <TextBlock Text="Settings"
-                           Foreground="White"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
                            FontSize="18"
                            FontWeight="Bold"
                            VerticalAlignment="Center"/>
                 <Button Content="✕" HorizontalAlignment="Right"
                         Click="OnCloseClick"
                         Style="{StaticResource IconButton}"
-                        Foreground="#888888" FontSize="14"
+                        Foreground="{DynamicResource TextMutedBrush}" FontSize="14"
                         Width="28" Height="28"/>
             </Grid>
 
@@ -74,8 +74,8 @@
                     </Grid>
 
                     <!-- Hover mode -->
-                    <TextBlock Text="Hover behavior" Foreground="#B0B0B0" FontSize="12" Margin="0,8,0,4"/>
-                    <Border Background="#1A1A1C" CornerRadius="10" Padding="2" Height="34">
+                    <TextBlock Text="Hover behavior" Foreground="{DynamicResource SettingLabelBrush}" FontSize="12" Margin="0,8,0,4"/>
+                    <Border Background="{DynamicResource SegmentedBgBrush}" CornerRadius="10" Padding="2" Height="34">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -157,10 +157,10 @@
                     <!-- ABOUT -->
                     <TextBlock Text="About" Style="{StaticResource SectionHeader}"/>
 
-                    <TextBlock Foreground="#666666" FontSize="12"
+                    <TextBlock Foreground="{DynamicResource TextSubtleBrush}" FontSize="12"
                                Text="WinNotch v0.1"
                                Margin="0,0,0,2"/>
-                    <TextBlock Foreground="#444444" FontSize="11"
+                    <TextBlock Foreground="{DynamicResource TextFaintestBrush}" FontSize="11"
                                Text="Inspired by boring.notch for macOS"/>
 
                 </StackPanel>
