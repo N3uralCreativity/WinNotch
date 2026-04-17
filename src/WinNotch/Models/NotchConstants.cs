@@ -38,6 +38,11 @@ public static class NotchConstants
     public const int HoverOpenDelayMs = 200;
     public const int HoverCloseDelayMs = 150;
 
+    // File Shelf
+    public const double ShelfRowHeight = 80;
+    public const double OpenHeightWithShelf = 250;
+    public const double OpenSettingsHeightWithShelf = 500;
+
     // Shadow
     public static readonly System.Windows.Media.Color ShadowColor = System.Windows.Media.Color.FromArgb(180, 0, 0, 0);
     public const double ShadowBlurRadius = 12;

@@ -1,4 +1,5 @@
 using System;
+using System.Windows.Media;
 
 namespace WinNotch.Models;
 
@@ -11,4 +12,6 @@ public class ShelfItem
     public string FileName { get; set; } = string.Empty;
     public string Extension { get; set; } = string.Empty;
     public DateTime AddedAt { get; set; } = DateTime.Now;
+    public ImageSource? Icon { get; set; }
+    public bool IsFolder { get; set; }
 }

@@ -8,6 +8,7 @@
         Topmost="True"
         ShowInTaskbar="False"
         ResizeMode="NoResize"
+        AllowDrop="True"
         Title="WinNotch">
 
     <Window.Resources>
@@ -69,6 +70,7 @@
                 <Grid x:Name="OpenContent" Opacity="0" Margin="12,6,12,10">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
@@ -100,9 +102,15 @@
                         </Button>
                     </Grid>
 
+                    <!-- File shelf (visible when files are shelved) -->
+                    <views:ShelfView x:Name="ShelfPanel"
+                                     Grid.Row="1"
+                                     Visibility="Collapsed"
+                                     Margin="0,4,0,0"/>
+
                     <!-- Inline settings (hidden by default, shown when gear clicked) -->
                     <views:InlineSettingsView x:Name="InlineSettings"
-                                              Grid.Row="1"
+                                              Grid.Row="2"
                                               Visibility="Collapsed"
                                               Margin="0,6,0,0"/>
                 </Grid>

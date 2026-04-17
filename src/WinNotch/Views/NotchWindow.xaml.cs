@@ -7,6 +7,9 @@ using WinNotch.Models;
 using WinNotch.Services;
 using MouseEventArgs = System.Windows.Input.MouseEventArgs;
 using MouseButtonEventArgs = System.Windows.Input.MouseButtonEventArgs;
+using DragEventArgs = System.Windows.DragEventArgs;
+using DataFormats = System.Windows.DataFormats;
+using DragDropEffects = System.Windows.DragDropEffects;
 
 namespace WinNotch.Views;
 
@@ -48,6 +51,7 @@ public partial class NotchWindow : Window
     private readonly BatteryService _batteryService;
     private readonly CalendarService _calendarService;
     private readonly ThemeService _themeService;
+    private readonly ShelfService _shelfService;
 
     // Settings
     private AppSettings _settings;
@@ -86,6 +90,7 @@ public partial class NotchWindow : Window
         _brightnessService = new BrightnessService();
         _batteryService = new BatteryService();
         _calendarService = new CalendarService();
+        _shelfService = new ShelfService();
 
         SourceInitialized += OnSourceInitialized;
         Loaded += OnLoaded;
@@ -118,6 +123,12 @@ public partial class NotchWindow : Window
 
         // Right-click context menu
         NotchPath.MouseRightButtonDown += OnNotchRightClick;
+
+        // Drag-drop for file shelf
+        DragEnter += OnDragEnter;
+        DragOver += OnDragOver;
+        DragLeave += OnDragLeave;
+        Drop += OnDrop;
 
         // Initialize media services
         _ = InitializeServicesAsync();
@@ -162,6 +173,10 @@ public partial class NotchWindow : Window
         _calendarService.Initialize();
         CalendarPanel_View.Bind(_calendarService);
         CalendarPanel.Visibility = _settings.ShowCalendar ? Visibility.Visible : Visibility.Collapsed;
+
+        // File Shelf
+        ShelfPanel.Bind(_shelfService);
+        _shelfService.ShelfChanged += () => Dispatcher.Invoke(UpdateShelfVisibility);
 
         // When HUD shows, expand notch horizontally and hide other content
         HudOverlay.HudShown += () => Dispatcher.Invoke(() =>
@@ -218,9 +233,12 @@ public partial class NotchWindow : Window
         InlineSettings.Visibility = Visibility.Visible;
 
         // Grow the notch taller
+        double targetH = _shelfService.HasItems
+            ? NotchConstants.OpenSettingsHeightWithShelf
+            : NotchConstants.OpenSettingsHeight;
         _heightSpring.Response = 0.42;
         _heightSpring.DampingFraction = 0.80;
-        _heightSpring.AnimateTo(NotchConstants.OpenSettingsHeight, _currentHeight);
+        _heightSpring.AnimateTo(targetH, _currentHeight);
     }
 
     private void CollapseSettings()
@@ -244,7 +262,8 @@ public partial class NotchWindow : Window
         double padding = NotchConstants.WindowPadding;
         double maxOpenWidth = Math.Max(NotchConstants.OpenWidth, NotchConstants.OpenWidthWithCalendar);
         _fixedWindowWidth = maxOpenWidth + padding * 2;
-        double maxHeight = Math.Max(NotchConstants.OpenHeight, NotchConstants.OpenSettingsHeight);
+        double maxHeight = Math.Max(NotchConstants.OpenSettingsHeightWithShelf,
+            Math.Max(NotchConstants.OpenHeightWithShelf, NotchConstants.OpenSettingsHeight));
         _fixedWindowHeight = maxHeight + padding + 10;
 
         var screenBounds = ScreenHelper.GetPrimaryScreenBounds(this);
@@ -362,8 +381,12 @@ public partial class NotchWindow : Window
             ? NotchConstants.OpenWidthWithCalendar
             : NotchConstants.OpenWidth;
 
+        double openH = _shelfService.HasItems
+            ? NotchConstants.OpenHeightWithShelf
+            : NotchConstants.OpenHeight;
+
         _widthSpring.AnimateTo(openW, _currentWidth);
-        _heightSpring.AnimateTo(NotchConstants.OpenHeight, _currentHeight);
+        _heightSpring.AnimateTo(openH, _currentHeight);
         _topRadiusSpring.AnimateTo(NotchConstants.OpenTopRadius, _currentTopRadius);
         _bottomRadiusSpring.AnimateTo(NotchConstants.OpenBottomRadius, _currentBottomRadius);
         _shadowOpacitySpring.AnimateTo(0.7, _currentShadowOpacity);
@@ -544,4 +567,85 @@ public partial class NotchWindow : Window
         if (LiveActivity.FindName("CompactVisualizer") is UIElement viz)
             viz.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
     }
+
+    #region File Shelf / Drag-Drop
+
+    private void UpdateShelfVisibility()
+    {
+        bool hasItems = _shelfService.HasItems;
+        ShelfPanel.Visibility = hasItems ? Visibility.Visible : Visibility.Collapsed;
+
+        // Adjust open height if notch is open
+        if (_vm.NotchState == NotchState.Open && !_isSettingsExpanded)
+        {
+            double targetHeight = hasItems
+                ? NotchConstants.OpenHeightWithShelf
+                : NotchConstants.OpenHeight;
+            _heightSpring.AnimateTo(targetHeight, _currentHeight);
+        }
+    }
+
+    private void OnDragEnter(object sender, DragEventArgs e)
+    {
+        if (e.Data.GetDataPresent(DataFormats.FileDrop))
+        {
+            e.Effects = DragDropEffects.Copy;
+
+            // Open the notch if closed/peeking to show drop zone
+            if (_vm.NotchState != NotchState.Open)
+                TransitionToOpen();
+
+            // Show drop zone and expand for shelf
+            ShelfPanel.Visibility = Visibility.Visible;
+            ShelfPanel.ShowDropZone();
+
+            if (!_isSettingsExpanded)
+            {
+                _heightSpring.AnimateTo(NotchConstants.OpenHeightWithShelf, _currentHeight);
+            }
+
+            e.Handled = true;
+        }
+    }
+
+    private void OnDragOver(object sender, DragEventArgs e)
+    {
+        if (e.Data.GetDataPresent(DataFormats.FileDrop))
+        {
+            e.Effects = DragDropEffects.Copy;
+            e.Handled = true;
+        }
+    }
+
+    private void OnDragLeave(object sender, DragEventArgs e)
+    {
+        ShelfPanel.HideDropZone();
+
+        // If no items, collapse shelf and shrink back
+        if (!_shelfService.HasItems)
+        {
+            ShelfPanel.Visibility = Visibility.Collapsed;
+            if (_vm.NotchState == NotchState.Open && !_isSettingsExpanded)
+            {
+                _heightSpring.AnimateTo(NotchConstants.OpenHeight, _currentHeight);
+            }
+        }
+    }
+
+    private void OnDrop(object sender, DragEventArgs e)
+    {
+        ShelfPanel.HideDropZone();
+
+        if (e.Data.GetDataPresent(DataFormats.FileDrop))
+        {
+            var files = e.Data.GetData(DataFormats.FileDrop) as string[];
+            if (files != null && files.Length > 0)
+            {
+                _shelfService.AddFiles(files);
+            }
+            e.Handled = true;
+        }
+    }
+
+    #endregion
 }
