@@ -1,0 +1,116 @@
+using System;
+using System.Runtime.InteropServices;
+using System.Windows.Threading;
+
+namespace WinNotch.Services;
+
+/// <summary>
+/// Detects when another application is running in fullscreen mode.
+/// Used to auto-hide the notch when a fullscreen app is active.
+/// </summary>
+public class FullscreenService : IDisposable
+{
+    private DispatcherTimer? _timer;
+
+    /// <summary>Whether a fullscreen application is currently detected.</summary>
+    public bool IsFullscreen { get; private set; }
+
+    /// <summary>Fired when fullscreen state changes. Args: isFullscreen</summary>
+    public event Action<bool>? FullscreenChanged;
+
+    public void Start()
+    {
+        _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+        _timer.Tick += (_, _) => Check();
+        _timer.Start();
+    }
+
+    public void Stop()
+    {
+        _timer?.Stop();
+    }
+
+    private void Check()
+    {
+        bool fullscreen = IsFullscreenAppRunning();
+        if (fullscreen != IsFullscreen)
+        {
+            IsFullscreen = fullscreen;
+            FullscreenChanged?.Invoke(fullscreen);
+        }
+    }
+
+    private static bool IsFullscreenAppRunning()
+    {
+        IntPtr foreground = GetForegroundWindow();
+        if (foreground == IntPtr.Zero) return false;
+
+        // Ignore the desktop/shell window
+        IntPtr desktop = GetDesktopWindow();
+        IntPtr shell = GetShellWindow();
+        if (foreground == desktop || foreground == shell) return false;
+
+        if (GetWindowRect(foreground, out RECT windowRect))
+        {
+            // Get the monitor info for the foreground window
+            IntPtr monitor = MonitorFromWindow(foreground, MONITOR_DEFAULTTONEAREST);
+            var monitorInfo = new MONITORINFO { cbSize = Marshal.SizeOf<MONITORINFO>() };
+            if (GetMonitorInfo(monitor, ref monitorInfo))
+            {
+                var screen = monitorInfo.rcMonitor;
+                return windowRect.Left <= screen.Left &&
+                       windowRect.Top <= screen.Top &&
+                       windowRect.Right >= screen.Right &&
+                       windowRect.Bottom >= screen.Bottom;
+            }
+        }
+
+        return false;
+    }
+
+    public void Dispose()
+    {
+        _timer?.Stop();
+    }
+
+    #region P/Invoke
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetDesktopWindow();
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetShellWindow();
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint dwFlags);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
+
+    private const uint MONITOR_DEFAULTTONEAREST = 2;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RECT
+    {
+        public int Left, Top, Right, Bottom;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MONITORINFO
+    {
+        public int cbSize;
+        public RECT rcMonitor;
+        public RECT rcWork;
+        public uint dwFlags;
+    }
+
+    #endregion
+}

@@ -52,6 +52,8 @@ public partial class NotchWindow : Window
     private readonly CalendarService _calendarService;
     private readonly ThemeService _themeService;
     private readonly ShelfService _shelfService;
+    private readonly FullscreenService _fullscreenService;
+    private readonly GlobalHotkey _globalHotkey;
 
     // Settings
     private AppSettings _settings;
@@ -91,6 +93,8 @@ public partial class NotchWindow : Window
         _batteryService = new BatteryService();
         _calendarService = new CalendarService();
         _shelfService = new ShelfService();
+        _fullscreenService = new FullscreenService();
+        _globalHotkey = new GlobalHotkey();
 
         SourceInitialized += OnSourceInitialized;
         Loaded += OnLoaded;
@@ -99,6 +103,10 @@ public partial class NotchWindow : Window
     private void OnSourceInitialized(object? sender, EventArgs e)
     {
         WindowHelper.MakeOverlayWindow(this);
+
+        // Register global hotkey (Ctrl+Alt+N)
+        _globalHotkey.Register(this);
+        _globalHotkey.HotkeyPressed += OnGlobalHotkeyPressed;
     }
 
     private void OnLoaded(object? sender, RoutedEventArgs e)
@@ -120,6 +128,10 @@ public partial class NotchWindow : Window
 
         // Click anywhere on closed/peeking content to open
         ContentGrid.PreviewMouseLeftButtonDown += OnContentGridClick;
+
+        // Scroll on notch changes volume
+        NotchPath.MouseWheel += OnNotchMouseWheel;
+        ContentGrid.MouseWheel += OnNotchMouseWheel;
 
         // Right-click context menu
         NotchPath.MouseRightButtonDown += OnNotchRightClick;
@@ -177,6 +189,26 @@ public partial class NotchWindow : Window
         // File Shelf
         ShelfPanel.Bind(_shelfService);
         _shelfService.ShelfChanged += () => Dispatcher.Invoke(UpdateShelfVisibility);
+
+        // Fullscreen detection — hide notch when another app is fullscreen
+        _fullscreenService.FullscreenChanged += isFs =>
+        {
+            Dispatcher.Invoke(() =>
+            {
+                if (isFs)
+                {
+                    // Hide the notch
+                    NotchCanvas.Opacity = 0;
+                    IsHitTestVisible = false;
+                }
+                else
+                {
+                    NotchCanvas.Opacity = 1;
+                    IsHitTestVisible = true;
+                }
+            });
+        };
+        _fullscreenService.Start();
 
         // When HUD shows, expand notch horizontally and hide other content
         HudOverlay.HudShown += () => Dispatcher.Invoke(() =>
@@ -518,6 +550,17 @@ public partial class NotchWindow : Window
         }
     }
 
+    private void OnNotchMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
+    {
+        if (_settings.ShowVolumeHud && _volumeService != null)
+        {
+            float current = _volumeService.Volume;
+            float delta = e.Delta > 0 ? 0.02f : -0.02f;
+            _volumeService.SetVolume(Math.Clamp(current + delta, 0f, 1f));
+            e.Handled = true;
+        }
+    }
+
     private void OnNotchRightClick(object sender, MouseButtonEventArgs e)
     {
         var menu = new System.Windows.Controls.ContextMenu();
@@ -536,6 +579,17 @@ public partial class NotchWindow : Window
         e.Handled = true;
     }
 
+    private void OnGlobalHotkeyPressed()
+    {
+        Dispatcher.Invoke(() =>
+        {
+            if (_vm.NotchState == NotchState.Open)
+                TransitionToClose();
+            else
+                TransitionToOpen();
+        });
+    }
+
     #endregion
 
     protected override void OnClosed(EventArgs e)
@@ -546,6 +600,8 @@ public partial class NotchWindow : Window
         _volumeService.Dispose();
         _brightnessService.Dispose();
         _batteryService.Dispose();
+        _fullscreenService.Dispose();
+        _globalHotkey.Dispose();
         base.OnClosed(e);
     }
 
