@@ -19,6 +19,7 @@ public static class NotchConstants
     public const double OpenWidth = 460;
     public const double OpenWidthWithCalendar = 640;
     public const double OpenHeight = 160;
+    public const double OpenSettingsHeight = 420;
 
     // Corner radii
     public const double ClosedTopRadius = 6;

@@ -59,18 +59,44 @@
 
                 <!-- Open state content -->
                 <Grid x:Name="OpenContent" Opacity="0" Margin="12,6,12,10">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
 
-                    <views:MusicPlayerView x:Name="MusicPlayer" Grid.Column="0"/>
+                    <!-- Main content (music + calendar) -->
+                    <Grid x:Name="MainOpenContent" Grid.Row="0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
 
-                    <!-- Calendar panel (separated by thin divider) -->
-                    <StackPanel x:Name="CalendarPanel" Grid.Column="1" Orientation="Horizontal">
-                        <Border Width="1" Background="#2A2A2A" Margin="8,4,8,4"/>
-                        <views:CalendarView x:Name="CalendarPanel_View"/>
-                    </StackPanel>
+                        <views:MusicPlayerView x:Name="MusicPlayer" Grid.Column="0"/>
+
+                        <!-- Calendar panel -->
+                        <StackPanel x:Name="CalendarPanel" Grid.Column="1" Orientation="Horizontal">
+                            <Border Width="1" Background="#2A2A2A" Margin="8,4,8,4"/>
+                            <views:CalendarView x:Name="CalendarPanel_View"/>
+                        </StackPanel>
+
+                        <!-- Gear button (right edge, vertically centered) -->
+                        <Button x:Name="SettingsGearButton"
+                                Grid.Column="2"
+                                Click="OnSettingsGearClick"
+                                Background="Transparent" BorderThickness="0"
+                                Cursor="Hand" Width="24" Height="24"
+                                VerticalAlignment="Top" Margin="4,0,0,0"
+                                ToolTip="Settings">
+                            <TextBlock Text="⚙" FontSize="13" Foreground="#666666"/>
+                        </Button>
+                    </Grid>
+
+                    <!-- Inline settings (hidden by default, shown when gear clicked) -->
+                    <views:InlineSettingsView x:Name="InlineSettings"
+                                              Grid.Row="1"
+                                              Visibility="Collapsed"
+                                              Margin="0,6,0,0"/>
                 </Grid>
             </Grid>
         </Canvas>

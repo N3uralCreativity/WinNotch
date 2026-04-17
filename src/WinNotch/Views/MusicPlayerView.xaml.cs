@@ -144,12 +144,4 @@ public partial class MusicPlayerView : UserControl
         double percent = Math.Clamp(pos.X / bar.ActualWidth, 0, 1);
         await _mediaService.SeekToAsync(percent);
     }
-
-    /// <summary>Fired when the settings gear is clicked.</summary>
-    public event Action? SettingsRequested;
-
-    private void OnSettingsClick(object sender, RoutedEventArgs e)
-    {
-        SettingsRequested?.Invoke();
-    }
 }

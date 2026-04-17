@@ -77,19 +77,7 @@ public partial class App : Application
 
     private void OpenSettings()
     {
-        // Find existing or create new
-        foreach (Window w in Windows)
-        {
-            if (w is SettingsWindow existing)
-            {
-                existing.Activate();
-                return;
-            }
-        }
-
-        var settingsWindow = new SettingsWindow(_settings);
-        settingsWindow.SettingsChanged += s => _notchWindow?.ApplySettings(s);
-        settingsWindow.Show();
+        _notchWindow?.OpenSettings();
     }
 
     private void QuitApp()

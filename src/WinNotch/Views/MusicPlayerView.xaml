@@ -47,20 +47,6 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <!-- Settings gear button (top-right) -->
-        <Button x:Name="SettingsButton"
-                Click="OnSettingsClick"
-                Style="{StaticResource TransportButton}"
-                Width="22" Height="22"
-                HorizontalAlignment="Right"
-                VerticalAlignment="Top"
-                Grid.Column="1"
-                Margin="0,-2,-4,0"
-                Panel.ZIndex="10"
-                ToolTip="Settings">
-            <TextBlock Text="⚙" FontSize="12" Foreground="#888888"/>
-        </Button>
-
         <!-- Album art with glow -->
         <Grid Grid.Column="0" Margin="0,0,12,0">
             <!-- Background glow from album art -->

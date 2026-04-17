@@ -38,6 +38,7 @@ public partial class NotchWindow : Window
     private DispatcherTimer? _hoverOpenTimer;
     private DispatcherTimer? _hoverCloseTimer;
     private bool _isMouseOverNotch;
+    private bool _isSettingsExpanded;
 
     // Services
     private readonly MediaService _mediaService;
@@ -122,8 +123,11 @@ public partial class NotchWindow : Window
 
         // Bind views to services
         MusicPlayer.Bind(_mediaService);
-        MusicPlayer.SettingsRequested += OpenSettings;
         LiveActivity.Bind(_mediaService, _audioCaptureService);
+
+        // Inline settings
+        InlineSettings.SettingsChanged += s => ApplySettings(s);
+        InlineSettings.BackRequested += CollapseSettings;
 
         // Toggle clock/live-activity visibility based on music state
         _mediaService.MediaInfo.PropertyChanged += (_, e) =>
@@ -176,20 +180,44 @@ public partial class NotchWindow : Window
         ClockWidget.Visibility = hasMusic ? Visibility.Collapsed : Visibility.Visible;
     }
 
-    private void OpenSettings()
+    public void OpenSettings()
     {
-        foreach (Window w in Application.Current.Windows)
-        {
-            if (w is SettingsWindow existing)
-            {
-                existing.Activate();
-                return;
-            }
-        }
+        // First ensure the notch is open
+        if (_vm.NotchState != NotchState.Open)
+            TransitionToOpen();
 
-        var settingsWindow = new SettingsWindow(_settings);
-        settingsWindow.SettingsChanged += s => ApplySettings(s);
-        settingsWindow.Show();
+        ExpandSettings();
+    }
+
+    private void OnSettingsGearClick(object sender, RoutedEventArgs e)
+    {
+        if (_isSettingsExpanded)
+            CollapseSettings();
+        else
+            ExpandSettings();
+    }
+
+    private void ExpandSettings()
+    {
+        _isSettingsExpanded = true;
+        InlineSettings.LoadSettings(_settings);
+        InlineSettings.Visibility = Visibility.Visible;
+
+        // Grow the notch taller
+        _heightSpring.Response = 0.42;
+        _heightSpring.DampingFraction = 0.80;
+        _heightSpring.AnimateTo(NotchConstants.OpenSettingsHeight, _currentHeight);
+    }
+
+    private void CollapseSettings()
+    {
+        _isSettingsExpanded = false;
+        InlineSettings.Visibility = Visibility.Collapsed;
+
+        // Shrink back to normal open height
+        _heightSpring.Response = 0.42;
+        _heightSpring.DampingFraction = 0.80;
+        _heightSpring.AnimateTo(NotchConstants.OpenHeight, _currentHeight);
     }
 
     /// <summary>
@@ -202,7 +230,8 @@ public partial class NotchWindow : Window
         double padding = NotchConstants.WindowPadding;
         double maxOpenWidth = Math.Max(NotchConstants.OpenWidth, NotchConstants.OpenWidthWithCalendar);
         _fixedWindowWidth = maxOpenWidth + padding * 2;
-        _fixedWindowHeight = NotchConstants.OpenHeight + padding + 10;
+        double maxHeight = Math.Max(NotchConstants.OpenHeight, NotchConstants.OpenSettingsHeight);
+        _fixedWindowHeight = maxHeight + padding + 10;
 
         var screenBounds = ScreenHelper.GetPrimaryScreenBounds(this);
 
@@ -344,6 +373,14 @@ public partial class NotchWindow : Window
     private void TransitionToClose()
     {
         if (_vm.NotchState == NotchState.Closed) return;
+
+        // Collapse settings if open
+        if (_isSettingsExpanded)
+        {
+            _isSettingsExpanded = false;
+            InlineSettings.Visibility = Visibility.Collapsed;
+        }
+
         _vm.Close();
 
         _widthSpring.Response = 0.45;

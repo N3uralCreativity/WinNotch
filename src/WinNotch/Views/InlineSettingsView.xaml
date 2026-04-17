@@ -1,0 +1,149 @@
+<UserControl x:Class="WinNotch.Views.InlineSettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Components/ToggleSwitchStyle.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <Style x:Key="SectionHeader" TargetType="TextBlock">
+                <Setter Property="Foreground" Value="#888888"/>
+                <Setter Property="FontSize" Value="10"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="Margin" Value="0,8,0,4"/>
+            </Style>
+            <Style x:Key="SettingLabel" TargetType="TextBlock">
+                <Setter Property="Foreground" Value="#B0B0B0"/>
+                <Setter Property="FontSize" Value="12"/>
+                <Setter Property="VerticalAlignment" Value="Center"/>
+            </Style>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header: back arrow + "Settings" title -->
+        <Grid Grid.Row="0" Margin="0,0,0,4">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Button x:Name="BackButton" Click="OnBackClick"
+                        Background="Transparent" BorderThickness="0"
+                        Foreground="#888888" FontSize="14" Cursor="Hand"
+                        Width="24" Height="24" Padding="0"
+                        VerticalAlignment="Center" ToolTip="Back">
+                    <TextBlock Text="←" FontSize="14"/>
+                </Button>
+                <TextBlock Text="Settings" Foreground="White"
+                           FontSize="14" FontWeight="SemiBold"
+                           VerticalAlignment="Center" Margin="4,0,0,0"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Scrollable settings in a compact two-column layout -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="2,0,2,0">
+
+                <!-- General -->
+                <TextBlock Text="GENERAL" Style="{StaticResource SectionHeader}"/>
+
+                <Grid Height="28" Margin="0,2">
+                    <TextBlock Text="Start on boot" Style="{StaticResource SettingLabel}"/>
+                    <CheckBox x:Name="StartOnBootCheck" Style="{StaticResource ToggleSwitch}"
+                              HorizontalAlignment="Right" VerticalAlignment="Center"
+                              Checked="OnSettingChanged" Unchecked="OnSettingChanged"/>
+                </Grid>
+
+                <!-- Hover mode -->
+                <TextBlock Text="Hover behavior" Foreground="#666666" FontSize="10" Margin="0,4,0,2"/>
+                <Grid Height="24">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <RadioButton x:Name="HoverPeekRadio" Content="Peek + Click"
+                                 Grid.Column="0" Foreground="#AAAAAA" FontSize="10"
+                                 VerticalAlignment="Center"
+                                 Checked="OnHoverModeChanged"/>
+                    <RadioButton x:Name="LongHoverRadio" Content="Long hover"
+                                 Grid.Column="1" Foreground="#AAAAAA" FontSize="10"
+                                 VerticalAlignment="Center"
+                                 Checked="OnHoverModeChanged"/>
+                </Grid>
+
+                <!-- Appearance -->
+                <TextBlock Text="APPEARANCE" Style="{StaticResource SectionHeader}"/>
+
+                <Grid Height="28" Margin="0,2">
+                    <TextBlock Text="Show shadow" Style="{StaticResource SettingLabel}"/>
+                    <CheckBox x:Name="ShowShadowCheck" Style="{StaticResource ToggleSwitch}"
+                              HorizontalAlignment="Right" VerticalAlignment="Center"
+                              Checked="OnSettingChanged" Unchecked="OnSettingChanged"/>
+                </Grid>
+
+                <!-- Music -->
+                <TextBlock Text="MUSIC" Style="{StaticResource SectionHeader}"/>
+
+                <Grid Height="28" Margin="0,2">
+                    <TextBlock Text="Music controls" Style="{StaticResource SettingLabel}"/>
+                    <CheckBox x:Name="ShowMusicCheck" Style="{StaticResource ToggleSwitch}"
+                              HorizontalAlignment="Right" VerticalAlignment="Center"
+                              Checked="OnSettingChanged" Unchecked="OnSettingChanged"/>
+                </Grid>
+
+                <Grid Height="28" Margin="0,2">
+                    <TextBlock Text="Audio visualizer" Style="{StaticResource SettingLabel}"/>
+                    <CheckBox x:Name="ShowVisualizerCheck" Style="{StaticResource ToggleSwitch}"
+                              HorizontalAlignment="Right" VerticalAlignment="Center"
+                              Checked="OnSettingChanged" Unchecked="OnSettingChanged"/>
+                </Grid>
+
+                <!-- System HUD -->
+                <TextBlock Text="SYSTEM HUD" Style="{StaticResource SectionHeader}"/>
+
+                <Grid Height="28" Margin="0,2">
+                    <TextBlock Text="Volume HUD" Style="{StaticResource SettingLabel}"/>
+                    <CheckBox x:Name="VolumeHudCheck" Style="{StaticResource ToggleSwitch}"
+                              HorizontalAlignment="Right" VerticalAlignment="Center"
+                              Checked="OnSettingChanged" Unchecked="OnSettingChanged"/>
+                </Grid>
+
+                <Grid Height="28" Margin="0,2">
+                    <TextBlock Text="Brightness HUD" Style="{StaticResource SettingLabel}"/>
+                    <CheckBox x:Name="BrightnessHudCheck" Style="{StaticResource ToggleSwitch}"
+                              HorizontalAlignment="Right" VerticalAlignment="Center"
+                              Checked="OnSettingChanged" Unchecked="OnSettingChanged"/>
+                </Grid>
+
+                <!-- Battery & Calendar -->
+                <TextBlock Text="WIDGETS" Style="{StaticResource SectionHeader}"/>
+
+                <Grid Height="28" Margin="0,2">
+                    <TextBlock Text="Battery indicator" Style="{StaticResource SettingLabel}"/>
+                    <CheckBox x:Name="ShowBatteryCheck" Style="{StaticResource ToggleSwitch}"
+                              HorizontalAlignment="Right" VerticalAlignment="Center"
+                              Checked="OnSettingChanged" Unchecked="OnSettingChanged"/>
+                </Grid>
+
+                <Grid Height="28" Margin="0,2">
+                    <TextBlock Text="Calendar panel" Style="{StaticResource SettingLabel}"/>
+                    <CheckBox x:Name="ShowCalendarCheck" Style="{StaticResource ToggleSwitch}"
+                              HorizontalAlignment="Right" VerticalAlignment="Center"
+                              Checked="OnSettingChanged" Unchecked="OnSettingChanged"/>
+                </Grid>
+
+                <!-- About -->
+                <TextBlock Text="ABOUT" Style="{StaticResource SectionHeader}"/>
+                <TextBlock Foreground="#555555" FontSize="10" Text="WinNotch v0.1" Margin="0,0,0,2"/>
+                <TextBlock Foreground="#444444" FontSize="9" Text="Inspired by boring.notch for macOS"
+                           Margin="0,0,0,8"/>
+
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>
