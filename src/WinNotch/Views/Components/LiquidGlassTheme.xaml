@@ -2,61 +2,61 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!-- ═══ Liquid Glass Theme (iOS-inspired) ═══ -->
-    <!-- Ultra-transparent with frosted glass effect, vibrant colors with subtle tints -->
+    <!-- Ultra-transparent frosted glass effect with vibrant clarity, mimicking iOS liquid glass material -->
 
-    <!-- Notch - Highly transparent with subtle tint -->
-    <SolidColorBrush x:Key="NotchFillBrush" Color="#18FFFFFF" Opacity="0.15"/>
-    <SolidColorBrush x:Key="NotchShadowBrush" Color="#30000000"/>
+    <!-- Notch - Extremely transparent with subtle white tint for glass effect -->
+    <SolidColorBrush x:Key="NotchFillBrush" Color="#12FFFFFF"/>
+    <SolidColorBrush x:Key="NotchShadowBrush" Color="#25000000"/>
 
-    <!-- Text hierarchy - Very light and crisp like iOS -->
+    <!-- Text hierarchy - Crisp white with excellent contrast like iOS -->
     <SolidColorBrush x:Key="TextPrimaryBrush" Color="#FFFFFF"/>
-    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#F0F0F0"/>
-    <SolidColorBrush x:Key="TextTertiaryBrush" Color="#E5E5E5"/>
-    <SolidColorBrush x:Key="TextMutedBrush" Color="#D0D0D0"/>
-    <SolidColorBrush x:Key="TextDimBrush" Color="#C0C0C0"/>
-    <SolidColorBrush x:Key="TextSubtleBrush" Color="#B0B0B0"/>
-    <SolidColorBrush x:Key="TextFaintBrush" Color="#A0A0A0"/>
-    <SolidColorBrush x:Key="TextFaintestBrush" Color="#909090"/>
-    <SolidColorBrush x:Key="SettingLabelBrush" Color="#E8E8E8"/>
-    <SolidColorBrush x:Key="BatteryTextBrush" Color="#D5D5D5"/>
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#F5F5F5"/>
+    <SolidColorBrush x:Key="TextTertiaryBrush" Color="#EBEBEB"/>
+    <SolidColorBrush x:Key="TextMutedBrush" Color="#D8D8D8"/>
+    <SolidColorBrush x:Key="TextDimBrush" Color="#CACACA"/>
+    <SolidColorBrush x:Key="TextSubtleBrush" Color="#BABABA"/>
+    <SolidColorBrush x:Key="TextFaintBrush" Color="#AAAAAA"/>
+    <SolidColorBrush x:Key="TextFaintestBrush" Color="#999999"/>
+    <SolidColorBrush x:Key="SettingLabelBrush" Color="#F0F0F0"/>
+    <SolidColorBrush x:Key="BatteryTextBrush" Color="#E0E0E0"/>
 
-    <!-- Surfaces - Translucent glass-like layers -->
-    <SolidColorBrush x:Key="SeparatorBrush" Color="#25FFFFFF"/>
-    <SolidColorBrush x:Key="ProgressTrackBrush" Color="#30FFFFFF"/>
+    <!-- Surfaces - Ultra-translucent layered glass -->
+    <SolidColorBrush x:Key="SeparatorBrush" Color="#20FFFFFF"/>
+    <SolidColorBrush x:Key="ProgressTrackBrush" Color="#28FFFFFF"/>
     <SolidColorBrush x:Key="ProgressFillBrush" Color="#FFFFFF"/>
-    <SolidColorBrush x:Key="SegmentedBgBrush" Color="#20FFFFFF"/>
-    <SolidColorBrush x:Key="SegmentedCheckedBgBrush" Color="#40FFFFFF"/>
+    <SolidColorBrush x:Key="SegmentedBgBrush" Color="#18FFFFFF"/>
+    <SolidColorBrush x:Key="SegmentedCheckedBgBrush" Color="#35FFFFFF"/>
 
-    <!-- Toggle switch - Vibrant iOS-style -->
-    <SolidColorBrush x:Key="ToggleTrackOffBrush" Color="#35FFFFFF"/>
+    <!-- Toggle switch - Clean iOS-style with glass material -->
+    <SolidColorBrush x:Key="ToggleTrackOffBrush" Color="#30FFFFFF"/>
     <SolidColorBrush x:Key="ToggleThumbBrush" Color="#FFFFFF"/>
 
-    <!-- Segmented radio text -->
-    <SolidColorBrush x:Key="SegmentedTextBrush" Color="#B0B0B0"/>
-    <SolidColorBrush x:Key="SegmentedHoverBgBrush" Color="#30FFFFFF"/>
-    <SolidColorBrush x:Key="SegmentedHoverTextBrush" Color="#E0E0E0"/>
+    <!-- Segmented radio - Glass layers with high clarity -->
+    <SolidColorBrush x:Key="SegmentedTextBrush" Color="#C0C0C0"/>
+    <SolidColorBrush x:Key="SegmentedHoverBgBrush" Color="#28FFFFFF"/>
+    <SolidColorBrush x:Key="SegmentedHoverTextBrush" Color="#E8E8E8"/>
     <SolidColorBrush x:Key="SegmentedCheckedTextBrush" Color="#FFFFFF"/>
 
-    <!-- Overlays / hover - Subtle glass-like interaction -->
-    <SolidColorBrush x:Key="TransportHoverBrush" Color="#30FFFFFF"/>
-    <SolidColorBrush x:Key="TransportPressedBrush" Color="#45FFFFFF"/>
-    <SolidColorBrush x:Key="HoverOverlayBrush" Color="#20FFFFFF"/>
-    <SolidColorBrush x:Key="PressedOverlayBrush" Color="#35FFFFFF"/>
+    <!-- Overlays / hover - Subtle glass-like interaction states -->
+    <SolidColorBrush x:Key="TransportHoverBrush" Color="#28FFFFFF"/>
+    <SolidColorBrush x:Key="TransportPressedBrush" Color="#40FFFFFF"/>
+    <SolidColorBrush x:Key="HoverOverlayBrush" Color="#18FFFFFF"/>
+    <SolidColorBrush x:Key="PressedOverlayBrush" Color="#30FFFFFF"/>
 
-    <!-- Scrollbar - Subtle and translucent -->
-    <SolidColorBrush x:Key="ScrollThumbBrush" Color="#40FFFFFF"/>
-    <SolidColorBrush x:Key="ScrollThumbHoverBrush" Color="#55FFFFFF"/>
-    <SolidColorBrush x:Key="ScrollThumbDragBrush" Color="#70FFFFFF"/>
+    <!-- Scrollbar - Translucent and minimal -->
+    <SolidColorBrush x:Key="ScrollThumbBrush" Color="#38FFFFFF"/>
+    <SolidColorBrush x:Key="ScrollThumbHoverBrush" Color="#50FFFFFF"/>
+    <SolidColorBrush x:Key="ScrollThumbDragBrush" Color="#68FFFFFF"/>
 
-    <!-- Battery - Clean and minimal -->
-    <SolidColorBrush x:Key="BatteryBorderBrush" Color="#C0C0C0"/>
+    <!-- Battery - Bright and clear with glass clarity -->
+    <SolidColorBrush x:Key="BatteryBorderBrush" Color="#D0D0D0"/>
     <SolidColorBrush x:Key="BatteryNormalFillBrush" Color="#FFFFFF"/>
 
-    <!-- HUD - Bright and clear -->
+    <!-- HUD - Vibrant white for maximum visibility through glass -->
     <SolidColorBrush x:Key="HudIconBrush" Color="#FFFFFF"/>
     <SolidColorBrush x:Key="HudSliderFillBrush" Color="#FFFFFF"/>
 
-    <!-- Audio visualizer - Vibrant white -->
+    <!-- Audio visualizer - Pure white for liquid glass aesthetic -->
     <Color x:Key="VisualizerBarColor">#FFFFFF</Color>
 
 </ResourceDictionary>
