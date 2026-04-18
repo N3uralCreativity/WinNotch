@@ -32,7 +32,7 @@ public partial class HudOverlay : UserControl
         UpdateLayout();
     }
 
-    private void UpdateLayout()
+    private new void UpdateLayout()
     {
         // For vertical docks, we need to adjust the slider to be vertical
         // The slider fill alignment changes: horizontal uses Left, vertical uses Bottom
@@ -41,26 +41,26 @@ public partial class HudOverlay : UserControl
             // Vertical orientation - slider fills from bottom to top
             SliderTrack.Width = 4;
             SliderTrack.Height = double.NaN; // Auto height
-            SliderTrack.HorizontalAlignment = HorizontalAlignment.Center;
-            SliderTrack.VerticalAlignment = VerticalAlignment.Stretch;
+            SliderTrack.HorizontalAlignment = System.Windows.HorizontalAlignment.Center;
+            SliderTrack.VerticalAlignment = System.Windows.VerticalAlignment.Stretch;
 
             SliderFill.Width = 4;
             SliderFill.Height = double.NaN; // Will be set programmatically
-            SliderFill.HorizontalAlignment = HorizontalAlignment.Stretch;
-            SliderFill.VerticalAlignment = VerticalAlignment.Bottom;
+            SliderFill.HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch;
+            SliderFill.VerticalAlignment = System.Windows.VerticalAlignment.Bottom;
         }
         else
         {
             // Horizontal orientation - slider fills from left to right
             SliderTrack.Width = double.NaN; // Auto width
             SliderTrack.Height = 4;
-            SliderTrack.HorizontalAlignment = HorizontalAlignment.Stretch;
-            SliderTrack.VerticalAlignment = VerticalAlignment.Center;
+            SliderTrack.HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch;
+            SliderTrack.VerticalAlignment = System.Windows.VerticalAlignment.Center;
 
             SliderFill.Width = double.NaN; // Will be set programmatically
             SliderFill.Height = 4;
-            SliderFill.HorizontalAlignment = HorizontalAlignment.Left;
-            SliderFill.VerticalAlignment = VerticalAlignment.Stretch;
+            SliderFill.HorizontalAlignment = System.Windows.HorizontalAlignment.Left;
+            SliderFill.VerticalAlignment = System.Windows.VerticalAlignment.Stretch;
         }
     }
 
