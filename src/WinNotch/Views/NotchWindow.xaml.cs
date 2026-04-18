@@ -380,27 +380,9 @@ public partial class NotchWindow : Window
 
     private void OnSideSettingsClick(object sender, RoutedEventArgs e)
     {
-        // Switch to top dock, open, and show settings
-        if (_dock != NotchDock.Top)
-        {
-            // First close visually, then dock, then open with settings
-            _vm.Close();
-            _dock = NotchDock.Top;
-            RepositionForDock();
-
-            // Switch content panels
-            ClosedContent.Visibility = Visibility.Visible;
-            OpenContent.Visibility = Visibility.Visible;
-            VerticalClosedContent.Visibility = Visibility.Collapsed;
-            VerticalOpenContent.Visibility = Visibility.Collapsed;
-
-            // Snap to closed dimensions so open animation starts from correct size
-            _currentWidth = NotchConstants.ClosedWidth;
-            _currentHeight = NotchConstants.ClosedHeight;
-            _currentContentOpacity = 0;
-        }
-        TransitionToOpen();
-        ExpandSettings();
+        // In vertical view, open the full settings window instead of inline settings
+        // (inline settings don't work well in the narrow vertical layout)
+        OpenSettingsWindow();
     }
 
     #endregion
@@ -449,6 +431,13 @@ public partial class NotchWindow : Window
         _heightSpring.Response = 0.42;
         _heightSpring.DampingFraction = 0.80;
         _heightSpring.AnimateTo(targetH, _currentHeight);
+    }
+
+    private void OpenSettingsWindow()
+    {
+        var settingsWindow = new SettingsWindow(_settings);
+        settingsWindow.SettingsChanged += s => ApplySettings(s);
+        settingsWindow.Show();
     }
 
     /// <summary>

@@ -232,7 +232,8 @@
                     <Button Click="OnSideSettingsClick"
                             Style="{StaticResource IconButton}"
                             Width="24" Height="24"
-                            HorizontalAlignment="Center" ToolTip="Settings">
+                            HorizontalAlignment="Center" ToolTip="Settings"
+                            Margin="0,0,0,8">
                         <TextBlock Text="⚙" FontSize="13"
                                    Foreground="{DynamicResource TextSubtleBrush}"/>
                     </Button>
