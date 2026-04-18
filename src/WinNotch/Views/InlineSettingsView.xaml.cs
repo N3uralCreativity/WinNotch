@@ -37,6 +37,8 @@ public partial class InlineSettingsView : System.Windows.Controls.UserControl
         ShowBatteryCheck.IsChecked = settings.ShowBattery;
         ShowCalendarCheck.IsChecked = settings.ShowCalendar;
         ShowWebcamCheck.IsChecked = settings.ShowWebcam;
+        WebcamFpsSlider.Value = settings.WebcamFps;
+        WebcamFpsLabel.Text = $"{settings.WebcamFps}";
 
         if (settings.HoverMode == HoverMode.LongHoverOpen)
             LongHoverRadio.IsChecked = true;
@@ -83,6 +85,21 @@ public partial class InlineSettingsView : System.Windows.Controls.UserControl
 
         _settings.Save();
         SettingsChanged?.Invoke(_settings);
+    }
+
+    private void OnWebcamFpsChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (_isLoading || _settings == null) return;
+        _settings.WebcamFps = (int)e.NewValue;
+        WebcamFpsLabel.Text = $"{_settings.WebcamFps}";
+        _settings.Save();
+        SettingsChanged?.Invoke(_settings);
+    }
+
+    public void UpdateWebcamFpsMax(double maxFps)
+    {
+        if (maxFps > 5)
+            WebcamFpsSlider.Maximum = Math.Min(maxFps, 60);
     }
 
     private void OnBackClick(object sender, RoutedEventArgs e)

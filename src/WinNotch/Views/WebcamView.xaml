@@ -3,22 +3,21 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!-- Circular webcam mirror, mirrored horizontally like a real mirror -->
-    <Grid Width="130" Height="130">
-        <Border x:Name="WebcamBorder"
-                CornerRadius="65"
-                ClipToBounds="True"
-                Background="{DynamicResource NotchFillBrush}">
-            <Image x:Name="WebcamImage"
-                   Stretch="UniformToFill"
-                   RenderOptions.BitmapScalingMode="LowQuality">
-                <Image.RenderTransform>
-                    <ScaleTransform ScaleX="-1" CenterX="65"/>
-                </Image.RenderTransform>
-            </Image>
-        </Border>
+    <Grid Width="110" Height="110">
+        <Grid.Clip>
+            <EllipseGeometry Center="55,55" RadiusX="55" RadiusY="55"/>
+        </Grid.Clip>
+
+        <Image x:Name="WebcamImage"
+               Stretch="UniformToFill"
+               RenderOptions.BitmapScalingMode="LowQuality">
+            <Image.RenderTransform>
+                <ScaleTransform ScaleX="-1" CenterX="55"/>
+            </Image.RenderTransform>
+        </Image>
 
         <!-- Subtle inner border ring -->
-        <Border CornerRadius="65"
+        <Border CornerRadius="55"
                 BorderThickness="1.5"
                 BorderBrush="{DynamicResource SeparatorBrush}"
                 IsHitTestVisible="False"/>

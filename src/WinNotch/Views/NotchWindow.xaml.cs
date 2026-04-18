@@ -44,6 +44,16 @@ public partial class NotchWindow : Window
     private bool _isSettingsExpanded;
     private bool _isContextMenuOpen;
 
+    // Drag & Dock
+    private NotchDock _dock = NotchDock.Top;
+    private bool _isDragging;
+    private bool _isMouseDownOnNotch;
+    private Point _dragStartScreen;
+    private Point _dragLastScreen;
+    private DateTime _dragLastTime;
+    private double _dragVelocityX;
+    private double _dragVelocityY;
+
     // Services
     private readonly MediaService _mediaService;
     private readonly AudioCaptureService _audioCaptureService;
@@ -123,14 +133,18 @@ public partial class NotchWindow : Window
         // Mouse events on the notch path
         NotchPath.MouseEnter += OnNotchMouseEnter;
         NotchPath.MouseLeave += OnNotchMouseLeave;
-        NotchPath.MouseLeftButtonDown += OnNotchClick;
+        NotchPath.MouseLeftButtonDown += OnNotchMouseDown;
+        NotchPath.MouseLeftButtonUp += OnNotchMouseUp;
+        NotchPath.MouseMove += OnNotchMouseMove;
 
         // Also track mouse on content grid (so hovering content keeps it open)
         ContentGrid.MouseEnter += OnNotchMouseEnter;
         ContentGrid.MouseLeave += OnNotchMouseLeave;
 
-        // Click anywhere on closed/peeking content to open
-        ContentGrid.PreviewMouseLeftButtonDown += OnContentGridClick;
+        // Drag + click from content area (so vertical time label etc. are draggable)
+        ContentGrid.PreviewMouseLeftButtonDown += OnNotchMouseDown;
+        ContentGrid.PreviewMouseMove += OnContentGridMouseMove;
+        ContentGrid.PreviewMouseLeftButtonUp += OnContentGridMouseUp;
 
         // Scroll on notch changes volume (Preview to catch before children)
         RootGrid.PreviewMouseWheel += OnNotchMouseWheel;
@@ -193,11 +207,26 @@ public partial class NotchWindow : Window
         _shelfService.ShelfChanged += () => Dispatcher.Invoke(UpdateShelfVisibility);
 
         // Webcam mirror
+        _webcamService.SetTargetFps(_settings.WebcamFps);
         if (_settings.ShowWebcam)
         {
             WebcamPanel.Visibility = Visibility.Visible;
             WebcamMirror.Bind(_webcamService);
         }
+
+        // Vertical side panel: wire media + clock
+        _mediaService.MediaInfo.PropertyChanged += (_, e) =>
+        {
+            Dispatcher.Invoke(() => UpdateSideMediaContent(_mediaService.MediaInfo, e.PropertyName));
+        };
+        _mediaService.SessionChanged += () =>
+        {
+            Dispatcher.Invoke(() => UpdateSideMediaContent(_mediaService.MediaInfo, null));
+        };
+        var sideClockTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(10) };
+        sideClockTimer.Tick += (_, _) => UpdateSideClock();
+        sideClockTimer.Start();
+        UpdateSideClock();
 
         // Fullscreen detection — hide notch when another app is fullscreen
         _fullscreenService.FullscreenChanged += isFs =>
@@ -249,6 +278,50 @@ public partial class NotchWindow : Window
         LiveActivity.Visibility = hasMusic ? Visibility.Visible : Visibility.Collapsed;
         ClockWidget.Visibility = hasMusic ? Visibility.Collapsed : Visibility.Visible;
     }
+
+    #region Vertical Side Content
+
+    private void UpdateSideClock()
+    {
+        var now = DateTime.Now;
+        SideTimeText.Text = now.ToString("HH:mm");
+        SideDateText.Text = now.ToString("ddd d", System.Globalization.CultureInfo.CurrentCulture);
+        SideTimeSmall.Text = now.ToString("HH:mm");
+    }
+
+    private void UpdateSideMediaContent(MediaInfo info, string? prop)
+    {
+        if (prop == null || prop == nameof(info.Title))
+            SideSongTitle.Text = info.Title;
+        if (prop == null || prop == nameof(info.Artist))
+            SideArtistName.Text = info.Artist;
+        if (prop == null || prop == nameof(info.AlbumArt))
+            SideAlbumArt.Source = info.AlbumArt;
+        if (prop == null || prop == nameof(info.IsPlaying))
+            SidePlayIcon.Text = info.IsPlaying ? "⏸" : "▶";
+        if (prop == null || prop == nameof(info.HasMedia))
+            SideMusicPanel.Visibility = info.HasMedia ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private async void OnSidePlayClick(object sender, RoutedEventArgs e) =>
+        await _mediaService.PlayPauseAsync();
+
+    private async void OnSidePrevClick(object sender, RoutedEventArgs e) =>
+        await _mediaService.PreviousAsync();
+
+    private async void OnSideNextClick(object sender, RoutedEventArgs e) =>
+        await _mediaService.NextAsync();
+
+    private void OnSideSettingsClick(object sender, RoutedEventArgs e)
+    {
+        // Switch to top dock and open settings
+        if (_dock != NotchDock.Top)
+            DockTo(NotchDock.Top);
+        TransitionToOpen();
+        ExpandSettings();
+    }
+
+    #endregion
 
     public void OpenSettings()
     {
@@ -375,14 +448,57 @@ public partial class NotchWindow : Window
 
         // Generate notch geometry
         var rect = new Rect(0, 0, w, h);
-        var geometry = NotchShape.CreateNotchGeometry(rect, topR, bottomR);
+        Geometry geometry;
+
+        if (_isDragging)
+            geometry = NotchShape.CreateNotchGeometry(rect, topR, bottomR);
+        else if (_dock == NotchDock.Left)
+            geometry = NotchShape.CreateSideNotchGeometry(rect, topR, bottomR, isLeft: true);
+        else if (_dock == NotchDock.Right)
+            geometry = NotchShape.CreateSideNotchGeometry(rect, topR, bottomR, isLeft: false);
+        else
+            geometry = NotchShape.CreateNotchGeometry(rect, topR, bottomR);
 
         NotchPath.Data = geometry;
         ShadowPath.Data = geometry;
 
-        // Center the notch horizontally within the fixed-size window
-        double offsetX = (_fixedWindowWidth - w) / 2;
-        double offsetY = 0; // Notch anchored at top edge
+        double windowW = ActualWidth > 0 ? ActualWidth : Width;
+        double windowH = ActualHeight > 0 ? ActualHeight : Height;
+
+        double offsetX, offsetY;
+
+        if (_isDragging)
+        {
+            // During drag: center pill in window, resize window to fit pill
+            Width = w;
+            Height = h;
+            windowW = w;
+            windowH = h;
+            offsetX = 0;
+            offsetY = 0;
+
+            // Keep window centered on cursor
+            var cursorPos = System.Windows.Forms.Cursor.Position;
+            var dpi = ScreenHelper.GetDpiScale(this);
+            Left = cursorPos.X / dpi - w / 2;
+            Top = cursorPos.Y / dpi - h / 2;
+        }
+        else if (_dock == NotchDock.Left)
+        {
+            offsetX = 0; // Anchored to left edge
+            offsetY = (windowH - h) / 2;
+        }
+        else if (_dock == NotchDock.Right)
+        {
+            offsetX = windowW - w; // Anchored to right edge
+            offsetY = (windowH - h) / 2;
+        }
+        else
+        {
+            // Top dock: centered horizontally at top
+            offsetX = (windowW - w) / 2;
+            offsetY = 0;
+        }
 
         System.Windows.Controls.Canvas.SetLeft(NotchPath, offsetX);
         System.Windows.Controls.Canvas.SetTop(NotchPath, offsetY);
@@ -393,23 +509,54 @@ public partial class NotchWindow : Window
         ShadowPath.Opacity = _currentShadowOpacity;
 
         // Content grid: positioned inside the notch shape (inset from corners)
-        double contentLeft = offsetX + topR + bottomR;
-        double contentTop = offsetY + topR;
-        double contentWidth = Math.Max(0, w - (topR + bottomR) * 2);
-        double contentHeight = Math.Max(0, h - topR - bottomR);
+        double contentLeft, contentTop, contentWidth, contentHeight;
+
+        if (_dock == NotchDock.Left)
+        {
+            contentLeft = offsetX + topR;
+            contentTop = offsetY + topR + bottomR;
+            contentWidth = Math.Max(0, w - topR);
+            contentHeight = Math.Max(0, h - 2 * (topR + bottomR));
+        }
+        else if (_dock == NotchDock.Right)
+        {
+            contentLeft = offsetX;
+            contentTop = offsetY + topR + bottomR;
+            contentWidth = Math.Max(0, w - topR);
+            contentHeight = Math.Max(0, h - 2 * (topR + bottomR));
+        }
+        else
+        {
+            contentLeft = offsetX + topR + bottomR;
+            contentTop = offsetY + topR;
+            contentWidth = Math.Max(0, w - (topR + bottomR) * 2);
+            contentHeight = Math.Max(0, h - topR - bottomR);
+        }
 
         System.Windows.Controls.Canvas.SetLeft(ContentGrid, contentLeft);
         System.Windows.Controls.Canvas.SetTop(ContentGrid, contentTop);
         ContentGrid.Width = contentWidth;
         ContentGrid.Height = contentHeight;
 
-        // Content opacity
-        OpenContent.Opacity = _currentContentOpacity;
-        ClosedContent.Opacity = 1.0 - _currentContentOpacity;
+        // Content opacity — switch between horizontal and vertical panels
+        if (_dock != NotchDock.Top)
+        {
+            VerticalOpenContent.Opacity = _currentContentOpacity;
+            VerticalClosedContent.Opacity = 1.0 - _currentContentOpacity;
+            OpenContent.Opacity = 0;
+            ClosedContent.Opacity = 0;
+        }
+        else
+        {
+            OpenContent.Opacity = _currentContentOpacity;
+            ClosedContent.Opacity = 1.0 - _currentContentOpacity;
+            VerticalOpenContent.Opacity = 0;
+            VerticalClosedContent.Opacity = 0;
+        }
 
-        // Canvas covers the full fixed window
-        NotchCanvas.Width = _fixedWindowWidth;
-        NotchCanvas.Height = _fixedWindowHeight;
+        // Canvas covers the full window
+        NotchCanvas.Width = windowW;
+        NotchCanvas.Height = windowH;
     }
 
     #endregion
@@ -426,14 +573,26 @@ public partial class NotchWindow : Window
         _heightSpring.Response = 0.42;
         _heightSpring.DampingFraction = 0.80;
 
-        double openW = GetOpenWidth();
+        if (_dock == NotchDock.Top)
+        {
+            double openW = GetOpenWidth();
+            double openH = _shelfService.HasItems
+                ? NotchConstants.OpenHeightWithShelf
+                : NotchConstants.OpenHeight;
 
-        double openH = _shelfService.HasItems
-            ? NotchConstants.OpenHeightWithShelf
-            : NotchConstants.OpenHeight;
+            _widthSpring.AnimateTo(openW, _currentWidth);
+            _heightSpring.AnimateTo(openH, _currentHeight);
+        }
+        else
+        {
+            // Side dock: width = protrusion from edge, height = tall axis
+            double openW = NotchConstants.SideOpenWidth;
+            double openH = NotchConstants.SideOpenHeight;
 
-        _widthSpring.AnimateTo(openW, _currentWidth);
-        _heightSpring.AnimateTo(openH, _currentHeight);
+            _widthSpring.AnimateTo(openW, _currentWidth);
+            _heightSpring.AnimateTo(openH, _currentHeight);
+        }
+
         _topRadiusSpring.AnimateTo(NotchConstants.OpenTopRadius, _currentTopRadius);
         _bottomRadiusSpring.AnimateTo(NotchConstants.OpenBottomRadius, _currentBottomRadius);
         _shadowOpacitySpring.AnimateTo(0.7, _currentShadowOpacity);
@@ -450,8 +609,16 @@ public partial class NotchWindow : Window
         _heightSpring.Response = 0.30;
         _heightSpring.DampingFraction = 0.90;
 
-        _widthSpring.AnimateTo(NotchConstants.PeekWidth, _currentWidth);
-        _heightSpring.AnimateTo(NotchConstants.PeekHeight, _currentHeight);
+        if (_dock == NotchDock.Top)
+        {
+            _widthSpring.AnimateTo(NotchConstants.PeekWidth, _currentWidth);
+            _heightSpring.AnimateTo(NotchConstants.PeekHeight, _currentHeight);
+        }
+        else
+        {
+            _widthSpring.AnimateTo(NotchConstants.PeekHeight, _currentWidth);
+            _heightSpring.AnimateTo(NotchConstants.PeekWidth, _currentHeight);
+        }
     }
 
     private void TransitionToClose()
@@ -472,8 +639,18 @@ public partial class NotchWindow : Window
         _heightSpring.Response = 0.45;
         _heightSpring.DampingFraction = 1.0;
 
-        _widthSpring.AnimateTo(NotchConstants.ClosedWidth, _currentWidth);
-        _heightSpring.AnimateTo(NotchConstants.ClosedHeight, _currentHeight);
+        if (_dock == NotchDock.Top)
+        {
+            _widthSpring.AnimateTo(NotchConstants.ClosedWidth, _currentWidth);
+            _heightSpring.AnimateTo(NotchConstants.ClosedHeight, _currentHeight);
+        }
+        else
+        {
+            // Side: narrow width, tall height
+            _widthSpring.AnimateTo(NotchConstants.ClosedHeight, _currentWidth);
+            _heightSpring.AnimateTo(NotchConstants.ClosedWidth, _currentHeight);
+        }
+
         _topRadiusSpring.AnimateTo(NotchConstants.ClosedTopRadius, _currentTopRadius);
         _bottomRadiusSpring.AnimateTo(NotchConstants.ClosedBottomRadius, _currentBottomRadius);
         _shadowOpacitySpring.AnimateTo(0.0, _currentShadowOpacity);
@@ -486,6 +663,7 @@ public partial class NotchWindow : Window
 
     private void OnNotchMouseEnter(object sender, MouseEventArgs e)
     {
+        if (_isDragging || _isMouseDownOnNotch) return;
         _isMouseOverNotch = true;
         _hoverCloseTimer?.Stop();
 
@@ -503,6 +681,7 @@ public partial class NotchWindow : Window
                 _hoverOpenTimer.Tick += (_, _) =>
                 {
                     _hoverOpenTimer!.Stop();
+                    if (_isDragging || _isMouseDownOnNotch) return;
                     if (_isMouseOverNotch && _vm.NotchState == NotchState.Closed)
                         TransitionToPeek();
                 };
@@ -518,6 +697,7 @@ public partial class NotchWindow : Window
                 _hoverOpenTimer.Tick += (_, _) =>
                 {
                     _hoverOpenTimer!.Stop();
+                    if (_isDragging || _isMouseDownOnNotch) return;
                     if (_isMouseOverNotch)
                         TransitionToOpen();
                 };
@@ -528,6 +708,7 @@ public partial class NotchWindow : Window
 
     private void OnNotchMouseLeave(object sender, MouseEventArgs e)
     {
+        if (_isDragging) return;
         _isMouseOverNotch = false;
         _hoverOpenTimer?.Stop();
 
@@ -552,20 +733,253 @@ public partial class NotchWindow : Window
         }
     }
 
-    private void OnNotchClick(object sender, MouseButtonEventArgs e)
+    private void OnNotchMouseDown(object sender, MouseButtonEventArgs e)
     {
-        if (_vm.NotchState == NotchState.Closed || _vm.NotchState == NotchState.Peeking)
-            TransitionToOpen();
+        // Don't capture for drag when open — let buttons/controls work normally
+        if (_vm.NotchState == NotchState.Open && sender != NotchPath) return;
+
+        var cursorPos = System.Windows.Forms.Cursor.Position;
+        _dragStartScreen = new Point(cursorPos.X, cursorPos.Y);
+        _dragLastScreen = _dragStartScreen;
+        _dragLastTime = DateTime.UtcNow;
+        _dragVelocityX = 0;
+        _dragVelocityY = 0;
+        _isDragging = false;
+        _isMouseDownOnNotch = true;
+
+        // Suppress hover timers while mouse is down
+        _hoverOpenTimer?.Stop();
+
+        NotchPath.CaptureMouse();
     }
 
-    private void OnContentGridClick(object sender, MouseButtonEventArgs e)
+    private void OnNotchMouseMove(object sender, MouseEventArgs e)
     {
-        // In closed/peeking state, clicking anywhere on the content should open
-        if (_vm.NotchState == NotchState.Closed || _vm.NotchState == NotchState.Peeking)
+        if (!_isMouseDownOnNotch && !_isDragging) return;
+        if (e.LeftButton != System.Windows.Input.MouseButtonState.Pressed) return;
+
+        // Use raw cursor position to avoid drift from window movement
+        var cursorPos = System.Windows.Forms.Cursor.Position;
+        var currentScreen = new Point(cursorPos.X, cursorPos.Y);
+
+        // Check drag threshold
+        if (_isMouseDownOnNotch && !_isDragging)
         {
-            TransitionToOpen();
-            e.Handled = true;
+            double dx = currentScreen.X - _dragStartScreen.X;
+            double dy = currentScreen.Y - _dragStartScreen.Y;
+            if (Math.Sqrt(dx * dx + dy * dy) > NotchConstants.DragThreshold)
+            {
+                BeginDrag(currentScreen);
+            }
+            else return;
         }
+
+        if (!_isDragging) return;
+
+        // Track velocity (exponential smoothing)
+        var now = DateTime.UtcNow;
+        double dt = (now - _dragLastTime).TotalSeconds;
+        if (dt > 0.001)
+        {
+            double vx = (currentScreen.X - _dragLastScreen.X) / dt;
+            double vy = (currentScreen.Y - _dragLastScreen.Y) / dt;
+            _dragVelocityX = _dragVelocityX * 0.6 + vx * 0.4;
+            _dragVelocityY = _dragVelocityY * 0.6 + vy * 0.4;
+        }
+        _dragLastScreen = currentScreen;
+        _dragLastTime = now;
+
+        // Move window: center the notch pill on cursor
+        var dpi = ScreenHelper.GetDpiScale(this);
+        double pillW = _currentWidth;
+        double pillH = _currentHeight;
+        Left = currentScreen.X / dpi - pillW / 2;
+        Top = currentScreen.Y / dpi - pillH / 2;
+    }
+
+    private void OnNotchMouseUp(object sender, MouseButtonEventArgs e)
+    {
+        _isMouseDownOnNotch = false;
+        NotchPath.ReleaseMouseCapture();
+
+        if (_isDragging)
+        {
+            EndDrag();
+        }
+        else
+        {
+            // Short click — normal behavior (no movement occurred)
+            if (_vm.NotchState == NotchState.Closed || _vm.NotchState == NotchState.Peeking)
+                TransitionToOpen();
+        }
+    }
+
+    private void BeginDrag(Point currentScreenPos)
+    {
+        _isDragging = true;
+        _isMouseDownOnNotch = false;
+
+        // If coming from a side dock, snap dimensions to horizontal immediately
+        // (no gradual swap — avoids the visual glitch)
+        double pillW = NotchConstants.ClosedWidth * 0.8;
+        double pillH = NotchConstants.ClosedHeight * 0.8;
+        if (_dock == NotchDock.Left || _dock == NotchDock.Right)
+        {
+            _currentWidth = pillW;
+            _currentHeight = pillH;
+        }
+
+        Width = NotchConstants.ClosedWidth;
+        Height = NotchConstants.ClosedHeight;
+
+        // Center window on cursor immediately
+        var dpi = ScreenHelper.GetDpiScale(this);
+        Left = currentScreenPos.X / dpi - NotchConstants.ClosedWidth / 2;
+        Top = currentScreenPos.Y / dpi - NotchConstants.ClosedHeight / 2;
+
+        // Switch to horizontal content during drag
+        ClosedContent.Visibility = Visibility.Visible;
+        OpenContent.Visibility = Visibility.Visible;
+        VerticalClosedContent.Visibility = Visibility.Collapsed;
+        VerticalOpenContent.Visibility = Visibility.Collapsed;
+
+        // Close the notch to a small dragging pill
+        if (_vm.NotchState != NotchState.Closed)
+        {
+            _vm.Close();
+            _isSettingsExpanded = false;
+            InlineSettings.Visibility = Visibility.Collapsed;
+        }
+
+        // Animate to a compact drag pill
+        _widthSpring.Response = 0.25;
+        _widthSpring.DampingFraction = 0.90;
+        _heightSpring.Response = 0.25;
+        _heightSpring.DampingFraction = 0.90;
+        _widthSpring.AnimateTo(NotchConstants.ClosedWidth * 0.8, _currentWidth);
+        _heightSpring.AnimateTo(NotchConstants.ClosedHeight * 0.8, _currentHeight);
+        _shadowOpacitySpring.AnimateTo(0.5, _currentShadowOpacity);
+        _contentOpacitySpring.AnimateTo(0.0, _currentContentOpacity);
+    }
+
+    private void EndDrag()
+    {
+        _isDragging = false;
+
+        var screenBounds = ScreenHelper.GetPrimaryScreenBounds(this);
+        var dpi = ScreenHelper.GetDpiScale(this);
+        double cursorX = _dragLastScreen.X / dpi;
+        double cursorY = _dragLastScreen.Y / dpi;
+
+        // Determine target dock based on position + velocity
+        NotchDock targetDock = NotchDock.Top;
+        double edgeDist = NotchConstants.EdgeSnapDistance;
+        double throwV = NotchConstants.ThrowVelocityThreshold;
+
+        bool nearLeft = cursorX - screenBounds.Left < edgeDist || _dragVelocityX < -throwV;
+        bool nearRight = screenBounds.Right - cursorX < edgeDist || _dragVelocityX > throwV;
+        bool nearTop = cursorY - screenBounds.Top < edgeDist * 1.5;
+
+        if (nearLeft && !nearTop)
+            targetDock = NotchDock.Left;
+        else if (nearRight && !nearTop)
+            targetDock = NotchDock.Right;
+        else
+            targetDock = NotchDock.Top;
+
+        DockTo(targetDock);
+    }
+
+    private void DockTo(NotchDock dock)
+    {
+        _dock = dock;
+
+        // Reset state so subsequent TransitionToOpen() isn't skipped
+        _vm.Close();
+
+        RepositionForDock();
+
+        // Switch content panels based on dock orientation
+        if (_dock == NotchDock.Top)
+        {
+            ClosedContent.Visibility = Visibility.Visible;
+            OpenContent.Visibility = Visibility.Visible;
+            VerticalClosedContent.Visibility = Visibility.Collapsed;
+            VerticalOpenContent.Visibility = Visibility.Collapsed;
+        }
+        else
+        {
+            ClosedContent.Visibility = Visibility.Collapsed;
+            OpenContent.Visibility = Visibility.Collapsed;
+            VerticalClosedContent.Visibility = Visibility.Visible;
+            VerticalOpenContent.Visibility = Visibility.Visible;
+        }
+
+        // Animate back to closed dimensions
+        _widthSpring.Response = 0.40;
+        _widthSpring.DampingFraction = 0.82;
+        _heightSpring.Response = 0.40;
+        _heightSpring.DampingFraction = 0.82;
+
+        if (_dock == NotchDock.Top)
+        {
+            _widthSpring.AnimateTo(NotchConstants.ClosedWidth, _currentWidth);
+            _heightSpring.AnimateTo(NotchConstants.ClosedHeight, _currentHeight);
+        }
+        else
+        {
+            // Side dock: swap width/height (tall & narrow)
+            _widthSpring.AnimateTo(NotchConstants.ClosedHeight, _currentWidth);
+            _heightSpring.AnimateTo(NotchConstants.ClosedWidth, _currentHeight);
+        }
+
+        _topRadiusSpring.AnimateTo(NotchConstants.ClosedTopRadius, _currentTopRadius);
+        _bottomRadiusSpring.AnimateTo(NotchConstants.ClosedBottomRadius, _currentBottomRadius);
+        _shadowOpacitySpring.AnimateTo(0.0, _currentShadowOpacity);
+        _contentOpacitySpring.AnimateTo(0.0, _currentContentOpacity);
+    }
+
+    private void RepositionForDock()
+    {
+        var screenBounds = ScreenHelper.GetPrimaryScreenBounds(this);
+
+        switch (_dock)
+        {
+            case NotchDock.Top:
+                Width = _fixedWindowWidth;
+                Height = _fixedWindowHeight;
+                Left = screenBounds.Left + (screenBounds.Width - _fixedWindowWidth) / 2;
+                Top = screenBounds.Top - 2;
+                break;
+
+            case NotchDock.Left:
+                // Vertical window on the left edge
+                Width = _fixedWindowHeight;
+                Height = _fixedWindowWidth;
+                Left = screenBounds.Left - 2;
+                Top = screenBounds.Top + (screenBounds.Height - _fixedWindowWidth) / 2;
+                break;
+
+            case NotchDock.Right:
+                // Vertical window on the right edge
+                Width = _fixedWindowHeight;
+                Height = _fixedWindowWidth;
+                Left = screenBounds.Right - _fixedWindowHeight + 2;
+                Top = screenBounds.Top + (screenBounds.Height - _fixedWindowWidth) / 2;
+                break;
+        }
+    }
+
+    private void OnContentGridMouseMove(object sender, MouseEventArgs e)
+    {
+        // Forward to drag handler
+        OnNotchMouseMove(sender, e);
+    }
+
+    private void OnContentGridMouseUp(object sender, MouseButtonEventArgs e)
+    {
+        // Handle drag end or click-to-open
+        OnNotchMouseUp(sender, e);
     }
 
     private void OnNotchMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
@@ -712,10 +1126,13 @@ public partial class NotchWindow : Window
         CompactVisualizer_SetVisible(settings.ShowVisualizer);
 
         // Webcam
+        _webcamService.SetTargetFps(settings.WebcamFps);
         if (settings.ShowWebcam)
         {
             WebcamPanel.Visibility = Visibility.Visible;
             WebcamMirror.Bind(_webcamService);
+            if (_webcamService.MaxCameraFps > 0)
+                InlineSettings.UpdateWebcamFpsMax(_webcamService.MaxCameraFps);
         }
         else
         {

@@ -2,6 +2,13 @@ using System.Windows;
 
 namespace WinNotch.Models;
 
+public enum NotchDock
+{
+    Top,
+    Left,
+    Right
+}
+
 public static class NotchConstants
 {
     // Closed dimensions (before DPI scaling)
@@ -49,4 +56,13 @@ public static class NotchConstants
     public static readonly System.Windows.Media.Color ShadowColor = System.Windows.Media.Color.FromArgb(180, 0, 0, 0);
     public const double ShadowBlurRadius = 12;
     public const double ShadowDepth = 2;
+
+    // Side dock vertical open dimensions
+    public const double SideOpenWidth = 160;    // how far the notch protrudes from edge
+    public const double SideOpenHeight = 420;   // tall axis along screen edge
+
+    // Drag & Dock
+    public const double DragThreshold = 3;        // pixels before drag starts
+    public const double EdgeSnapDistance = 80;     // px from screen edge to snap
+    public const double ThrowVelocityThreshold = 800; // px/s to register as throw
 }

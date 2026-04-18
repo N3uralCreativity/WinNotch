@@ -58,6 +58,7 @@ public class AppSettings
 
     // Webcam
     public bool ShowWebcam { get; set; } = false;
+    public int WebcamFps { get; set; } = 15;
 
     private static readonly string SettingsDir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "WinNotch");

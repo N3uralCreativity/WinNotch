@@ -115,4 +115,117 @@ public class NotchShape : System.Windows.Shapes.Shape
         geo.Freeze();
         return geo;
     }
+
+    /// <summary>
+    /// Creates a notch geometry for side-docked (left/right) mode.
+    /// The shape is a vertically-oriented notch anchored to a screen edge.
+    /// For left dock: "ears" on the left edge, curves expand rightward.
+    /// For right dock: "ears" on the right edge, curves expand leftward.
+    /// </summary>
+    public static Geometry CreateSideNotchGeometry(Rect rect, double topR, double bottomR, bool isLeft)
+    {
+        double minX = rect.Left;
+        double minY = rect.Top;
+        double maxX = rect.Right;
+        double maxY = rect.Bottom;
+
+        // topR acts as the "edge radius" (small ear curves along the docked edge)
+        // bottomR acts as the "open radius" (larger outward curves on the free side)
+        var fig = new PathFigure { IsClosed = true, IsFilled = true };
+
+        if (isLeft)
+        {
+            // Anchored to left edge. Shape: top-left ear, down left side, bottom-left ear,
+            // bottom across, bottom-right curve, up right side, top-right curve, back to start.
+            fig.StartPoint = new Point(minX, minY);
+
+            // Top-left ear: quad curve inward (going down)
+            fig.Segments.Add(new QuadraticBezierSegment(
+                new Point(minX, minY + topR),
+                new Point(minX + topR, minY + topR),
+                true));
+
+            // Right side down to near bottom
+            fig.Segments.Add(new LineSegment(
+                new Point(maxX - bottomR, minY + topR), true));
+
+            // Top-right curve outward
+            fig.Segments.Add(new QuadraticBezierSegment(
+                new Point(maxX, minY + topR),
+                new Point(maxX, minY + topR + bottomR),
+                true));
+
+            // Down the right (free) side
+            fig.Segments.Add(new LineSegment(
+                new Point(maxX, maxY - topR - bottomR), true));
+
+            // Bottom-right curve outward
+            fig.Segments.Add(new QuadraticBezierSegment(
+                new Point(maxX, maxY - topR),
+                new Point(maxX - bottomR, maxY - topR),
+                true));
+
+            // Back to left side
+            fig.Segments.Add(new LineSegment(
+                new Point(minX + topR, maxY - topR), true));
+
+            // Bottom-left ear: quad curve inward
+            fig.Segments.Add(new QuadraticBezierSegment(
+                new Point(minX, maxY - topR),
+                new Point(minX, maxY),
+                true));
+
+            // Close
+            fig.Segments.Add(new LineSegment(new Point(minX, minY), true));
+        }
+        else
+        {
+            // Anchored to right edge. Mirror of left.
+            fig.StartPoint = new Point(maxX, minY);
+
+            // Top-right ear: quad curve inward (going down)
+            fig.Segments.Add(new QuadraticBezierSegment(
+                new Point(maxX, minY + topR),
+                new Point(maxX - topR, minY + topR),
+                true));
+
+            // Left side down
+            fig.Segments.Add(new LineSegment(
+                new Point(minX + bottomR, minY + topR), true));
+
+            // Top-left curve outward
+            fig.Segments.Add(new QuadraticBezierSegment(
+                new Point(minX, minY + topR),
+                new Point(minX, minY + topR + bottomR),
+                true));
+
+            // Down the left (free) side
+            fig.Segments.Add(new LineSegment(
+                new Point(minX, maxY - topR - bottomR), true));
+
+            // Bottom-left curve outward
+            fig.Segments.Add(new QuadraticBezierSegment(
+                new Point(minX, maxY - topR),
+                new Point(minX + bottomR, maxY - topR),
+                true));
+
+            // Back to right side
+            fig.Segments.Add(new LineSegment(
+                new Point(maxX - topR, maxY - topR), true));
+
+            // Bottom-right ear: quad curve inward
+            fig.Segments.Add(new QuadraticBezierSegment(
+                new Point(maxX, maxY - topR),
+                new Point(maxX, maxY),
+                true));
+
+            // Close
+            fig.Segments.Add(new LineSegment(new Point(maxX, minY), true));
+        }
+
+        var geo = new PathGeometry();
+        geo.Figures.Add(fig);
+        geo.Freeze();
+        return geo;
+    }
 }
