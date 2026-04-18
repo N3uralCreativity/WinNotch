@@ -1,12 +1,13 @@
 using System;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Media;
 
 namespace WinNotch.Views.Components;
 
 /// <summary>
-/// Renders audio spectrum bars. Set SpectrumData (float[]) and call InvalidateVisual().
+/// Renders audio spectrum as thin pill-shaped bars that grow from center.
+/// Evenly distributes input bands, uses auto-gain normalization so bars
+/// never max out but always show clear movement.
 /// </summary>
 public class AudioVisualizer : FrameworkElement
 {
@@ -16,15 +17,15 @@ public class AudioVisualizer : FrameworkElement
 
     public static readonly DependencyProperty BarCountProperty =
         DependencyProperty.Register(nameof(BarCount), typeof(int), typeof(AudioVisualizer),
-            new FrameworkPropertyMetadata(12, FrameworkPropertyMetadataOptions.AffectsRender));
+            new FrameworkPropertyMetadata(4, FrameworkPropertyMetadataOptions.AffectsRender));
+
+    public static readonly DependencyProperty BarWidthProperty =
+        DependencyProperty.Register(nameof(BarWidth), typeof(double), typeof(AudioVisualizer),
+            new FrameworkPropertyMetadata(3.0, FrameworkPropertyMetadataOptions.AffectsRender));
 
     public static readonly DependencyProperty BarGapProperty =
         DependencyProperty.Register(nameof(BarGap), typeof(double), typeof(AudioVisualizer),
             new FrameworkPropertyMetadata(2.0, FrameworkPropertyMetadataOptions.AffectsRender));
-
-    public static readonly DependencyProperty BarRadiusProperty =
-        DependencyProperty.Register(nameof(BarRadius), typeof(double), typeof(AudioVisualizer),
-            new FrameworkPropertyMetadata(1.5, FrameworkPropertyMetadataOptions.AffectsRender));
 
     public Color BarColor
     {
@@ -38,39 +39,66 @@ public class AudioVisualizer : FrameworkElement
         set => SetValue(BarCountProperty, value);
     }
 
+    public double BarWidth
+    {
+        get => (double)GetValue(BarWidthProperty);
+        set => SetValue(BarWidthProperty, value);
+    }
+
     public double BarGap
     {
         get => (double)GetValue(BarGapProperty);
         set => SetValue(BarGapProperty, value);
     }
 
-    public double BarRadius
-    {
-        get => (double)GetValue(BarRadiusProperty);
-        set => SetValue(BarRadiusProperty, value);
-    }
-
-    // Set this from code-behind, then call InvalidateVisual()
-    public float[]? SpectrumData { get; set; }
-
-    // Smoothed values for rendering
-    private float[]? _smoothed;
+    // Display-ready levels (one per visual bar)
+    private float[] _display = new float[4];
+    // Auto-gain: tracks recent peak per bar for normalization
+    private float[] _peak = new float[4];
 
     public void UpdateSpectrum(float[] data)
     {
-        if (_smoothed == null || _smoothed.Length != data.Length)
-            _smoothed = new float[data.Length];
-
-        for (int i = 0; i < data.Length; i++)
+        int barCount = BarCount;
+        if (_display.Length != barCount)
         {
-            // Smooth: fast rise, slow fall
-            if (data[i] > _smoothed[i])
-                _smoothed[i] = _smoothed[i] * 0.2f + data[i] * 0.8f;
-            else
-                _smoothed[i] = _smoothed[i] * 0.85f + data[i] * 0.15f;
+            _display = new float[barCount];
+            _peak = new float[barCount];
+            for (int i = 0; i < barCount; i++) _peak[i] = 0.3f;
         }
 
-        SpectrumData = _smoothed;
+        int bandsPerBar = Math.Max(1, data.Length / barCount);
+
+        for (int i = 0; i < barCount; i++)
+        {
+            // Average a spread of input bands for this visual bar
+            int start = i * bandsPerBar;
+            int end = Math.Min(start + bandsPerBar, data.Length);
+            float sum = 0;
+            int count = 0;
+            for (int j = start; j < end; j++)
+            {
+                sum += data[j];
+                count++;
+            }
+            float avg = count > 0 ? sum / count : 0;
+
+            // Auto-gain: slowly adapt peak so bars never stay maxed out
+            if (avg > _peak[i])
+                _peak[i] = _peak[i] * 0.5f + avg * 0.5f;   // rise toward new peak
+            else
+                _peak[i] = _peak[i] * 0.998f;               // slowly decay peak
+            _peak[i] = Math.Max(_peak[i], 0.15f);            // floor so quiet audio still shows
+
+            // Normalize against recent peak, cap at 0.75 so we never hit max
+            float normalized = Math.Min(0.75f, avg / _peak[i] * 0.75f);
+
+            // Smooth: fast rise, slow fall
+            if (normalized > _display[i])
+                _display[i] = _display[i] * 0.2f + normalized * 0.8f;
+            else
+                _display[i] = _display[i] * 0.85f + normalized * 0.15f;
+        }
+
         InvalidateVisual();
     }
 
@@ -78,33 +106,33 @@ public class AudioVisualizer : FrameworkElement
     {
         base.OnRender(dc);
 
-        double w = ActualWidth;
         double h = ActualHeight;
         int count = BarCount;
+        double bw = BarWidth;
         double gap = BarGap;
-        double radius = BarRadius;
 
-        if (count <= 0 || w <= 0 || h <= 0) return;
+        if (count <= 0 || h <= 0) return;
 
-        double barWidth = (w - gap * (count - 1)) / count;
-        if (barWidth < 1) barWidth = 1;
+        double pillRadius = bw / 2.0;
+        double minH = bw;           // min = a circle
+        double maxH = h;
+
+        double totalW = count * bw + (count - 1) * gap;
+        double startX = (ActualWidth - totalW) / 2.0;
+        double centerY = h / 2.0;
 
         var brush = new SolidColorBrush(BarColor);
         brush.Freeze();
 
-        double minBarHeight = 2;
-
         for (int i = 0; i < count; i++)
         {
-            float level = (SpectrumData != null && i < SpectrumData.Length)
-                ? SpectrumData[i] : 0;
+            float level = (i < _display.Length) ? _display[i] : 0;
+            double barH = minH + level * (maxH - minH);
 
-            double barHeight = Math.Max(minBarHeight, level * h);
-            double x = i * (barWidth + gap);
-            double y = h - barHeight;
+            double x = startX + i * (bw + gap);
+            double y = centerY - barH / 2.0;
 
-            var rect = new Rect(x, y, barWidth, barHeight);
-            dc.DrawRoundedRectangle(brush, null, rect, radius, radius);
+            dc.DrawRoundedRectangle(brush, null, new Rect(x, y, bw, barH), pillRadius, pillRadius);
         }
     }
 }

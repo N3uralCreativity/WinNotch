@@ -57,7 +57,11 @@ public partial class MusicLiveActivity : UserControl
 
         if (propertyName == null || propertyName == nameof(info.DominantColor))
         {
-            CompactVisualizer.BarColor = info.DominantColor;
+            var color = info.DominantColor;
+            // Ensure the visualizer bar color is always visible against the dark notch
+            // If dominant color is too dark, use white instead
+            double brightness = (0.299 * color.R + 0.587 * color.G + 0.114 * color.B) / 255.0;
+            CompactVisualizer.BarColor = brightness < 0.3 ? Colors.White : color;
         }
     }
 }
