@@ -9,6 +9,23 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>WinNotch</RootNamespace>
     <AssemblyName>WinNotch</AssemblyName>
+
+    <!-- App metadata -->
+    <ApplicationIcon>Assets\Icons\WinNotch.ico</ApplicationIcon>
+    <Version>0.1.0</Version>
+    <FileVersion>0.1.0.0</FileVersion>
+    <AssemblyVersion>0.1.0.0</AssemblyVersion>
+    <Product>WinNotch</Product>
+    <Description>Dynamic Island-inspired notch overlay for Windows</Description>
+    <Company>N3uralCreativity</Company>
+    <Copyright>Copyright © 2026 N3uralCreativity. Licensed under GPL-3.0.</Copyright>
+
+    <!-- Publish settings (applied only via: dotnet publish -c Release) -->
+    <PublishSingleFile Condition="'$(Configuration)' == 'Release'">true</PublishSingleFile>
+    <SelfContained Condition="'$(Configuration)' == 'Release'">true</SelfContained>
+    <RuntimeIdentifier Condition="'$(Configuration)' == 'Release'">win-x64</RuntimeIdentifier>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
   </PropertyGroup>
 
   <ItemGroup>
