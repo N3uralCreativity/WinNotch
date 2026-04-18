@@ -5,7 +5,8 @@
 
     <!-- Compact inline HUD shown in closed notch for volume/brightness changes -->
     <Grid HorizontalAlignment="Stretch" VerticalAlignment="Center"
-          Margin="6,0,6,0">
+          Margin="6,0,6,0"
+          Background="{DynamicResource NotchFillBrush}">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="*"/>
