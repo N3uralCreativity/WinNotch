@@ -161,6 +161,13 @@
                               Checked="OnSettingChanged" Unchecked="OnSettingChanged"/>
                 </Grid>
 
+                <Grid Height="28" Margin="0,2">
+                    <TextBlock Text="Webcam mirror" Style="{StaticResource SettingLabel}"/>
+                    <CheckBox x:Name="ShowWebcamCheck" Style="{StaticResource ToggleSwitch}"
+                              HorizontalAlignment="Right" VerticalAlignment="Center"
+                              Checked="OnSettingChanged" Unchecked="OnSettingChanged"/>
+                </Grid>
+
                 <!-- About -->
                 <TextBlock Text="ABOUT" Style="{StaticResource SectionHeader}"/>
                 <TextBlock Foreground="{DynamicResource TextFaintBrush}" FontSize="10" Text="WinNotch v0.1" Margin="0,0,0,2"/>

@@ -36,6 +36,7 @@ public partial class InlineSettingsView : System.Windows.Controls.UserControl
         BrightnessHudCheck.IsChecked = settings.ShowBrightnessHud;
         ShowBatteryCheck.IsChecked = settings.ShowBattery;
         ShowCalendarCheck.IsChecked = settings.ShowCalendar;
+        ShowWebcamCheck.IsChecked = settings.ShowWebcam;
 
         if (settings.HoverMode == HoverMode.LongHoverOpen)
             LongHoverRadio.IsChecked = true;
@@ -65,6 +66,7 @@ public partial class InlineSettingsView : System.Windows.Controls.UserControl
         _settings.ShowBrightnessHud = BrightnessHudCheck.IsChecked == true;
         _settings.ShowBattery = ShowBatteryCheck.IsChecked == true;
         _settings.ShowCalendar = ShowCalendarCheck.IsChecked == true;
+        _settings.ShowWebcam = ShowWebcamCheck.IsChecked == true;
 
         _settings.ApplyStartOnBoot();
         _settings.Save();

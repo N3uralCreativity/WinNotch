@@ -54,6 +54,7 @@ public partial class NotchWindow : Window
     private readonly ThemeService _themeService;
     private readonly ShelfService _shelfService;
     private readonly FullscreenService _fullscreenService;
+    private readonly WebcamService _webcamService;
     private readonly GlobalHotkey _globalHotkey;
 
     // Settings
@@ -95,6 +96,7 @@ public partial class NotchWindow : Window
         _calendarService = new CalendarService();
         _shelfService = new ShelfService();
         _fullscreenService = new FullscreenService();
+        _webcamService = new WebcamService();
         _globalHotkey = new GlobalHotkey();
 
         SourceInitialized += OnSourceInitialized;
@@ -189,6 +191,13 @@ public partial class NotchWindow : Window
         // File Shelf
         ShelfPanel.Bind(_shelfService);
         _shelfService.ShelfChanged += () => Dispatcher.Invoke(UpdateShelfVisibility);
+
+        // Webcam mirror
+        if (_settings.ShowWebcam)
+        {
+            WebcamPanel.Visibility = Visibility.Visible;
+            WebcamMirror.Bind(_webcamService);
+        }
 
         // Fullscreen detection — hide notch when another app is fullscreen
         _fullscreenService.FullscreenChanged += isFs =>
@@ -295,7 +304,12 @@ public partial class NotchWindow : Window
     private void PositionFixedWindow()
     {
         double padding = NotchConstants.WindowPadding;
-        double maxOpenWidth = Math.Max(NotchConstants.OpenWidth, NotchConstants.OpenWidthWithCalendar);
+        double maxOpenWidth = new[] {
+            NotchConstants.OpenWidth,
+            NotchConstants.OpenWidthWithCalendar,
+            NotchConstants.OpenWidthWithWebcam,
+            NotchConstants.OpenWidthWithCalendarAndWebcam
+        }.Max();
         _fixedWindowWidth = maxOpenWidth + padding * 2;
         double maxHeight = Math.Max(NotchConstants.OpenSettingsHeightWithShelf,
             Math.Max(NotchConstants.OpenHeightWithShelf, NotchConstants.OpenSettingsHeight));
@@ -412,9 +426,7 @@ public partial class NotchWindow : Window
         _heightSpring.Response = 0.42;
         _heightSpring.DampingFraction = 0.80;
 
-        double openW = _settings.ShowCalendar
-            ? NotchConstants.OpenWidthWithCalendar
-            : NotchConstants.OpenWidth;
+        double openW = GetOpenWidth();
 
         double openH = _shelfService.HasItems
             ? NotchConstants.OpenHeightWithShelf
@@ -683,6 +695,7 @@ public partial class NotchWindow : Window
         _brightnessService.Dispose();
         _batteryService.Dispose();
         _fullscreenService.Dispose();
+        _webcamService.Dispose();
         _globalHotkey.Dispose();
         base.OnClosed(e);
     }
@@ -698,13 +711,22 @@ public partial class NotchWindow : Window
         CalendarPanel.Visibility = settings.ShowCalendar ? Visibility.Visible : Visibility.Collapsed;
         CompactVisualizer_SetVisible(settings.ShowVisualizer);
 
-        // Re-adjust notch size if currently open (calendar toggle changes width)
+        // Webcam
+        if (settings.ShowWebcam)
+        {
+            WebcamPanel.Visibility = Visibility.Visible;
+            WebcamMirror.Bind(_webcamService);
+        }
+        else
+        {
+            WebcamPanel.Visibility = Visibility.Collapsed;
+            WebcamMirror.StopCamera();
+        }
+
+        // Re-adjust notch size if currently open
         if (_vm.NotchState == NotchState.Open)
         {
-            double targetW = settings.ShowCalendar
-                ? NotchConstants.OpenWidthWithCalendar
-                : NotchConstants.OpenWidth;
-            _widthSpring.AnimateTo(targetW, _currentWidth);
+            _widthSpring.AnimateTo(GetOpenWidth(), _currentWidth);
 
             if (!_isSettingsExpanded)
             {
@@ -714,6 +736,16 @@ public partial class NotchWindow : Window
                 _heightSpring.AnimateTo(targetH, _currentHeight);
             }
         }
+    }
+
+    private double GetOpenWidth()
+    {
+        bool cal = _settings.ShowCalendar;
+        bool cam = _settings.ShowWebcam;
+        if (cal && cam) return NotchConstants.OpenWidthWithCalendarAndWebcam;
+        if (cal) return NotchConstants.OpenWidthWithCalendar;
+        if (cam) return NotchConstants.OpenWidthWithWebcam;
+        return NotchConstants.OpenWidth;
     }
 
     private void CompactVisualizer_SetVisible(bool visible)

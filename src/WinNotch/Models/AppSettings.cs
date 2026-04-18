@@ -56,6 +56,9 @@ public class AppSettings
     // Battery
     public bool ShowBattery { get; set; } = true;
 
+    // Webcam
+    public bool ShowWebcam { get; set; } = false;
+
     private static readonly string SettingsDir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "WinNotch");
     private static readonly string SettingsPath = Path.Combine(SettingsDir, "settings.json");
