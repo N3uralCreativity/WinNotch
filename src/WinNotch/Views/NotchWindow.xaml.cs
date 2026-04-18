@@ -182,6 +182,14 @@ public partial class NotchWindow : Window
             await _themeService.ApplyWithTransition(theme, NotchCanvas);
         };
 
+        // Vertical inline settings (separate instance for side dock)
+        VerticalInlineSettings.SettingsChanged += s => ApplySettings(s);
+        VerticalInlineSettings.BackRequested += CollapseSettings;
+        VerticalInlineSettings.ThemeChangeRequested += async theme =>
+        {
+            await _themeService.ApplyWithTransition(theme, NotchCanvas);
+        };
+
         // Toggle clock/live-activity visibility based on music state
         _mediaService.MediaInfo.PropertyChanged += (_, e) =>
         {
@@ -380,9 +388,11 @@ public partial class NotchWindow : Window
 
     private void OnSideSettingsClick(object sender, RoutedEventArgs e)
     {
-        // In vertical view, open the full settings window instead of inline settings
-        // (inline settings don't work well in the narrow vertical layout)
-        OpenSettingsWindow();
+        // In vertical view, expand settings on the right side dynamically
+        if (_isSettingsExpanded)
+            CollapseSettings();
+        else
+            ExpandSettings();
     }
 
     #endregion
@@ -407,38 +417,61 @@ public partial class NotchWindow : Window
     private void ExpandSettings()
     {
         _isSettingsExpanded = true;
-        InlineSettings.LoadSettings(_settings);
-        InlineSettings.Visibility = Visibility.Visible;
 
-        // Grow the notch taller
-        double targetH = _shelfService.HasItems
-            ? NotchConstants.OpenSettingsHeightWithShelf
-            : NotchConstants.OpenSettingsHeight;
-        _heightSpring.Response = 0.42;
-        _heightSpring.DampingFraction = 0.80;
-        _heightSpring.AnimateTo(targetH, _currentHeight);
+        if (_dock == NotchDock.Top)
+        {
+            // Top dock: Load settings and grow the notch taller (slide down)
+            InlineSettings.LoadSettings(_settings);
+            InlineSettings.Visibility = Visibility.Visible;
+
+            double targetH = _shelfService.HasItems
+                ? NotchConstants.OpenSettingsHeightWithShelf
+                : NotchConstants.OpenSettingsHeight;
+            _heightSpring.Response = 0.42;
+            _heightSpring.DampingFraction = 0.80;
+            _heightSpring.AnimateTo(targetH, _currentHeight);
+        }
+        else
+        {
+            // Side dock: Load settings in vertical panel and expand width to the right
+            VerticalInlineSettings.LoadSettings(_settings);
+            VerticalSettingsPanel.Visibility = Visibility.Visible;
+
+            double targetW = NotchConstants.SideOpenWidth + 280; // Add settings panel width
+            _widthSpring.Response = 0.42;
+            _widthSpring.DampingFraction = 0.80;
+            _widthSpring.AnimateTo(targetW, _currentWidth);
+        }
     }
 
     private void CollapseSettings()
     {
         _isSettingsExpanded = false;
-        InlineSettings.Visibility = Visibility.Collapsed;
 
-        // Shrink back to normal open height (account for shelf)
-        double targetH = _shelfService.HasItems
-            ? NotchConstants.OpenHeightWithShelf
-            : NotchConstants.OpenHeight;
-        _heightSpring.Response = 0.42;
-        _heightSpring.DampingFraction = 0.80;
-        _heightSpring.AnimateTo(targetH, _currentHeight);
+        if (_dock == NotchDock.Top)
+        {
+            // Top dock: Hide settings and shrink back to normal open height
+            InlineSettings.Visibility = Visibility.Collapsed;
+
+            double targetH = _shelfService.HasItems
+                ? NotchConstants.OpenHeightWithShelf
+                : NotchConstants.OpenHeight;
+            _heightSpring.Response = 0.42;
+            _heightSpring.DampingFraction = 0.80;
+            _heightSpring.AnimateTo(targetH, _currentHeight);
+        }
+        else
+        {
+            // Side dock: Hide settings panel and shrink width back to normal
+            VerticalSettingsPanel.Visibility = Visibility.Collapsed;
+
+            _widthSpring.Response = 0.42;
+            _widthSpring.DampingFraction = 0.80;
+            _widthSpring.AnimateTo(NotchConstants.SideOpenWidth, _currentWidth);
+        }
     }
 
-    private void OpenSettingsWindow()
-    {
-        var settingsWindow = new SettingsWindow(_settings);
-        settingsWindow.SettingsChanged += s => ApplySettings(s);
-        settingsWindow.Show();
-    }
+    // Removed OpenSettingsWindow - now using integrated settings panel
 
     /// <summary>
     /// Position the window once: centered at top of primary screen,
@@ -700,6 +733,7 @@ public partial class NotchWindow : Window
         {
             _isSettingsExpanded = false;
             InlineSettings.Visibility = Visibility.Collapsed;
+            VerticalSettingsPanel.Visibility = Visibility.Collapsed;
         }
 
         _vm.Close();
@@ -1146,35 +1180,82 @@ public partial class NotchWindow : Window
     }
 
     /// <summary>
-    /// Creates a styled ContextMenu matching the app's dark/light theme.
+    /// Creates a styled ContextMenu matching the app's dark/light theme with rounded corners.
     /// </summary>
     public System.Windows.Controls.ContextMenu CreateStyledContextMenu()
     {
         var menu = new System.Windows.Controls.ContextMenu();
-        menu.Background = (System.Windows.Media.Brush)FindResource("NotchFillBrush");
-        menu.BorderBrush = (System.Windows.Media.Brush)FindResource("SeparatorBrush");
-        menu.BorderThickness = new Thickness(1);
-        menu.Padding = new Thickness(4, 6, 4, 6);
-        menu.HasDropShadow = true;
 
-        // Style for MenuItems
+        // Create a border template with rounded corners
+        var template = new ControlTemplate(typeof(System.Windows.Controls.ContextMenu));
+        var frameworkFactory = new FrameworkElementFactory(typeof(Border));
+        frameworkFactory.SetValue(Border.BackgroundProperty, new DynamicResourceExtension("NotchFillBrush"));
+        frameworkFactory.SetValue(Border.BorderBrushProperty, new DynamicResourceExtension("SeparatorBrush"));
+        frameworkFactory.SetValue(Border.BorderThicknessProperty, new Thickness(1));
+        frameworkFactory.SetValue(Border.CornerRadiusProperty, new CornerRadius(10));
+        frameworkFactory.SetValue(Border.PaddingProperty, new Thickness(6, 8, 6, 8));
+
+        // Add drop shadow effect
+        var shadowEffect = new System.Windows.Media.Effects.DropShadowEffect
+        {
+            Color = System.Windows.Media.Colors.Black,
+            Direction = 270,
+            ShadowDepth = 2,
+            BlurRadius = 12,
+            Opacity = 0.3
+        };
+        frameworkFactory.SetValue(Border.EffectProperty, shadowEffect);
+
+        var scrollFactory = new FrameworkElementFactory(typeof(System.Windows.Controls.ScrollViewer));
+        scrollFactory.SetValue(System.Windows.Controls.ScrollViewer.CanContentScrollProperty, true);
+        scrollFactory.SetValue(System.Windows.Controls.ScrollViewer.HorizontalScrollBarVisibilityProperty,
+            System.Windows.Controls.ScrollBarVisibility.Disabled);
+        scrollFactory.SetValue(System.Windows.Controls.ScrollViewer.VerticalScrollBarVisibilityProperty,
+            System.Windows.Controls.ScrollBarVisibility.Auto);
+
+        var stackFactory = new FrameworkElementFactory(typeof(System.Windows.Controls.StackPanel));
+        stackFactory.SetValue(System.Windows.Controls.StackPanel.IsItemsHostProperty, true);
+
+        scrollFactory.AppendChild(stackFactory);
+        frameworkFactory.AppendChild(scrollFactory);
+        template.VisualTree = frameworkFactory;
+        menu.Template = template;
+
+        // Style for MenuItems with rounded hover
         var menuItemStyle = new Style(typeof(System.Windows.Controls.MenuItem));
         menuItemStyle.Setters.Add(new Setter(System.Windows.Controls.MenuItem.ForegroundProperty,
             FindResource("TextSecondaryBrush")));
         menuItemStyle.Setters.Add(new Setter(System.Windows.Controls.MenuItem.FontSizeProperty, 12.0));
         menuItemStyle.Setters.Add(new Setter(System.Windows.Controls.MenuItem.PaddingProperty,
-            new Thickness(8, 5, 20, 5)));
+            new Thickness(12, 6, 24, 6)));
+        menuItemStyle.Setters.Add(new Setter(System.Windows.Controls.MenuItem.MarginProperty,
+            new Thickness(2, 1, 2, 1)));
         menuItemStyle.Setters.Add(new Setter(System.Windows.Controls.MenuItem.CursorProperty,
             System.Windows.Input.Cursors.Hand));
 
-        // Hover trigger
+        // Create template for menu item with rounded background
+        var itemTemplate = new ControlTemplate(typeof(System.Windows.Controls.MenuItem));
+        var itemBorder = new FrameworkElementFactory(typeof(Border));
+        itemBorder.Name = "ItemBorder";
+        itemBorder.SetValue(Border.CornerRadiusProperty, new CornerRadius(6));
+        itemBorder.SetValue(Border.BackgroundProperty, System.Windows.Media.Brushes.Transparent);
+
+        var contentPresenter = new FrameworkElementFactory(typeof(System.Windows.Controls.ContentPresenter));
+        contentPresenter.SetValue(System.Windows.Controls.ContentPresenter.ContentSourceProperty, "Header");
+        contentPresenter.SetValue(System.Windows.Controls.ContentPresenter.MarginProperty, new Thickness(0));
+
+        itemBorder.AppendChild(contentPresenter);
+        itemTemplate.VisualTree = itemBorder;
+
+        // Hover trigger with rounded background
         var hoverTrigger = new Trigger { Property = System.Windows.Controls.MenuItem.IsHighlightedProperty, Value = true };
         hoverTrigger.Setters.Add(new Setter(System.Windows.Controls.MenuItem.BackgroundProperty,
-            FindResource("HoverOverlayBrush")));
+            FindResource("HoverOverlayBrush"), "ItemBorder"));
         hoverTrigger.Setters.Add(new Setter(System.Windows.Controls.MenuItem.ForegroundProperty,
             FindResource("TextPrimaryBrush")));
-        menuItemStyle.Triggers.Add(hoverTrigger);
+        itemTemplate.Triggers.Add(hoverTrigger);
 
+        menuItemStyle.Setters.Add(new Setter(System.Windows.Controls.MenuItem.TemplateProperty, itemTemplate));
         menu.Resources.Add(typeof(System.Windows.Controls.MenuItem), menuItemStyle);
 
         // Style for Separator
@@ -1182,7 +1263,8 @@ public partial class NotchWindow : Window
         separatorStyle.Setters.Add(new Setter(System.Windows.Controls.Separator.BackgroundProperty,
             FindResource("SeparatorBrush")));
         separatorStyle.Setters.Add(new Setter(System.Windows.Controls.Separator.MarginProperty,
-            new Thickness(4, 3, 4, 3)));
+            new Thickness(8, 4, 8, 4)));
+        separatorStyle.Setters.Add(new Setter(System.Windows.Controls.Separator.HeightProperty, 1.0));
         menu.Resources.Add(typeof(System.Windows.Controls.Separator), separatorStyle);
 
         return menu;
