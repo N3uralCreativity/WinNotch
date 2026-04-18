@@ -1304,7 +1304,10 @@ public partial class NotchWindow : Window
             WebcamPanel.Visibility = Visibility.Visible;
             WebcamMirror.Bind(_webcamService);
             if (_webcamService.MaxCameraFps > 0)
+            {
                 InlineSettings.UpdateWebcamFpsMax(_webcamService.MaxCameraFps);
+                VerticalInlineSettings.UpdateWebcamFpsMax(_webcamService.MaxCameraFps);
+            }
         }
         else
         {
