@@ -16,6 +16,7 @@ public class MediaService : IDisposable
     private GlobalSystemMediaTransportControlsSession? _session;
     private readonly DispatcherTimer _positionTimer;
     private DateTime _lastTimelineUpdate = DateTime.MinValue;
+    private TimeSpan _basePosition = TimeSpan.Zero;
 
     public MediaInfo MediaInfo { get; } = new();
 
@@ -189,7 +190,8 @@ public class MediaService : IDisposable
             var timeline = _session.GetTimelineProperties();
             if (timeline == null) return;
 
-            MediaInfo.Position = timeline.Position;
+            _basePosition = timeline.Position;
+            MediaInfo.Position = _basePosition;
             MediaInfo.Duration = timeline.EndTime;
             _lastTimelineUpdate = DateTime.UtcNow;
         }
@@ -204,7 +206,7 @@ public class MediaService : IDisposable
         if (_lastTimelineUpdate != DateTime.MinValue && MediaInfo.Duration.TotalSeconds > 0)
         {
             double elapsed = (DateTime.UtcNow - _lastTimelineUpdate).TotalSeconds;
-            var interpolatedPosition = MediaInfo.Position + TimeSpan.FromSeconds(elapsed);
+            var interpolatedPosition = _basePosition + TimeSpan.FromSeconds(elapsed);
 
             // Clamp to duration to prevent overflow
             if (interpolatedPosition <= MediaInfo.Duration)
