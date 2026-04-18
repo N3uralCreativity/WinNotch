@@ -15,6 +15,8 @@ namespace WinNotch.Views;
 public partial class ShelfView : UserControl
 {
     private ShelfService? _service;
+    private Point _itemDragStart;
+    private bool _itemDragStarted;
 
     public ShelfView()
     {
@@ -64,13 +66,21 @@ public partial class ShelfView : UserControl
 
     private void OnItemMouseDown(object sender, MouseButtonEventArgs e)
     {
-        if (e.ClickCount == 2 && sender is FrameworkElement fe && fe.DataContext is ShelfItem item)
+        if (sender is FrameworkElement fe && fe.DataContext is ShelfItem item)
         {
-            try
+            // Track potential drag start
+            _itemDragStart = e.GetPosition(fe);
+            _itemDragStarted = false;
+
+            // Double-click to open
+            if (e.ClickCount == 2)
             {
-                Process.Start(new ProcessStartInfo(item.FilePath) { UseShellExecute = true });
+                try
+                {
+                    Process.Start(new ProcessStartInfo(item.FilePath) { UseShellExecute = true });
+                }
+                catch { }
             }
-            catch { }
         }
     }
 
@@ -117,6 +127,7 @@ public partial class ShelfView : UserControl
 
     /// <summary>
     /// Initiate drag-out so users can drag shelf items to other applications.
+    /// Uses a drag threshold to prevent accidental drags when clicking.
     /// </summary>
     private void OnItemMouseMove(object sender, MouseEventArgs e)
     {
@@ -124,8 +135,26 @@ public partial class ShelfView : UserControl
             sender is FrameworkElement fe &&
             fe.DataContext is ShelfItem item)
         {
-            var data = new DataObject(DataFormats.FileDrop, new[] { item.FilePath });
-            DragDrop.DoDragDrop(fe, data, DragDropEffects.Copy | DragDropEffects.Move);
+            // Check if we've exceeded drag threshold
+            if (!_itemDragStarted)
+            {
+                Point currentPos = e.GetPosition(fe);
+                double dx = currentPos.X - _itemDragStart.X;
+                double dy = currentPos.Y - _itemDragStart.Y;
+                double distance = Math.Sqrt(dx * dx + dy * dy);
+
+                // Use drag threshold of 5 pixels
+                if (distance > 5)
+                {
+                    _itemDragStarted = true;
+                    var data = new DataObject(DataFormats.FileDrop, new[] { item.FilePath });
+                    DragDrop.DoDragDrop(fe, data, DragDropEffects.Copy | DragDropEffects.Move);
+                }
+            }
+        }
+        else
+        {
+            _itemDragStarted = false;
         }
     }
 }

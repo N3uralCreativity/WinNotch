@@ -81,9 +81,15 @@ public partial class HudOverlay : UserControl
 
     private void UpdateSliderFill(float fraction)
     {
-        if (SliderFill.Parent is Border parent && parent.ActualWidth > 0)
+        if (SliderFill.Parent is Border parent)
         {
-            SliderFill.Width = Math.Max(0, fraction * parent.ActualWidth);
+            double parentWidth = parent.ActualWidth;
+            // Only update if parent has valid width to prevent visual glitches
+            if (parentWidth > 0 && !double.IsNaN(parentWidth) && !double.IsInfinity(parentWidth))
+            {
+                double targetWidth = Math.Max(0, Math.Min(fraction * parentWidth, parentWidth));
+                SliderFill.Width = targetWidth;
+            }
         }
     }
 
@@ -113,8 +119,13 @@ public partial class HudOverlay : UserControl
     private void OnSliderClick(object sender, MouseButtonEventArgs e)
     {
         if (sender is not Border bar) return;
+
+        double barWidth = bar.ActualWidth;
+        // Validate bar width before calculating position
+        if (barWidth <= 0 || double.IsNaN(barWidth) || double.IsInfinity(barWidth)) return;
+
         var pos = e.GetPosition(bar);
-        float fraction = (float)Math.Clamp(pos.X / bar.ActualWidth, 0, 1);
+        float fraction = (float)Math.Clamp(pos.X / barWidth, 0, 1);
 
         switch (_currentType)
         {
