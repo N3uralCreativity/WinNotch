@@ -42,6 +42,7 @@ public partial class NotchWindow : Window
     private DispatcherTimer? _hoverCloseTimer;
     private bool _isMouseOverNotch;
     private bool _isSettingsExpanded;
+    private bool _isContextMenuOpen;
 
     // Services
     private readonly MediaService _mediaService;
@@ -518,6 +519,9 @@ public partial class NotchWindow : Window
         _isMouseOverNotch = false;
         _hoverOpenTimer?.Stop();
 
+        // Don't close while a context menu is open
+        if (_isContextMenuOpen) return;
+
         if (_vm.NotchState == NotchState.Open || _vm.NotchState == NotchState.Peeking)
         {
             _hoverCloseTimer?.Stop();
@@ -529,7 +533,7 @@ public partial class NotchWindow : Window
             _hoverCloseTimer.Tick += (_, _) =>
             {
                 _hoverCloseTimer!.Stop();
-                if (!_isMouseOverNotch)
+                if (!_isMouseOverNotch && !_isContextMenuOpen)
                     TransitionToClose();
             };
             _hoverCloseTimer.Start();
@@ -569,7 +573,7 @@ public partial class NotchWindow : Window
 
     private void OnNotchRightClick(object sender, MouseButtonEventArgs e)
     {
-        var menu = new System.Windows.Controls.ContextMenu();
+        var menu = CreateStyledContextMenu();
 
         var settingsItem = new System.Windows.Controls.MenuItem { Header = "Settings" };
         settingsItem.Click += (_, _) => OpenSettings();
@@ -581,6 +585,7 @@ public partial class NotchWindow : Window
         quitItem.Click += (_, _) => Application.Current.Shutdown();
         menu.Items.Add(quitItem);
 
+        TrackContextMenu(menu);
         menu.IsOpen = true;
         e.Handled = true;
     }
@@ -594,6 +599,77 @@ public partial class NotchWindow : Window
             else
                 TransitionToOpen();
         });
+    }
+
+    /// <summary>
+    /// Tracks a context menu so the notch doesn't close while it's open.
+    /// </summary>
+    public void TrackContextMenu(System.Windows.Controls.ContextMenu menu)
+    {
+        _isContextMenuOpen = true;
+        menu.Closed += (_, _) =>
+        {
+            _isContextMenuOpen = false;
+            // Re-check if mouse has left while menu was open
+            if (!_isMouseOverNotch && _vm.NotchState == NotchState.Open)
+            {
+                _hoverCloseTimer?.Stop();
+                _hoverCloseTimer = new DispatcherTimer
+                {
+                    Interval = TimeSpan.FromMilliseconds(NotchConstants.HoverCloseDelayMs)
+                };
+                _hoverCloseTimer.Tick += (_, _) =>
+                {
+                    _hoverCloseTimer!.Stop();
+                    if (!_isMouseOverNotch && !_isContextMenuOpen)
+                        TransitionToClose();
+                };
+                _hoverCloseTimer.Start();
+            }
+        };
+    }
+
+    /// <summary>
+    /// Creates a styled ContextMenu matching the app's dark/light theme.
+    /// </summary>
+    public System.Windows.Controls.ContextMenu CreateStyledContextMenu()
+    {
+        var menu = new System.Windows.Controls.ContextMenu();
+        menu.Background = (System.Windows.Media.Brush)FindResource("NotchFillBrush");
+        menu.BorderBrush = (System.Windows.Media.Brush)FindResource("SeparatorBrush");
+        menu.BorderThickness = new Thickness(1);
+        menu.Padding = new Thickness(4, 6, 4, 6);
+        menu.HasDropShadow = true;
+
+        // Style for MenuItems
+        var menuItemStyle = new Style(typeof(System.Windows.Controls.MenuItem));
+        menuItemStyle.Setters.Add(new Setter(System.Windows.Controls.MenuItem.ForegroundProperty,
+            FindResource("TextSecondaryBrush")));
+        menuItemStyle.Setters.Add(new Setter(System.Windows.Controls.MenuItem.FontSizeProperty, 12.0));
+        menuItemStyle.Setters.Add(new Setter(System.Windows.Controls.MenuItem.PaddingProperty,
+            new Thickness(8, 5, 20, 5)));
+        menuItemStyle.Setters.Add(new Setter(System.Windows.Controls.MenuItem.CursorProperty,
+            System.Windows.Input.Cursors.Hand));
+
+        // Hover trigger
+        var hoverTrigger = new Trigger { Property = System.Windows.Controls.MenuItem.IsHighlightedProperty, Value = true };
+        hoverTrigger.Setters.Add(new Setter(System.Windows.Controls.MenuItem.BackgroundProperty,
+            FindResource("HoverOverlayBrush")));
+        hoverTrigger.Setters.Add(new Setter(System.Windows.Controls.MenuItem.ForegroundProperty,
+            FindResource("TextPrimaryBrush")));
+        menuItemStyle.Triggers.Add(hoverTrigger);
+
+        menu.Resources.Add(typeof(System.Windows.Controls.MenuItem), menuItemStyle);
+
+        // Style for Separator
+        var separatorStyle = new Style(typeof(System.Windows.Controls.Separator));
+        separatorStyle.Setters.Add(new Setter(System.Windows.Controls.Separator.BackgroundProperty,
+            FindResource("SeparatorBrush")));
+        separatorStyle.Setters.Add(new Setter(System.Windows.Controls.Separator.MarginProperty,
+            new Thickness(4, 3, 4, 3)));
+        menu.Resources.Add(typeof(System.Windows.Controls.Separator), separatorStyle);
+
+        return menu;
     }
 
     #endregion

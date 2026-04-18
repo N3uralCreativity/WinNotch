@@ -78,7 +78,8 @@ public partial class ShelfView : UserControl
     {
         if (sender is FrameworkElement fe && fe.DataContext is ShelfItem item)
         {
-            var menu = new ContextMenu();
+            var notchWindow = Window.GetWindow(this) as NotchWindow;
+            var menu = notchWindow?.CreateStyledContextMenu() ?? new ContextMenu();
 
             var openItem = new MenuItem { Header = "Open" };
             openItem.Click += (_, _) =>
@@ -108,6 +109,7 @@ public partial class ShelfView : UserControl
             removeItem.Click += (_, _) => _service?.Remove(item);
             menu.Items.Add(removeItem);
 
+            notchWindow?.TrackContextMenu(menu);
             menu.IsOpen = true;
             e.Handled = true;
         }

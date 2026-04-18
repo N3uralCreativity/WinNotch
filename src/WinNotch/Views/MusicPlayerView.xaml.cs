@@ -46,9 +46,13 @@ public partial class MusicPlayerView : UserControl
         if (!info.HasMedia)
         {
             NoMediaText.Visibility = Visibility.Visible;
+            AlbumArtGrid.Visibility = Visibility.Collapsed;
+            InfoControlsGrid.Visibility = Visibility.Collapsed;
             return;
         }
         NoMediaText.Visibility = Visibility.Collapsed;
+        AlbumArtGrid.Visibility = Visibility.Visible;
+        InfoControlsGrid.Visibility = Visibility.Visible;
 
         if (propertyName == null || propertyName == nameof(info.Title))
             TitleText.Text = info.Title;
