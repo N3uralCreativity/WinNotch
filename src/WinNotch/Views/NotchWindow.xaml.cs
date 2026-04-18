@@ -223,10 +223,22 @@ public partial class NotchWindow : Window
         {
             Dispatcher.Invoke(() => UpdateSideMediaContent(_mediaService.MediaInfo, null));
         };
-        var sideClockTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(10) };
+
+        // Side visualizer
+        _audioCaptureService.SpectrumUpdated += () =>
+        {
+            Dispatcher.BeginInvoke(() =>
+            {
+                if (_audioCaptureService.SpectrumData != null)
+                    SideVisualizer.UpdateSpectrum(_audioCaptureService.SpectrumData);
+            });
+        };
+
+        var sideClockTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         sideClockTimer.Tick += (_, _) => UpdateSideClock();
         sideClockTimer.Start();
         UpdateSideClock();
+        UpdateSideMediaContent(_mediaService.MediaInfo, null);
 
         // Fullscreen detection — hide notch when another app is fullscreen
         _fullscreenService.FullscreenChanged += isFs =>
@@ -301,6 +313,40 @@ public partial class NotchWindow : Window
             SidePlayIcon.Text = info.IsPlaying ? "⏸" : "▶";
         if (prop == null || prop == nameof(info.HasMedia))
             SideMusicPanel.Visibility = info.HasMedia ? Visibility.Visible : Visibility.Collapsed;
+
+        // Progress bar + time
+        if (prop == null || prop == nameof(info.Position) || prop == nameof(info.ProgressPercent))
+        {
+            SideElapsedText.Text = FormatTimeSpan(info.Position);
+            UpdateSideProgressBar(info.ProgressPercent);
+        }
+        if (prop == null || prop == nameof(info.Duration))
+            SideDurationText.Text = FormatTimeSpan(info.Duration);
+
+        // Visualizer bar color from album dominant color
+        if (prop == null || prop == nameof(info.DominantColor))
+        {
+            var color = info.DominantColor;
+            double brightness = (0.299 * color.R + 0.587 * color.G + 0.114 * color.B) / 255.0;
+            SideVisualizer.BarColor = brightness < 0.3 ? System.Windows.Media.Colors.White : color;
+        }
+    }
+
+    private void UpdateSideProgressBar(double percent)
+    {
+        if (SideProgressFill.Parent is System.Windows.Controls.Border parent)
+        {
+            double parentWidth = parent.ActualWidth;
+            if (parentWidth > 0)
+                SideProgressFill.Width = Math.Max(0, percent * parentWidth);
+        }
+    }
+
+    private static string FormatTimeSpan(TimeSpan ts)
+    {
+        return ts.Hours > 0
+            ? $"{ts.Hours}:{ts.Minutes:D2}:{ts.Seconds:D2}"
+            : $"{ts.Minutes}:{ts.Seconds:D2}";
     }
 
     private async void OnSidePlayClick(object sender, RoutedEventArgs e) =>
@@ -312,11 +358,35 @@ public partial class NotchWindow : Window
     private async void OnSideNextClick(object sender, RoutedEventArgs e) =>
         await _mediaService.NextAsync();
 
+    private async void OnSideProgressBarClick(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.Border bar) return;
+        var pos = e.GetPosition(bar);
+        double percent = Math.Clamp(pos.X / bar.ActualWidth, 0, 1);
+        await _mediaService.SeekToAsync(percent);
+    }
+
     private void OnSideSettingsClick(object sender, RoutedEventArgs e)
     {
-        // Switch to top dock and open settings
+        // Switch to top dock, open, and show settings
         if (_dock != NotchDock.Top)
-            DockTo(NotchDock.Top);
+        {
+            // First close visually, then dock, then open with settings
+            _vm.Close();
+            _dock = NotchDock.Top;
+            RepositionForDock();
+
+            // Switch content panels
+            ClosedContent.Visibility = Visibility.Visible;
+            OpenContent.Visibility = Visibility.Visible;
+            VerticalClosedContent.Visibility = Visibility.Collapsed;
+            VerticalOpenContent.Visibility = Visibility.Collapsed;
+
+            // Snap to closed dimensions so open animation starts from correct size
+            _currentWidth = NotchConstants.ClosedWidth;
+            _currentHeight = NotchConstants.ClosedHeight;
+            _currentContentOpacity = 0;
+        }
         TransitionToOpen();
         ExpandSettings();
     }

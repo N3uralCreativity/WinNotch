@@ -59,7 +59,7 @@ public static class NotchConstants
 
     // Side dock vertical open dimensions
     public const double SideOpenWidth = 160;    // how far the notch protrudes from edge
-    public const double SideOpenHeight = 420;   // tall axis along screen edge
+    public const double SideOpenHeight = 460;   // tall axis along screen edge
 
     // Drag & Dock
     public const double DragThreshold = 3;        // pixels before drag starts
