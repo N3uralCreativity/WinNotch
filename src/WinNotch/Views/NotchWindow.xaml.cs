@@ -275,7 +275,7 @@ public partial class NotchWindow : Window
         };
         _fullscreenService.Start();
 
-        // When HUD shows, expand notch horizontally and hide other content
+        // When HUD shows, expand notch and hide other content
         HudOverlay.HudShown += () => Dispatcher.Invoke(() =>
         {
             if (_vm.NotchState != NotchState.Open)
@@ -283,6 +283,7 @@ public partial class NotchWindow : Window
                 LiveActivity.Visibility = Visibility.Collapsed;
                 ClockWidget.Visibility = Visibility.Collapsed;
                 BatteryIndicator.Visibility = Visibility.Collapsed;
+                // Horizontal expansion for top dock
                 _widthSpring.AnimateTo(NotchConstants.HudWidth, _currentWidth);
             }
         });
@@ -293,7 +294,28 @@ public partial class NotchWindow : Window
                 BatteryIndicator.Visibility = Visibility.Visible;
             if (_vm.NotchState != NotchState.Open)
             {
+                // Return to normal closed width
                 _widthSpring.AnimateTo(NotchConstants.ClosedWidth, _currentWidth);
+            }
+        });
+
+        // Vertical HUD expansion for side docks
+        VerticalHudOverlay.HudShown += () => Dispatcher.Invoke(() =>
+        {
+            if (_vm.NotchState != NotchState.Open)
+            {
+                SideTimeSmall.Visibility = Visibility.Collapsed;
+                // Vertical expansion for side docks (expand height)
+                _heightSpring.AnimateTo(NotchConstants.HudWidth, _currentHeight);
+            }
+        });
+        VerticalHudOverlay.HudDismissed += () => Dispatcher.Invoke(() =>
+        {
+            SideTimeSmall.Visibility = Visibility.Visible;
+            if (_vm.NotchState != NotchState.Open)
+            {
+                // Return to normal closed height (which is swapped for vertical)
+                _heightSpring.AnimateTo(NotchConstants.ClosedWidth, _currentHeight);
             }
         });
     }
