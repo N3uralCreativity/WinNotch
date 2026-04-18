@@ -154,6 +154,16 @@
                                   Checked="OnSettingChanged" Unchecked="OnSettingChanged"/>
                     </Grid>
 
+                    <!-- BETA FEATURES -->
+                    <TextBlock Text="Beta Features" Style="{StaticResource SectionHeader}"/>
+
+                    <Grid Style="{StaticResource SettingRow}">
+                        <TextBlock Text="Liquid Glass Theme" Style="{StaticResource SettingLabel}"/>
+                        <CheckBox x:Name="LiquidGlassCheck" Style="{StaticResource ToggleSwitch}"
+                                  HorizontalAlignment="Right" VerticalAlignment="Center"
+                                  Checked="OnLiquidGlassChanged" Unchecked="OnLiquidGlassChanged"/>
+                    </Grid>
+
                     <!-- ABOUT -->
                     <TextBlock Text="About" Style="{StaticResource SectionHeader}"/>
 

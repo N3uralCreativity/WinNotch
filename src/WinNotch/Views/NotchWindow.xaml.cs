@@ -1316,6 +1316,9 @@ public partial class NotchWindow : Window
     {
         _settings = settings;
 
+        // Apply liquid glass theme if toggled
+        _themeService.Apply(settings.Theme, settings.UseLiquidGlassTheme);
+
         // Toggle visibility of components based on settings
         LiveActivity.Visibility = settings.ShowMusicControls ? Visibility.Visible : Visibility.Collapsed;
         MusicPlayer.Visibility = settings.ShowMusicControls ? Visibility.Visible : Visibility.Collapsed;

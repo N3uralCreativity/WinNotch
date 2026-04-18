@@ -45,7 +45,7 @@ public partial class App : Application
 
         // Initialize theme
         _themeService = new ThemeService();
-        _themeService.Apply(_settings.Theme);
+        _themeService.Apply(_settings.Theme, _settings.UseLiquidGlassTheme);
         _themeService.StartWatchingSystemTheme();
 
         // System tray icon

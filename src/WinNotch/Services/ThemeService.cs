@@ -16,14 +16,16 @@ public class ThemeService
     private AppTheme _currentSetting = AppTheme.Dark;
     private bool _isLightResolved;
     private bool _isTransitioning;
+    private bool _useLiquidGlass;
 
     public event Action? ThemeChanged;
 
     public bool IsLight => _isLightResolved;
 
-    public void Apply(AppTheme theme)
+    public void Apply(AppTheme theme, bool useLiquidGlass = false)
     {
         _currentSetting = theme;
+        _useLiquidGlass = useLiquidGlass;
         _isLightResolved = theme switch
         {
             AppTheme.Light => true,
@@ -35,12 +37,13 @@ public class ThemeService
         ThemeChanged?.Invoke();
     }
 
-    public async Task ApplyWithTransition(AppTheme theme, UIElement target)
+    public async Task ApplyWithTransition(AppTheme theme, UIElement target, bool useLiquidGlass = false)
     {
         if (_isTransitioning) return;
         _isTransitioning = true;
 
         _currentSetting = theme;
+        _useLiquidGlass = useLiquidGlass;
         _isLightResolved = theme switch
         {
             AppTheme.Light => true,
@@ -77,9 +80,11 @@ public class ThemeService
 
     private void SwapThemeDictionary()
     {
-        var dictUri = _isLightResolved
-            ? new Uri("Views/Components/LightTheme.xaml", UriKind.Relative)
-            : new Uri("Views/Components/DarkTheme.xaml", UriKind.Relative);
+        var dictUri = _useLiquidGlass
+            ? new Uri("Views/Components/LiquidGlassTheme.xaml", UriKind.Relative)
+            : _isLightResolved
+                ? new Uri("Views/Components/LightTheme.xaml", UriKind.Relative)
+                : new Uri("Views/Components/DarkTheme.xaml", UriKind.Relative);
 
         var app = Application.Current;
         var mergedDicts = app.Resources.MergedDictionaries;
@@ -88,7 +93,8 @@ public class ThemeService
         {
             if (mergedDicts[i].Source != null &&
                 (mergedDicts[i].Source.OriginalString.Contains("DarkTheme") ||
-                 mergedDicts[i].Source.OriginalString.Contains("LightTheme")))
+                 mergedDicts[i].Source.OriginalString.Contains("LightTheme") ||
+                 mergedDicts[i].Source.OriginalString.Contains("LiquidGlassTheme")))
             {
                 mergedDicts.RemoveAt(i);
             }

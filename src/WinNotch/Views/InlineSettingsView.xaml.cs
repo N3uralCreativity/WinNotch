@@ -39,6 +39,7 @@ public partial class InlineSettingsView : System.Windows.Controls.UserControl
         ShowWebcamCheck.IsChecked = settings.ShowWebcam;
         WebcamFpsSlider.Value = settings.WebcamFps;
         WebcamFpsLabel.Text = $"{settings.WebcamFps}";
+        LiquidGlassCheck.IsChecked = settings.UseLiquidGlassTheme;
 
         if (settings.HoverMode == HoverMode.LongHoverOpen)
             LongHoverRadio.IsChecked = true;
@@ -117,5 +118,14 @@ public partial class InlineSettingsView : System.Windows.Controls.UserControl
 
         _settings.Save();
         ThemeChangeRequested?.Invoke(_settings.Theme);
+    }
+
+    private void OnLiquidGlassChanged(object sender, RoutedEventArgs e)
+    {
+        if (_isLoading || _settings == null) return;
+
+        _settings.UseLiquidGlassTheme = LiquidGlassCheck.IsChecked == true;
+        _settings.Save();
+        SettingsChanged?.Invoke(_settings);
     }
 }

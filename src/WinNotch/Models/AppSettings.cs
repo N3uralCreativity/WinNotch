@@ -60,6 +60,9 @@ public class AppSettings
     public bool ShowWebcam { get; set; } = false;
     public int WebcamFps { get; set; } = 15;
 
+    // Beta features
+    public bool UseLiquidGlassTheme { get; set; } = false;
+
     private static readonly string SettingsDir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "WinNotch");
     private static readonly string SettingsPath = Path.Combine(SettingsDir, "settings.json");

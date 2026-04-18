@@ -34,6 +34,7 @@ public partial class SettingsWindow : Window
         BrightnessHudCheck.IsChecked = _settings.ShowBrightnessHud;
         ShowBatteryCheck.IsChecked = _settings.ShowBattery;
         ShowCalendarCheck.IsChecked = _settings.ShowCalendar;
+        LiquidGlassCheck.IsChecked = _settings.UseLiquidGlassTheme;
 
         // Hover mode radio buttons
         if (_settings.HoverMode == HoverMode.LongHoverOpen)
@@ -75,5 +76,14 @@ public partial class SettingsWindow : Window
     private void OnCloseClick(object sender, RoutedEventArgs e)
     {
         Close();
+    }
+
+    private void OnLiquidGlassChanged(object sender, RoutedEventArgs e)
+    {
+        if (_isLoading) return;
+
+        _settings.UseLiquidGlassTheme = LiquidGlassCheck.IsChecked == true;
+        _settings.Save();
+        SettingsChanged?.Invoke(_settings);
     }
 }

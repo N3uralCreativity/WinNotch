@@ -189,6 +189,16 @@
                     </Border>
                 </Grid>
 
+                <!-- Beta Features -->
+                <TextBlock Text="BETA FEATURES" Style="{StaticResource SectionHeader}"/>
+
+                <Grid Height="28" Margin="0,2">
+                    <TextBlock Text="Liquid Glass Theme" Style="{StaticResource SettingLabel}"/>
+                    <CheckBox x:Name="LiquidGlassCheck" Style="{StaticResource ToggleSwitch}"
+                              HorizontalAlignment="Right" VerticalAlignment="Center"
+                              Checked="OnLiquidGlassChanged" Unchecked="OnLiquidGlassChanged"/>
+                </Grid>
+
                 <!-- About -->
                 <TextBlock Text="ABOUT" Style="{StaticResource SectionHeader}"/>
                 <TextBlock Foreground="{DynamicResource TextFaintBrush}" FontSize="10" Text="WinNotch v0.1" Margin="0,0,0,2"/>
