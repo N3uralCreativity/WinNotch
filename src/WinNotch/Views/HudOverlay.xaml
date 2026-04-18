@@ -22,7 +22,7 @@
                    Margin="0,0,8,0"/>
 
         <!-- Slider track -->
-        <Border Grid.Column="1"
+        <Border x:Name="SliderTrack" Grid.Column="1"
                 Height="4"
                 CornerRadius="2"
                 Background="{DynamicResource ProgressTrackBrush}"
@@ -33,7 +33,8 @@
                     Height="4"
                     CornerRadius="2"
                     Background="{DynamicResource HudSliderFillBrush}"
-                    HorizontalAlignment="Left"/>
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Stretch"/>
         </Border>
 
         <!-- Percentage -->

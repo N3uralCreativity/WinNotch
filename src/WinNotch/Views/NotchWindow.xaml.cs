@@ -204,6 +204,9 @@ public partial class NotchWindow : Window
         _volumeService.Initialize();
         _brightnessService.Initialize();
         HudOverlay.Bind(_volumeService, _brightnessService);
+        HudOverlay.SetDock(NotchDock.Top);
+        VerticalHudOverlay.Bind(_volumeService, _brightnessService);
+        VerticalHudOverlay.SetDock(NotchDock.Left); // Will be updated when dock changes
 
         // Battery
         _batteryService.Initialize();
@@ -1011,6 +1014,9 @@ public partial class NotchWindow : Window
         _vm.Close();
 
         RepositionForDock();
+
+        // Update HUD overlay dock orientation
+        VerticalHudOverlay.SetDock(dock);
 
         // Switch content panels based on dock orientation
         if (_dock == NotchDock.Top)

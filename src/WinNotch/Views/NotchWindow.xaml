@@ -135,6 +135,10 @@
                             <RotateTransform Angle="90"/>
                         </TextBlock.LayoutTransform>
                     </TextBlock>
+                    <!-- Vertical HUD Overlay for volume/brightness -->
+                    <views:HudOverlay x:Name="VerticalHudOverlay"
+                                      HorizontalAlignment="Center"
+                                      Margin="0,8,0,0"/>
                 </StackPanel>
 
                 <!-- Vertical open content (side dock) - expands to the right when settings opened -->
