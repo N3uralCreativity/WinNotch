@@ -204,9 +204,8 @@ public partial class NotchWindow : Window
         _volumeService.Initialize();
         _brightnessService.Initialize();
         HudOverlay.Bind(_volumeService, _brightnessService);
-        HudOverlay.SetDock(NotchDock.Top);
+        VerticalHudOverlay.IsActive = false;
         VerticalHudOverlay.Bind(_volumeService, _brightnessService);
-        VerticalHudOverlay.SetDock(NotchDock.Left); // Will be updated when dock changes
 
         // Battery
         _batteryService.Initialize();
@@ -276,6 +275,7 @@ public partial class NotchWindow : Window
         _fullscreenService.Start();
 
         // When HUD shows, expand notch and hide other content
+        // Top dock HUD: expand width only (v0.1.0 behavior)
         HudOverlay.HudShown += () => Dispatcher.Invoke(() =>
         {
             if (_vm.NotchState != NotchState.Open)
@@ -283,7 +283,6 @@ public partial class NotchWindow : Window
                 LiveActivity.Visibility = Visibility.Collapsed;
                 ClockWidget.Visibility = Visibility.Collapsed;
                 BatteryIndicator.Visibility = Visibility.Collapsed;
-                // Horizontal expansion for top dock
                 _widthSpring.AnimateTo(NotchConstants.HudWidth, _currentWidth);
             }
         });
@@ -294,18 +293,16 @@ public partial class NotchWindow : Window
                 BatteryIndicator.Visibility = Visibility.Visible;
             if (_vm.NotchState != NotchState.Open)
             {
-                // Return to normal closed width
                 _widthSpring.AnimateTo(NotchConstants.ClosedWidth, _currentWidth);
             }
         });
 
-        // Vertical HUD expansion for side docks
+        // Side dock HUD: expand height only
         VerticalHudOverlay.HudShown += () => Dispatcher.Invoke(() =>
         {
             if (_vm.NotchState != NotchState.Open)
             {
                 SideTimeSmall.Visibility = Visibility.Collapsed;
-                // Vertical expansion for side docks (expand height)
                 _heightSpring.AnimateTo(NotchConstants.HudWidth, _currentHeight);
             }
         });
@@ -314,7 +311,6 @@ public partial class NotchWindow : Window
             SideTimeSmall.Visibility = Visibility.Visible;
             if (_vm.NotchState != NotchState.Open)
             {
-                // Return to normal closed height (which is swapped for vertical)
                 _heightSpring.AnimateTo(NotchConstants.ClosedWidth, _currentHeight);
             }
         });
@@ -459,17 +455,11 @@ public partial class NotchWindow : Window
         }
         else
         {
-            // Side dock: Load settings in vertical panel and expand width to the right
+            // Side dock: Load settings in vertical panel and expand width
             VerticalInlineSettings.LoadSettings(_settings);
             VerticalSettingsPanel.Visibility = Visibility.Visible;
 
-            // Set the settings column width to 280px (instead of using star-sizing which causes resize issues)
-            if (VerticalOpenContent.ColumnDefinitions.Count > 1)
-            {
-                VerticalOpenContent.ColumnDefinitions[1].Width = new GridLength(280);
-            }
-
-            double targetW = NotchConstants.SideOpenWidth + 280; // Add settings panel width
+            double targetW = NotchConstants.SideOpenWidth + 280 + NotchConstants.OpenTopRadius;
             _widthSpring.Response = 0.42;
             _widthSpring.DampingFraction = 0.80;
             _widthSpring.AnimateTo(targetW, _currentWidth);
@@ -494,14 +484,8 @@ public partial class NotchWindow : Window
         }
         else
         {
-            // Side dock: Hide settings panel and shrink width back to normal
+            // Side dock: Hide settings panel and shrink width back
             VerticalSettingsPanel.Visibility = Visibility.Collapsed;
-
-            // Reset the settings column width to 0
-            if (VerticalOpenContent.ColumnDefinitions.Count > 1)
-            {
-                VerticalOpenContent.ColumnDefinitions[1].Width = new GridLength(0);
-            }
 
             _widthSpring.Response = 0.42;
             _widthSpring.DampingFraction = 0.80;
@@ -1049,8 +1033,9 @@ public partial class NotchWindow : Window
 
         RepositionForDock();
 
-        // Update HUD overlay dock orientation
-        VerticalHudOverlay.SetDock(dock);
+        // Update HUD overlay active state based on dock
+        HudOverlay.IsActive = (dock == NotchDock.Top);
+        VerticalHudOverlay.IsActive = (dock != NotchDock.Top);
 
         // Switch content panels based on dock orientation
         if (_dock == NotchDock.Top)
@@ -1359,15 +1344,19 @@ public partial class NotchWindow : Window
         // Re-adjust notch size if currently open
         if (_vm.NotchState == NotchState.Open)
         {
-            _widthSpring.AnimateTo(GetOpenWidth(), _currentWidth);
-
-            if (!_isSettingsExpanded)
+            if (_dock == NotchDock.Top)
             {
-                double targetH = _shelfService.HasItems
-                    ? NotchConstants.OpenHeightWithShelf
-                    : NotchConstants.OpenHeight;
-                _heightSpring.AnimateTo(targetH, _currentHeight);
+                _widthSpring.AnimateTo(GetOpenWidth(), _currentWidth);
+
+                if (!_isSettingsExpanded)
+                {
+                    double targetH = _shelfService.HasItems
+                        ? NotchConstants.OpenHeightWithShelf
+                        : NotchConstants.OpenHeight;
+                    _heightSpring.AnimateTo(targetH, _currentHeight);
+                }
             }
+            // Side docks: don't re-animate width/height — settings panel has fixed size
         }
     }
 

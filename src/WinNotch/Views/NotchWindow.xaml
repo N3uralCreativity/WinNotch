@@ -142,10 +142,11 @@
                 </StackPanel>
 
                 <!-- Vertical open content (side dock) - expands to the right when settings opened -->
-                <Grid x:Name="VerticalOpenContent" Opacity="0" Visibility="Collapsed">
+                <Grid x:Name="VerticalOpenContent" Opacity="0" Visibility="Collapsed"
+                      ClipToBounds="True">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="160"/> <!-- Main vertical panel - fixed width -->
-                        <ColumnDefinition Width="0"/>    <!-- Settings panel (width set programmatically) -->
+                        <ColumnDefinition Width="Auto"/>    <!-- Settings panel (visibility-controlled) -->
                     </Grid.ColumnDefinitions>
 
                     <!-- Main vertical content -->
@@ -252,10 +253,13 @@
                     <!-- Settings panel for vertical mode (expands to the right) -->
                     <Border Grid.Column="1" x:Name="VerticalSettingsPanel"
                             Visibility="Collapsed"
+                            Width="280"
+                            ClipToBounds="True"
                             Background="{DynamicResource NotchFillBrush}"
-                            Margin="0,8,4,8">
+                            Margin="0,8,0,8">
                         <views:InlineSettingsView x:Name="VerticalInlineSettings"
-                                                  Margin="8,0,0,0"/>
+                                                  Width="264"
+                                                  Margin="8,0,8,0"/>
                     </Border>
                 </Grid>
             </Grid>
