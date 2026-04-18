@@ -101,9 +101,11 @@ public partial class MusicPlayerView : UserControl
         if (ProgressFill.Parent is Border parent)
         {
             double parentWidth = parent.ActualWidth;
-            if (parentWidth > 0)
+            // Only update if parent has valid width to prevent visual glitches
+            if (parentWidth > 0 && !double.IsNaN(parentWidth) && !double.IsInfinity(parentWidth))
             {
-                ProgressFill.Width = Math.Max(0, percent * parentWidth);
+                double targetWidth = Math.Max(0, Math.Min(percent * parentWidth, parentWidth));
+                ProgressFill.Width = targetWidth;
             }
         }
     }
@@ -144,8 +146,13 @@ public partial class MusicPlayerView : UserControl
     private async void OnProgressBarClick(object sender, MouseButtonEventArgs e)
     {
         if (_mediaService == null || sender is not Border bar) return;
+
+        double barWidth = bar.ActualWidth;
+        // Validate bar width before calculating seek position
+        if (barWidth <= 0 || double.IsNaN(barWidth) || double.IsInfinity(barWidth)) return;
+
         var pos = e.GetPosition(bar);
-        double percent = Math.Clamp(pos.X / bar.ActualWidth, 0, 1);
+        double percent = Math.Clamp(pos.X / barWidth, 0, 1);
         await _mediaService.SeekToAsync(percent);
     }
 }

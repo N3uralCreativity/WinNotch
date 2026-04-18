@@ -15,6 +15,7 @@ public class MediaService : IDisposable
     private GlobalSystemMediaTransportControlsSessionManager? _manager;
     private GlobalSystemMediaTransportControlsSession? _session;
     private readonly DispatcherTimer _positionTimer;
+    private DateTime _lastTimelineUpdate = DateTime.MinValue;
 
     public MediaInfo MediaInfo { get; } = new();
 
@@ -24,7 +25,7 @@ public class MediaService : IDisposable
     {
         _positionTimer = new DispatcherTimer
         {
-            Interval = TimeSpan.FromMilliseconds(500)
+            Interval = TimeSpan.FromMilliseconds(200) // Update more frequently for smoother progress
         };
         _positionTimer.Tick += OnPositionTimerTick;
     }
@@ -156,8 +157,16 @@ public class MediaService : IDisposable
             var info = _session.GetPlaybackInfo();
             if (info == null) return;
 
+            bool wasPlaying = MediaInfo.IsPlaying;
             MediaInfo.IsPlaying = info.PlaybackStatus ==
                 GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing;
+
+            // Reset timeline timestamp when playback state changes
+            if (wasPlaying != MediaInfo.IsPlaying)
+            {
+                _lastTimelineUpdate = DateTime.MinValue;
+                UpdateTimeline();
+            }
 
             MediaInfo.IsShuffle = info.IsShuffleActive ?? false;
 
@@ -182,6 +191,7 @@ public class MediaService : IDisposable
 
             MediaInfo.Position = timeline.Position;
             MediaInfo.Duration = timeline.EndTime;
+            _lastTimelineUpdate = DateTime.UtcNow;
         }
         catch { }
     }
@@ -189,7 +199,25 @@ public class MediaService : IDisposable
     private void OnPositionTimerTick(object? sender, EventArgs e)
     {
         if (_session == null || !MediaInfo.IsPlaying) return;
-        UpdateTimeline();
+
+        // Interpolate position locally for smooth updates between timeline queries
+        if (_lastTimelineUpdate != DateTime.MinValue && MediaInfo.Duration.TotalSeconds > 0)
+        {
+            double elapsed = (DateTime.UtcNow - _lastTimelineUpdate).TotalSeconds;
+            var interpolatedPosition = MediaInfo.Position + TimeSpan.FromSeconds(elapsed);
+
+            // Clamp to duration to prevent overflow
+            if (interpolatedPosition <= MediaInfo.Duration)
+            {
+                MediaInfo.Position = interpolatedPosition;
+            }
+        }
+
+        // Query actual timeline every second to resync and prevent drift
+        if ((DateTime.UtcNow - _lastTimelineUpdate).TotalSeconds >= 1.0)
+        {
+            UpdateTimeline();
+        }
     }
 
     // Transport controls
@@ -240,6 +268,9 @@ public class MediaService : IDisposable
         {
             var targetTicks = (long)(percent * MediaInfo.Duration.Ticks);
             await _session.TryChangePlaybackPositionAsync(targetTicks);
+
+            // Reset timeline timestamp to force immediate update after seek
+            _lastTimelineUpdate = DateTime.MinValue;
         }
         catch { }
     }

@@ -146,6 +146,9 @@ public partial class NotchWindow : Window
         ContentGrid.PreviewMouseMove += OnContentGridMouseMove;
         ContentGrid.PreviewMouseLeftButtonUp += OnContentGridMouseUp;
 
+        // Handle mouse leaving window during drag
+        RootGrid.MouseLeave += OnRootGridMouseLeave;
+
         // Scroll on notch changes volume (Preview to catch before children)
         RootGrid.PreviewMouseWheel += OnNotchMouseWheel;
 
@@ -337,8 +340,12 @@ public partial class NotchWindow : Window
         if (SideProgressFill.Parent is System.Windows.Controls.Border parent)
         {
             double parentWidth = parent.ActualWidth;
-            if (parentWidth > 0)
-                SideProgressFill.Width = Math.Max(0, percent * parentWidth);
+            // Only update if parent has valid width to prevent visual glitches
+            if (parentWidth > 0 && !double.IsNaN(parentWidth) && !double.IsInfinity(parentWidth))
+            {
+                double targetWidth = Math.Max(0, Math.Min(percent * parentWidth, parentWidth));
+                SideProgressFill.Width = targetWidth;
+            }
         }
     }
 
@@ -361,8 +368,13 @@ public partial class NotchWindow : Window
     private async void OnSideProgressBarClick(object sender, MouseButtonEventArgs e)
     {
         if (sender is not System.Windows.Controls.Border bar) return;
+
+        double barWidth = bar.ActualWidth;
+        // Validate bar width before calculating seek position
+        if (barWidth <= 0 || double.IsNaN(barWidth) || double.IsInfinity(barWidth)) return;
+
         var pos = e.GetPosition(bar);
-        double percent = Math.Clamp(pos.X / bar.ActualWidth, 0, 1);
+        double percent = Math.Clamp(pos.X / barWidth, 0, 1);
         await _mediaService.SeekToAsync(percent);
     }
 
@@ -539,19 +551,18 @@ public partial class NotchWindow : Window
 
         if (_isDragging)
         {
-            // During drag: center pill in window, resize window to fit pill
-            Width = w;
-            Height = h;
-            windowW = w;
-            windowH = h;
+            // During drag: use fixed drag pill size to prevent window resize glitches
+            double dragW = NotchConstants.ClosedWidth * 0.8;
+            double dragH = NotchConstants.ClosedHeight * 0.8;
+            Width = dragW;
+            Height = dragH;
+            windowW = dragW;
+            windowH = dragH;
             offsetX = 0;
             offsetY = 0;
 
-            // Keep window centered on cursor
-            var cursorPos = System.Windows.Forms.Cursor.Position;
-            var dpi = ScreenHelper.GetDpiScale(this);
-            Left = cursorPos.X / dpi - w / 2;
-            Top = cursorPos.Y / dpi - h / 2;
+            // Position is already updated in OnNotchMouseMove to follow cursor smoothly
+            // Don't recalculate here to avoid visual jitter
         }
         else if (_dock == NotchDock.Left)
         {
@@ -846,9 +857,12 @@ public partial class NotchWindow : Window
 
         if (!_isDragging) return;
 
-        // Track velocity (exponential smoothing)
+        // Track velocity (exponential smoothing with clamped time delta)
         var now = DateTime.UtcNow;
         double dt = (now - _dragLastTime).TotalSeconds;
+        // Clamp dt to prevent huge velocity spikes from timer irregularities
+        dt = Math.Clamp(dt, 0.001, 0.1);
+
         if (dt > 0.001)
         {
             double vx = (currentScreen.X - _dragLastScreen.X) / dt;
@@ -859,10 +873,10 @@ public partial class NotchWindow : Window
         _dragLastScreen = currentScreen;
         _dragLastTime = now;
 
-        // Move window: center the notch pill on cursor
+        // Move window: use target drag pill size (not animated current size) to prevent drift
         var dpi = ScreenHelper.GetDpiScale(this);
-        double pillW = _currentWidth;
-        double pillH = _currentHeight;
+        double pillW = NotchConstants.ClosedWidth * 0.8;
+        double pillH = NotchConstants.ClosedHeight * 0.8;
         Left = currentScreen.X / dpi - pillW / 2;
         Top = currentScreen.Y / dpi - pillH / 2;
     }
@@ -870,7 +884,10 @@ public partial class NotchWindow : Window
     private void OnNotchMouseUp(object sender, MouseButtonEventArgs e)
     {
         _isMouseDownOnNotch = false;
-        NotchPath.ReleaseMouseCapture();
+
+        // Always release mouse capture to prevent stuck states
+        if (NotchPath.IsMouseCaptured)
+            NotchPath.ReleaseMouseCapture();
 
         if (_isDragging)
         {
@@ -889,23 +906,25 @@ public partial class NotchWindow : Window
         _isDragging = true;
         _isMouseDownOnNotch = false;
 
-        // If coming from a side dock, snap dimensions to horizontal immediately
-        // (no gradual swap — avoids the visual glitch)
+        // Target drag pill size
         double pillW = NotchConstants.ClosedWidth * 0.8;
         double pillH = NotchConstants.ClosedHeight * 0.8;
+
+        // If coming from a side dock, immediately set dimensions to horizontal
         if (_dock == NotchDock.Left || _dock == NotchDock.Right)
         {
             _currentWidth = pillW;
             _currentHeight = pillH;
         }
 
-        Width = NotchConstants.ClosedWidth;
-        Height = NotchConstants.ClosedHeight;
+        // Set window to drag pill size immediately to prevent resize glitches
+        Width = pillW;
+        Height = pillH;
 
         // Center window on cursor immediately
         var dpi = ScreenHelper.GetDpiScale(this);
-        Left = currentScreenPos.X / dpi - NotchConstants.ClosedWidth / 2;
-        Top = currentScreenPos.Y / dpi - NotchConstants.ClosedHeight / 2;
+        Left = currentScreenPos.X / dpi - pillW / 2;
+        Top = currentScreenPos.Y / dpi - pillH / 2;
 
         // Switch to horizontal content during drag
         ClosedContent.Visibility = Visibility.Visible;
@@ -921,13 +940,13 @@ public partial class NotchWindow : Window
             InlineSettings.Visibility = Visibility.Collapsed;
         }
 
-        // Animate to a compact drag pill
+        // Animate to compact drag pill size
         _widthSpring.Response = 0.25;
         _widthSpring.DampingFraction = 0.90;
         _heightSpring.Response = 0.25;
         _heightSpring.DampingFraction = 0.90;
-        _widthSpring.AnimateTo(NotchConstants.ClosedWidth * 0.8, _currentWidth);
-        _heightSpring.AnimateTo(NotchConstants.ClosedHeight * 0.8, _currentHeight);
+        _widthSpring.AnimateTo(pillW, _currentWidth);
+        _heightSpring.AnimateTo(pillH, _currentHeight);
         _shadowOpacitySpring.AnimateTo(0.5, _currentShadowOpacity);
         _contentOpacitySpring.AnimateTo(0.0, _currentContentOpacity);
     }
@@ -1050,6 +1069,18 @@ public partial class NotchWindow : Window
     {
         // Handle drag end or click-to-open
         OnNotchMouseUp(sender, e);
+    }
+
+    private void OnRootGridMouseLeave(object sender, MouseEventArgs e)
+    {
+        // If dragging and mouse leaves window (very fast movement), end drag safely
+        if (_isDragging && e.LeftButton != System.Windows.Input.MouseButtonState.Pressed)
+        {
+            _isMouseDownOnNotch = false;
+            if (NotchPath.IsMouseCaptured)
+                NotchPath.ReleaseMouseCapture();
+            EndDrag();
+        }
     }
 
     private void OnNotchMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
