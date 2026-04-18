@@ -144,8 +144,8 @@
                 <!-- Vertical open content (side dock) - expands to the right when settings opened -->
                 <Grid x:Name="VerticalOpenContent" Opacity="0" Visibility="Collapsed">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/> <!-- Main vertical panel -->
-                        <ColumnDefinition Width="*"/>    <!-- Settings panel (expands dynamically) -->
+                        <ColumnDefinition Width="160"/> <!-- Main vertical panel - fixed width -->
+                        <ColumnDefinition Width="0"/>    <!-- Settings panel (width set programmatically) -->
                     </Grid.ColumnDefinitions>
 
                     <!-- Main vertical content -->

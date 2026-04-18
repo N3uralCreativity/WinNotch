@@ -463,6 +463,12 @@ public partial class NotchWindow : Window
             VerticalInlineSettings.LoadSettings(_settings);
             VerticalSettingsPanel.Visibility = Visibility.Visible;
 
+            // Set the settings column width to 280px (instead of using star-sizing which causes resize issues)
+            if (VerticalOpenContent.ColumnDefinitions.Count > 1)
+            {
+                VerticalOpenContent.ColumnDefinitions[1].Width = new GridLength(280);
+            }
+
             double targetW = NotchConstants.SideOpenWidth + 280; // Add settings panel width
             _widthSpring.Response = 0.42;
             _widthSpring.DampingFraction = 0.80;
@@ -490,6 +496,12 @@ public partial class NotchWindow : Window
         {
             // Side dock: Hide settings panel and shrink width back to normal
             VerticalSettingsPanel.Visibility = Visibility.Collapsed;
+
+            // Reset the settings column width to 0
+            if (VerticalOpenContent.ColumnDefinitions.Count > 1)
+            {
+                VerticalOpenContent.ColumnDefinitions[1].Width = new GridLength(0);
+            }
 
             _widthSpring.Response = 0.42;
             _widthSpring.DampingFraction = 0.80;
