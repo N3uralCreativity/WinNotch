@@ -204,29 +204,9 @@ public partial class PluginBrowserWindow : Window
 
             if (filePath != null)
             {
-                if (filePath.EndsWith(".pending"))
-                {
-                    button.Content = "Restart Now";
-                    button.IsEnabled = true;
-                    button.Click -= null!; // clear previous handlers
-                    button.Click += (s2, e2) => RestartApp();
-                }
-                else
-                {
-                    // Try to load the plugin live
-                    var plugin = await _pluginManager!.LoadPluginFromFileAsync(filePath);
-
-                    if (plugin != null)
-                    {
-                        button.Content = "Installed ✓";
-                    }
-                    else
-                    {
-                        button.Content = "Restart Now";
-                        button.IsEnabled = true;
-                        button.Click += (s2, e2) => RestartApp();
-                    }
-                }
+                button.Content = "Restart Now";
+                button.IsEnabled = true;
+                button.Click += (s2, e2) => RestartApp();
             }
         }
         catch (Exception ex)
