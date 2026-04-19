@@ -38,7 +38,7 @@ public class AppSettings
     public int LongHoverDelayMs { get; set; } = 600;
 
     // Appearance
-    public AppTheme Theme { get; set; } = AppTheme.Dark;
+    public AppTheme Theme { get; set; } = AppTheme.Auto;
     public double CornerRadiusScale { get; set; } = 1.0;
     public bool ShowShadow { get; set; } = true;
 
