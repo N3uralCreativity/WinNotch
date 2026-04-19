@@ -1,6 +1,6 @@
 @echo off
 echo ========================================
-echo  WinNotch v0.3.3 - Build Release
+echo  WinNotch v0.3.4 - Build Release
 echo ========================================
 echo.
 
@@ -47,9 +47,9 @@ if defined ISCC (
     echo.
     echo ========================================
     echo  Installer created!
-    echo  Output: publish\installer\WinNotch-0.3.3-Setup.exe
+    echo  Output: publish\installer\WinNotch-0.3.4-Setup.exe
     echo ========================================
-    for %%A in ("publish\installer\WinNotch-0.3.3-Setup.exe") do echo  Size: %%~zA bytes
+    for %%A in ("publish\installer\WinNotch-0.3.4-Setup.exe") do echo  Size: %%~zA bytes
 ) else (
     echo [2/2] Inno Setup not found - skipping installer.
     echo  Install from: https://jrsoftware.org/isinfo.php

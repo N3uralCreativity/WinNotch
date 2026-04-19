@@ -206,32 +206,25 @@ public partial class PluginBrowserWindow : Window
             {
                 if (filePath.EndsWith(".pending"))
                 {
-                    MessageBox.Show($"{manifest.Name} downloaded! Restart WinNotch to install it.",
-                                  "Plugin Downloaded",
-                                  MessageBoxButton.OK,
-                                  MessageBoxImage.Information);
-                    button.Content = "Restart needed";
+                    button.Content = "Restart Now";
+                    button.IsEnabled = true;
+                    button.Click -= null!; // clear previous handlers
+                    button.Click += (s2, e2) => RestartApp();
                 }
                 else
                 {
-                    // Load the plugin
+                    // Try to load the plugin live
                     var plugin = await _pluginManager!.LoadPluginFromFileAsync(filePath);
 
                     if (plugin != null)
                     {
-                        MessageBox.Show($"{manifest.Name} installed successfully!",
-                                      "Plugin Installed",
-                                      MessageBoxButton.OK,
-                                      MessageBoxImage.Information);
-                        button.Content = "Installed";
+                        button.Content = "Installed ✓";
                     }
                     else
                     {
-                        MessageBox.Show($"{manifest.Name} downloaded! Restart WinNotch to activate it.",
-                                      "Plugin Installed",
-                                      MessageBoxButton.OK,
-                                      MessageBoxImage.Information);
-                        button.Content = "Restart needed";
+                        button.Content = "Restart Now";
+                        button.IsEnabled = true;
+                        button.Click += (s2, e2) => RestartApp();
                     }
                 }
             }
@@ -242,5 +235,15 @@ public partial class PluginBrowserWindow : Window
             button.IsEnabled = true;
             button.Content = "Install";
         }
+    }
+
+    private static void RestartApp()
+    {
+        var exePath = Environment.ProcessPath;
+        if (exePath != null)
+        {
+            System.Diagnostics.Process.Start(exePath);
+        }
+        System.Windows.Application.Current.Shutdown();
     }
 }
