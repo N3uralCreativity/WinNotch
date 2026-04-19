@@ -165,7 +165,8 @@ public partial class PluginManagerView : UserControl
             }
             else
             {
-                MessageBox.Show("Failed to refresh plugin library. Please check your internet connection.", "Plugin Manager", MessageBoxButton.OK, MessageBoxImage.Warning);
+                var detail = _libraryService?.LastError ?? "Unknown error";
+                MessageBox.Show($"Failed to refresh plugin library.\n\n{detail}", "Plugin Manager", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
         finally

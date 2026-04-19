@@ -30,8 +30,26 @@ public partial class PluginBrowserWindow : Window
         Loaded += async (s, e) =>
         {
             // Refresh library on open
-            await _libraryService.RefreshLibraryAsync();
-            DisplayPlugins(_libraryService.AvailablePlugins);
+            var success = await _libraryService.RefreshLibraryAsync();
+            if (success)
+            {
+                DisplayPlugins(_libraryService.AvailablePlugins);
+            }
+            else
+            {
+                var detail = _libraryService.LastError ?? "Unknown error";
+                PluginListPanel.Children.Clear();
+                var errorText = new TextBlock
+                {
+                    Text = $"Failed to load plugin library.\n{detail}",
+                    FontSize = 14,
+                    Foreground = Brushes.OrangeRed,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(0, 50, 0, 0)
+                };
+                PluginListPanel.Children.Add(errorText);
+            }
         };
     }
 

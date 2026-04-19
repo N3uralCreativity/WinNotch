@@ -23,13 +23,15 @@ public class PluginLibraryService
 
     public event Action? LibraryUpdated;
 
+    public string? LastError { get; private set; }
+
     public PluginLibraryService()
     {
         _httpClient = new HttpClient
         {
             Timeout = TimeSpan.FromSeconds(30)
         };
-        _httpClient.DefaultRequestHeaders.Add("User-Agent", "WinNotch/0.3.0");
+        _httpClient.DefaultRequestHeaders.Add("User-Agent", "WinNotch/0.3.1");
     }
 
     /// <summary>
@@ -54,6 +56,7 @@ public class PluginLibraryService
         }
         catch (Exception ex)
         {
+            LastError = ex.Message;
             System.Diagnostics.Debug.WriteLine($"Failed to refresh plugin library: {ex.Message}");
             return false;
         }
