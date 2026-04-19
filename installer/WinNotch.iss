@@ -65,6 +65,56 @@ Type: files; Name: "{localappdata}\WinNotch\*"
 Type: dirifempty; Name: "{localappdata}\WinNotch"
 
 [Code]
+
+procedure KillRunningProcess();
+var
+  ResultCode: Integer;
+begin
+  Exec('taskkill.exe', '/F /IM {#MyAppExeName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  // Small wait to ensure process is fully terminated
+  Sleep(500);
+end;
+
+procedure InitializeUninstallProgressForm();
+begin
+  // Kill WinNotch before uninstalling
+  KillRunningProcess();
+end;
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  AppDataDir: String;
+begin
+  if CurUninstallStep = usPostUninstall then
+  begin
+    // Always remove startup registry entry
+    RegDeleteValue(HKCU, 'Software\Microsoft\Windows\CurrentVersion\Run', '{#MyAppName}');
+
+    // Ask user if they want to delete all data
+    if MsgBox('Do you want to delete all WinNotch data?' + #13#10 + #13#10 +
+              'This includes plugins, settings, logs, and all user data.' + #13#10 +
+              '(Located in: ' + ExpandConstant('{userappdata}\WinNotch') + ')',
+              mbConfirmation, MB_YESNO) = IDYES then
+    begin
+      // Delete %AppData%\WinNotch (plugins, settings, logs)
+      AppDataDir := ExpandConstant('{userappdata}\WinNotch');
+      if DirExists(AppDataDir) then
+        DelTree(AppDataDir, True, True, True);
+
+      // Delete %LocalAppData%\WinNotch
+      AppDataDir := ExpandConstant('{localappdata}\WinNotch');
+      if DirExists(AppDataDir) then
+        DelTree(AppDataDir, True, True, True);
+    end;
+  end;
+end;
+
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+begin
+  // Kill running process before installing/upgrading
+  KillRunningProcess();
+  Result := '';
+end;
 function GetUninstallString(): String;
 var
   sUnInstPath: String;
