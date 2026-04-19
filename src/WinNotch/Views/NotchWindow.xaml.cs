@@ -55,6 +55,14 @@ public partial class NotchWindow : Window
     private double _dragVelocityX;
     private double _dragVelocityY;
 
+    // Liquid Glass backdrop
+    private bool _isLiquidGlassActive;
+    private ImageBrush? _backdropBrush;
+    private System.Windows.Media.Imaging.WriteableBitmap? _backdropWb;
+    private int _wbW, _wbH;
+    private double _cachedDpiX = 1, _cachedDpiY = 1;
+    private bool _dpiCached;
+
     // Services
     private readonly MediaService _mediaService;
     private readonly AudioCaptureService _audioCaptureService;
@@ -128,6 +136,9 @@ public partial class NotchWindow : Window
         PositionFixedWindow();
         UpdateNotchVisuals();
 
+        // Apply liquid glass if enabled at startup
+        ApplyLiquidGlassEffect(_settings.UseLiquidGlassTheme);
+
         // Register for per-frame rendering
         CompositionTarget.Rendering += OnRendering;
 
@@ -180,7 +191,7 @@ public partial class NotchWindow : Window
         InlineSettings.BackRequested += CollapseSettings;
         InlineSettings.ThemeChangeRequested += async theme =>
         {
-            await _themeService.ApplyWithTransition(theme, NotchCanvas);
+            await _themeService.ApplyWithTransition(theme, NotchCanvas, _settings.UseLiquidGlassTheme);
         };
 
         // Vertical inline settings (separate instance for side dock)
@@ -188,7 +199,7 @@ public partial class NotchWindow : Window
         VerticalInlineSettings.BackRequested += CollapseSettings;
         VerticalInlineSettings.ThemeChangeRequested += async theme =>
         {
-            await _themeService.ApplyWithTransition(theme, NotchCanvas);
+            await _themeService.ApplyWithTransition(theme, NotchCanvas, _settings.UseLiquidGlassTheme);
         };
 
         // Toggle clock/live-activity visibility based on music state
@@ -587,6 +598,10 @@ public partial class NotchWindow : Window
 
         NotchPath.Data = geometry;
         ShadowPath.Data = geometry;
+        BackdropBlurPath.Data = geometry;
+        GlassSpecularPath.Data = geometry;
+        GlassBorderPath.Data = geometry;
+        GlassInnerShadowPath.Data = geometry;
 
         double windowW = ActualWidth > 0 ? ActualWidth : Width;
         double windowH = ActualHeight > 0 ? ActualHeight : Height;
@@ -629,6 +644,14 @@ public partial class NotchWindow : Window
         System.Windows.Controls.Canvas.SetTop(NotchPath, offsetY);
         System.Windows.Controls.Canvas.SetLeft(ShadowPath, offsetX);
         System.Windows.Controls.Canvas.SetTop(ShadowPath, offsetY);
+        System.Windows.Controls.Canvas.SetLeft(BackdropBlurPath, offsetX);
+        System.Windows.Controls.Canvas.SetTop(BackdropBlurPath, offsetY);
+        System.Windows.Controls.Canvas.SetLeft(GlassSpecularPath, offsetX);
+        System.Windows.Controls.Canvas.SetTop(GlassSpecularPath, offsetY);
+        System.Windows.Controls.Canvas.SetLeft(GlassBorderPath, offsetX);
+        System.Windows.Controls.Canvas.SetTop(GlassBorderPath, offsetY);
+        System.Windows.Controls.Canvas.SetLeft(GlassInnerShadowPath, offsetX);
+        System.Windows.Controls.Canvas.SetTop(GlassInnerShadowPath, offsetY);
 
         // Shadow opacity
         ShadowPath.Opacity = _currentShadowOpacity;
@@ -1300,6 +1323,7 @@ public partial class NotchWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
+        CompositionTarget.Rendering -= OnRenderBackdrop;
         CompositionTarget.Rendering -= OnRendering;
         _audioCaptureService.Dispose();
         _mediaService.Dispose();
@@ -1318,6 +1342,7 @@ public partial class NotchWindow : Window
 
         // Apply liquid glass theme if toggled
         _themeService.Apply(settings.Theme, settings.UseLiquidGlassTheme);
+        ApplyLiquidGlassEffect(settings.UseLiquidGlassTheme);
 
         // Toggle visibility of components based on settings
         LiveActivity.Visibility = settings.ShowMusicControls ? Visibility.Visible : Visibility.Collapsed;
@@ -1371,6 +1396,88 @@ public partial class NotchWindow : Window
         if (cal) return NotchConstants.OpenWidthWithCalendar;
         if (cam) return NotchConstants.OpenWidthWithWebcam;
         return NotchConstants.OpenWidth;
+    }
+
+    private void ApplyLiquidGlassEffect(bool enable)
+    {
+        _isLiquidGlassActive = enable;
+
+        if (enable)
+        {
+            WindowHelper.SetExcludeFromCapture(this, true);
+
+            // Cache DPI once
+            if (!_dpiCached)
+            {
+                var dpi = VisualTreeHelper.GetDpi(this);
+                _cachedDpiX = dpi.DpiScaleX;
+                _cachedDpiY = dpi.DpiScaleY;
+                _dpiCached = true;
+            }
+
+            GlassSpecularPath.Opacity = 1.0;
+            GlassBorderPath.Opacity = 1.0;
+            GlassInnerShadowPath.Opacity = 1.0;
+            BackdropBlurPath.Opacity = 1.0;
+
+            CompositionTarget.Rendering += OnRenderBackdrop;
+        }
+        else
+        {
+            CompositionTarget.Rendering -= OnRenderBackdrop;
+            WindowHelper.SetExcludeFromCapture(this, false);
+            GlassSpecularPath.Opacity = 0;
+            GlassBorderPath.Opacity = 0;
+            GlassInnerShadowPath.Opacity = 0;
+            BackdropBlurPath.Opacity = 0;
+            BackdropBlurPath.Fill = null;
+            _backdropBrush = null;
+            _backdropWb = null;
+        }
+    }
+
+    private void OnRenderBackdrop(object? sender, EventArgs e)
+    {
+        if (!_isLiquidGlassActive || _isDragging) return;
+        if (_currentWidth < 10 || _currentHeight < 10) return;
+
+        try
+        {
+            double canvasLeft = System.Windows.Controls.Canvas.GetLeft(NotchPath);
+            double canvasTop = System.Windows.Controls.Canvas.GetTop(NotchPath);
+            if (double.IsNaN(canvasLeft)) canvasLeft = 0;
+            if (double.IsNaN(canvasTop)) canvasTop = 0;
+
+            int px = (int)((Left + canvasLeft) * _cachedDpiX);
+            int py = (int)((Top + canvasTop) * _cachedDpiY);
+            int pw = (int)(_currentWidth * _cachedDpiX);
+            int ph = (int)(_currentHeight * _cachedDpiY);
+
+            if (pw < 4 || ph < 4) return;
+
+            // Ensure WriteableBitmap matches current size
+            if (_backdropWb == null || _wbW != pw || _wbH != ph)
+            {
+                _backdropWb = new System.Windows.Media.Imaging.WriteableBitmap(
+                    pw, ph, 96, 96, PixelFormats.Bgra32, null);
+                _wbW = pw;
+                _wbH = ph;
+
+                _backdropBrush = new ImageBrush(_backdropWb)
+                {
+                    Stretch = Stretch.Fill,
+                    TileMode = TileMode.None
+                };
+                BackdropBlurPath.Fill = _backdropBrush;
+            }
+
+            // Capture directly into the WriteableBitmap (zero alloc)
+            BackdropBlurHelper.CaptureInto(_backdropWb, px, py, pw, ph, padding: 4);
+        }
+        catch
+        {
+            // Silently ignore capture failures
+        }
     }
 
     private void CompactVisualizer_SetVisible(bool visible)

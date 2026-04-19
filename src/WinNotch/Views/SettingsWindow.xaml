@@ -167,11 +167,30 @@
                     <!-- ABOUT -->
                     <TextBlock Text="About" Style="{StaticResource SectionHeader}"/>
 
-                    <TextBlock Foreground="{DynamicResource TextSubtleBrush}" FontSize="12"
-                               Text="WinNotch v0.1"
+                    <TextBlock x:Name="VersionText" Foreground="{DynamicResource TextSubtleBrush}" FontSize="12"
+                               Text="WinNotch v0.2.0"
                                Margin="0,0,0,2"/>
                     <TextBlock Foreground="{DynamicResource TextFaintestBrush}" FontSize="11"
-                               Text="Inspired by boring.notch for macOS"/>
+                               Text="Inspired by boring.notch for macOS"
+                               Margin="0,0,0,6"/>
+
+                    <!-- Update check -->
+                    <Grid Margin="0,0,0,8">
+                        <Button x:Name="CheckUpdateButton" Click="OnCheckUpdateClick"
+                                HorizontalAlignment="Left" Cursor="Hand"
+                                Background="Transparent" BorderThickness="0" Padding="0">
+                            <TextBlock x:Name="CheckUpdateText" Text="Check for updates"
+                                       Foreground="{DynamicResource TextSubtleBrush}" FontSize="11"
+                                       TextDecorations="Underline"/>
+                        </Button>
+                        <Button x:Name="UpdateButton" Click="OnUpdateClick"
+                                Visibility="Collapsed" HorizontalAlignment="Left"
+                                Cursor="Hand" Padding="8,4" Background="{DynamicResource SegmentedCheckedBgBrush}"
+                                BorderThickness="0">
+                            <TextBlock x:Name="UpdateButtonText" Text="Update available"
+                                       Foreground="{DynamicResource TextPrimaryBrush}" FontSize="11" FontWeight="SemiBold"/>
+                        </Button>
+                    </Grid>
 
                 </StackPanel>
             </ScrollViewer>

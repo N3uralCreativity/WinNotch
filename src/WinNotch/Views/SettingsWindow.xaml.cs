@@ -2,6 +2,7 @@ using System;
 using System.Windows;
 using System.Windows.Input;
 using WinNotch.Models;
+using WinNotch.Services;
 
 namespace WinNotch.Views;
 
@@ -9,6 +10,7 @@ public partial class SettingsWindow : Window
 {
     private readonly AppSettings _settings;
     private bool _isLoading = true;
+    private readonly UpdateService _updateService = new();
 
     /// <summary>Fired when a setting changes so the notch can react.</summary>
     public event Action<AppSettings>? SettingsChanged;
@@ -85,5 +87,45 @@ public partial class SettingsWindow : Window
         _settings.UseLiquidGlassTheme = LiquidGlassCheck.IsChecked == true;
         _settings.Save();
         SettingsChanged?.Invoke(_settings);
+    }
+
+    private async void OnCheckUpdateClick(object sender, RoutedEventArgs e)
+    {
+        CheckUpdateText.Text = "Checking...";
+        CheckUpdateButton.IsEnabled = false;
+
+        var hasUpdate = await _updateService.CheckForUpdateAsync();
+
+        if (hasUpdate)
+        {
+            CheckUpdateButton.Visibility = Visibility.Collapsed;
+            UpdateButton.Visibility = Visibility.Visible;
+            UpdateButtonText.Text = $"⬇ Update to v{_updateService.LatestVersion}";
+        }
+        else
+        {
+            CheckUpdateText.Text = "You're up to date ✓";
+        }
+
+        CheckUpdateButton.IsEnabled = true;
+    }
+
+    private async void OnUpdateClick(object sender, RoutedEventArgs e)
+    {
+        UpdateButtonText.Text = "Downloading...";
+        UpdateButton.IsEnabled = false;
+
+        var progress = new Progress<double>(p =>
+        {
+            var pct = (int)(p * 100);
+            UpdateButtonText.Text = $"Downloading... {pct}%";
+        });
+
+        var ok = await _updateService.DownloadAndLaunchInstallerAsync(progress);
+        if (!ok)
+        {
+            UpdateButtonText.Text = "Download failed — retry";
+            UpdateButton.IsEnabled = true;
+        }
     }
 }

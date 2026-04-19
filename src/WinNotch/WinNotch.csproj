@@ -7,14 +7,15 @@
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <RootNamespace>WinNotch</RootNamespace>
     <AssemblyName>WinNotch</AssemblyName>
 
     <!-- App metadata -->
     <ApplicationIcon>Assets\Icons\WinNotch.ico</ApplicationIcon>
-    <Version>0.1.5</Version>
-    <FileVersion>0.1.5.0</FileVersion>
-    <AssemblyVersion>0.1.5.0</AssemblyVersion>
+    <Version>0.2.0</Version>
+    <FileVersion>0.2.0.0</FileVersion>
+    <AssemblyVersion>0.2.0.0</AssemblyVersion>
     <Product>WinNotch</Product>
     <Description>Dynamic Island-inspired notch overlay for Windows</Description>
     <Company>N3uralCreativity</Company>

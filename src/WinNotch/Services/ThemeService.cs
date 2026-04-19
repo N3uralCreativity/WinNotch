@@ -21,6 +21,7 @@ public class ThemeService
     public event Action? ThemeChanged;
 
     public bool IsLight => _isLightResolved;
+    public bool IsLiquidGlass => _useLiquidGlass;
 
     public void Apply(AppTheme theme, bool useLiquidGlass = false)
     {

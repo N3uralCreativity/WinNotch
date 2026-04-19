@@ -45,4 +45,24 @@ public static class WindowHelper
             exStyle &= ~WS_EX_TRANSPARENT;
         SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
     }
+
+    /// <summary>
+    /// Enables acrylic blur-behind effect on the window.
+    /// <paramref name="tintColor"/> is AABBGGRR (e.g. 0x40FFFFFF = 25% white tint).
+    /// <summary>
+    /// Excludes the window from screen capture APIs (BitBlt, CopyFromScreen, etc.).
+    /// The window remains visible on the actual display but invisible to capture.
+    /// Requires Windows 10 2004+ (build 19041).
+    /// </summary>
+    public static void SetExcludeFromCapture(Window window, bool exclude)
+    {
+        var hwnd = new WindowInteropHelper(window).Handle;
+        SetWindowDisplayAffinity(hwnd, exclude ? WDA_EXCLUDEFROMCAPTURE : WDA_NONE);
+    }
+
+    [DllImport("user32.dll")]
+    private static extern bool SetWindowDisplayAffinity(IntPtr hWnd, uint dwAffinity);
+
+    private const uint WDA_NONE = 0x00000000;
+    private const uint WDA_EXCLUDEFROMCAPTURE = 0x00000011;
 }

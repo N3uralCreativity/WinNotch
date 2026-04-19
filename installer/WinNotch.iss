@@ -2,7 +2,7 @@
 ; Requires Inno Setup 6.x (https://jrsoftware.org/isinfo.php)
 
 #define MyAppName "WinNotch"
-#define MyAppVersion "0.1.5"
+#define MyAppVersion "0.2.0"
 #define MyAppPublisher "N3uralCreativity"
 #define MyAppURL "https://github.com/N3uralCreativity/WinNotch"
 #define MyAppExeName "WinNotch.exe"
@@ -32,6 +32,11 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0.17763
 DisableProgramGroupPage=yes
+; Upgrade support: use previous install dir, close running app
+UsePreviousAppDir=yes
+CloseApplications=yes
+RestartApplications=yes
+CloseApplicationsFilter=WinNotch.exe
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -58,3 +63,96 @@ Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}
 [UninstallDelete]
 Type: files; Name: "{localappdata}\WinNotch\*"
 Type: dirifempty; Name: "{localappdata}\WinNotch"
+
+[Code]
+function GetUninstallString(): String;
+var
+  sUnInstPath: String;
+  sUnInstallString: String;
+begin
+  sUnInstPath := 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{#SetupSetting("AppId")}_is1';
+  sUnInstallString := '';
+  RegQueryStringValue(HKCU, sUnInstPath, 'UninstallString', sUnInstallString);
+  if sUnInstallString = '' then
+    RegQueryStringValue(HKLM, sUnInstPath, 'UninstallString', sUnInstallString);
+  Result := sUnInstallString;
+end;
+
+function GetInstalledVersion(): String;
+var
+  sUnInstPath: String;
+  sVersion: String;
+begin
+  sUnInstPath := 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{#SetupSetting("AppId")}_is1';
+  sVersion := '';
+  RegQueryStringValue(HKCU, sUnInstPath, 'DisplayVersion', sVersion);
+  if sVersion = '' then
+    RegQueryStringValue(HKLM, sUnInstPath, 'DisplayVersion', sVersion);
+  Result := sVersion;
+end;
+
+function IsAppInstalled(): Boolean;
+begin
+  Result := GetUninstallString() <> '';
+end;
+
+function InitializeSetup(): Boolean;
+var
+  InstalledVersion: String;
+  UninstallString: String;
+  ResultCode: Integer;
+  Msg: Integer;
+begin
+  Result := True;
+
+  if IsAppInstalled() then
+  begin
+    InstalledVersion := GetInstalledVersion();
+
+    if InstalledVersion = '{#MyAppVersion}' then
+    begin
+      // Same version: offer repair or uninstall
+      Msg := MsgBox('WinNotch v' + InstalledVersion + ' is already installed.' + #13#10 + #13#10 +
+                     'Click YES to repair (reinstall).' + #13#10 +
+                     'Click NO to uninstall it.' + #13#10 +
+                     'Click CANCEL to abort.',
+                     mbConfirmation, MB_YESNOCANCEL);
+
+      if Msg = IDYES then
+      begin
+        // Repair = continue with install (overwrites files)
+        Result := True;
+      end
+      else if Msg = IDNO then
+      begin
+        // Uninstall
+        UninstallString := RemoveQuotes(GetUninstallString());
+        Exec(UninstallString, '/SILENT', '', SW_SHOW, ewWaitUntilTerminated, ResultCode);
+        Result := False; // exit installer after uninstall
+      end
+      else
+      begin
+        Result := False; // cancel
+      end;
+    end
+    else
+    begin
+      // Different version: offer upgrade
+      Msg := MsgBox('WinNotch v' + InstalledVersion + ' is currently installed.' + #13#10 + #13#10 +
+                     'Do you want to upgrade to v{#MyAppVersion}?',
+                     mbConfirmation, MB_YESNO);
+
+      if Msg = IDYES then
+      begin
+        // Silently uninstall old version first, then install new
+        UninstallString := RemoveQuotes(GetUninstallString());
+        Exec(UninstallString, '/SILENT /NORESTART', '', SW_SHOW, ewWaitUntilTerminated, ResultCode);
+        Result := True;
+      end
+      else
+      begin
+        Result := False;
+      end;
+    end;
+  end;
+end;

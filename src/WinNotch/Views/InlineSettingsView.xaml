@@ -201,9 +201,27 @@
 
                 <!-- About -->
                 <TextBlock Text="ABOUT" Style="{StaticResource SectionHeader}"/>
-                <TextBlock Foreground="{DynamicResource TextFaintBrush}" FontSize="10" Text="WinNotch v0.1" Margin="0,0,0,2"/>
+                <TextBlock x:Name="VersionText" Foreground="{DynamicResource TextFaintBrush}" FontSize="10" Text="WinNotch v0.2.0" Margin="0,0,0,2"/>
                 <TextBlock Foreground="{DynamicResource TextFaintestBrush}" FontSize="9" Text="Inspired by boring.notch for macOS"
-                           Margin="0,0,0,8"/>
+                           Margin="0,0,0,4"/>
+
+                <!-- Update check -->
+                <Grid Margin="0,0,0,8">
+                    <Button x:Name="CheckUpdateButton" Click="OnCheckUpdateClick"
+                            HorizontalAlignment="Left" Cursor="Hand"
+                            Background="Transparent" BorderThickness="0" Padding="0">
+                        <TextBlock x:Name="CheckUpdateText" Text="Check for updates"
+                                   Foreground="{DynamicResource TextSubtleBrush}" FontSize="10"
+                                   TextDecorations="Underline"/>
+                    </Button>
+                    <Button x:Name="UpdateButton" Click="OnUpdateClick"
+                            Visibility="Collapsed" HorizontalAlignment="Left"
+                            Cursor="Hand" Padding="6,3" Background="{DynamicResource SegmentedCheckedBgBrush}"
+                            BorderThickness="0">
+                        <TextBlock x:Name="UpdateButtonText" Text="Update available"
+                                   Foreground="{DynamicResource TextPrimaryBrush}" FontSize="10" FontWeight="SemiBold"/>
+                    </Button>
+                </Grid>
 
             </StackPanel>
         </ScrollViewer>

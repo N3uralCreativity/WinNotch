@@ -34,10 +34,53 @@
                 </Path.Effect>
             </Path>
 
-            <!-- Main notch shape -->
+            <!-- Liquid Glass: blurred + refracted backdrop (GPU blur via BlurEffect) -->
+            <Path x:Name="BackdropBlurPath" Opacity="0" IsHitTestVisible="False">
+                <Path.Effect>
+                    <BlurEffect Radius="6" KernelType="Gaussian"/>
+                </Path.Effect>
+            </Path>
+
+            <!-- Main notch shape — glass tint: V2 uses color-mix(glass 12%, transparent) -->
             <Path x:Name="NotchPath"
                   Fill="{DynamicResource NotchFillBrush}"
                   Cursor="Hand"/>
+
+            <!-- Liquid Glass: top-edge specular highlight (V2 inset 1.8px 3px white 90%) -->
+            <Path x:Name="GlassSpecularPath" Opacity="0" IsHitTestVisible="False">
+                <Path.Fill>
+                    <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
+                        <GradientStop Color="#20FFFFFF" Offset="0.0"/>
+                        <GradientStop Color="#0CFFFFFF" Offset="0.12"/>
+                        <GradientStop Color="#00FFFFFF" Offset="0.35"/>
+                    </LinearGradientBrush>
+                </Path.Fill>
+            </Path>
+
+            <!-- Liquid Glass: bright inner border (V2 multi-layer inset box-shadow) -->
+            <Path x:Name="GlassBorderPath" Opacity="0" IsHitTestVisible="False"
+                  StrokeThickness="1.2" Fill="{x:Null}">
+                <Path.Stroke>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#80FFFFFF" Offset="0.0"/>
+                        <GradientStop Color="#30FFFFFF" Offset="0.25"/>
+                        <GradientStop Color="#10FFFFFF" Offset="0.55"/>
+                        <GradientStop Color="#45FFFFFF" Offset="1.0"/>
+                    </LinearGradientBrush>
+                </Path.Stroke>
+            </Path>
+
+            <!-- Liquid Glass: dark inner shadow (V2 dark inset shadows for depth) -->
+            <Path x:Name="GlassInnerShadowPath" Opacity="0" IsHitTestVisible="False"
+                  StrokeThickness="2.0" Fill="{x:Null}">
+                <Path.Stroke>
+                    <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
+                        <GradientStop Color="#00000000" Offset="0.0"/>
+                        <GradientStop Color="#18000000" Offset="0.5"/>
+                        <GradientStop Color="#0A000000" Offset="1.0"/>
+                    </LinearGradientBrush>
+                </Path.Stroke>
+            </Path>
 
             <!-- Clip region for content (matches notch shape) -->
             <Grid x:Name="ContentGrid" ClipToBounds="True">
