@@ -86,8 +86,9 @@ public class PluginLibraryService
 
             var fileName = $"{SanitizeFileName(manifest.Name)}.dll";
             var targetPath = Path.Combine(pluginDir, fileName);
+            var tempPath = targetPath + ".tmp";
 
-            // Download the plugin DLL
+            // Download the plugin DLL to a temp file first
             using var response = await _httpClient.GetAsync(manifest.DownloadUrl, HttpCompletionOption.ResponseHeadersRead);
             response.EnsureSuccessStatusCode();
 
@@ -95,7 +96,7 @@ public class PluginLibraryService
             var downloadedBytes = 0L;
 
             using var contentStream = await response.Content.ReadAsStreamAsync();
-            using var fileStream = new FileStream(targetPath, FileMode.Create, FileAccess.Write, FileShare.None, 8192, true);
+            using var fileStream = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None, 8192, true);
 
             var buffer = new byte[8192];
             int bytesRead;
@@ -111,15 +112,40 @@ public class PluginLibraryService
                 }
             }
 
+            fileStream.Close();
+
             // Verify SHA256 if provided
             if (!string.IsNullOrEmpty(manifest.Sha256))
             {
-                var computedHash = await ComputeSha256Async(targetPath);
+                var computedHash = await ComputeSha256Async(tempPath);
                 if (!computedHash.Equals(manifest.Sha256, StringComparison.OrdinalIgnoreCase))
                 {
-                    File.Delete(targetPath);
+                    File.Delete(tempPath);
                     throw new InvalidOperationException("Plugin file hash verification failed. The file may be corrupted or tampered with.");
                 }
+            }
+
+            // Move temp file to final location, handling locked files
+            try
+            {
+                if (File.Exists(targetPath))
+                    File.Delete(targetPath);
+                File.Move(tempPath, targetPath);
+            }
+            catch (IOException)
+            {
+                // File is locked (plugin already loaded) — write to .pending for next restart
+                var pendingPath = targetPath + ".pending";
+                if (File.Exists(pendingPath))
+                    File.Delete(pendingPath);
+                File.Move(tempPath, pendingPath);
+
+                // Save manifest alongside the DLL
+                var manifestPath2 = Path.Combine(pluginDir, "manifest.json");
+                var manifestJson2 = JsonSerializer.Serialize(manifest, new JsonSerializerOptions { WriteIndented = true });
+                await File.WriteAllTextAsync(manifestPath2, manifestJson2);
+
+                return pendingPath;
             }
 
             // Save manifest alongside the DLL

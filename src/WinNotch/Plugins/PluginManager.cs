@@ -45,6 +45,9 @@ public class PluginManager : IDisposable
     {
         _context.Log("Starting plugin discovery...", PluginLogLevel.Info);
 
+        // Apply any pending plugin updates (downloaded while previous DLL was locked)
+        ApplyPendingUpdates();
+
         var pluginFiles = Directory.GetFiles(_pluginsDirectory, "*.dll", SearchOption.AllDirectories);
 
         foreach (var file in pluginFiles)
@@ -284,6 +287,33 @@ public class PluginManager : IDisposable
         catch (Exception ex)
         {
             _context.Log($"Failed to load plugin states: {ex.Message}", PluginLogLevel.Warning);
+        }
+    }
+
+    private void ApplyPendingUpdates()
+    {
+        try
+        {
+            var pendingFiles = Directory.GetFiles(_pluginsDirectory, "*.pending", SearchOption.AllDirectories);
+            foreach (var pendingFile in pendingFiles)
+            {
+                var targetFile = pendingFile[..^".pending".Length]; // Remove .pending extension
+                try
+                {
+                    if (File.Exists(targetFile))
+                        File.Delete(targetFile);
+                    File.Move(pendingFile, targetFile);
+                    _context.Log($"Applied pending plugin update: {Path.GetFileName(targetFile)}", PluginLogLevel.Info);
+                }
+                catch (Exception ex)
+                {
+                    _context.Log($"Failed to apply pending update {pendingFile}: {ex.Message}", PluginLogLevel.Warning);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _context.Log($"Failed to scan for pending updates: {ex.Message}", PluginLogLevel.Warning);
         }
     }
 

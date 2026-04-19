@@ -204,22 +204,35 @@ public partial class PluginBrowserWindow : Window
 
             if (filePath != null)
             {
-                // Load the plugin
-                var plugin = await _pluginManager!.LoadPluginFromFileAsync(filePath);
-
-                if (plugin != null)
+                if (filePath.EndsWith(".pending"))
                 {
-                    MessageBox.Show($"{manifest.Name} installed successfully! Restart WinNotch to activate it.",
-                                  "Plugin Installed",
+                    MessageBox.Show($"{manifest.Name} downloaded! Restart WinNotch to install it.",
+                                  "Plugin Downloaded",
                                   MessageBoxButton.OK,
                                   MessageBoxImage.Information);
-                    button.Content = "Installed";
+                    button.Content = "Restart needed";
                 }
                 else
                 {
-                    MessageBox.Show("Failed to load plugin after download.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    button.IsEnabled = true;
-                    button.Content = "Install";
+                    // Load the plugin
+                    var plugin = await _pluginManager!.LoadPluginFromFileAsync(filePath);
+
+                    if (plugin != null)
+                    {
+                        MessageBox.Show($"{manifest.Name} installed successfully!",
+                                      "Plugin Installed",
+                                      MessageBoxButton.OK,
+                                      MessageBoxImage.Information);
+                        button.Content = "Installed";
+                    }
+                    else
+                    {
+                        MessageBox.Show($"{manifest.Name} downloaded! Restart WinNotch to activate it.",
+                                      "Plugin Installed",
+                                      MessageBoxButton.OK,
+                                      MessageBoxImage.Information);
+                        button.Content = "Restart needed";
+                    }
                 }
             }
         }
