@@ -20,6 +20,9 @@ public partial class InlineSettingsView : System.Windows.Controls.UserControl
     /// <summary>Fired when theme changes (passes new AppTheme).</summary>
     public event Action<AppTheme>? ThemeChangeRequested;
 
+    /// <summary>Fired when the user wants to manage plugins.</summary>
+    public event Action? ManagePluginsRequested;
+
     public InlineSettingsView()
     {
         InitializeComponent();
@@ -129,6 +132,11 @@ public partial class InlineSettingsView : System.Windows.Controls.UserControl
         _settings.UseLiquidGlassTheme = LiquidGlassCheck.IsChecked == true;
         _settings.Save();
         SettingsChanged?.Invoke(_settings);
+    }
+
+    private void OnManagePluginsClick(object sender, RoutedEventArgs e)
+    {
+        ManagePluginsRequested?.Invoke();
     }
 
     private async void OnCheckUpdateClick(object sender, RoutedEventArgs e)

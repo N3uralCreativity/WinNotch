@@ -1,0 +1,72 @@
+{
+  "version": "1.0",
+  "lastUpdated": "2026-04-19T00:00:00Z",
+  "plugins": [
+    {
+      "id": "com.winnotch.betteranimation",
+      "name": "Better Animation",
+      "version": "1.0.0",
+      "author": "WinNotch Team",
+      "description": "Replaces default animations with smooth fade + slide effects featuring elastic easing and pop effects",
+      "minimumWinNotchVersion": "0.2.3",
+      "downloadUrl": "https://github.com/N3uralCreativity/WinNotch-Plugins/releases/download/betteranimation-v1.0.0/BetterAnimationPlugin.dll",
+      "homepage": "https://github.com/N3uralCreativity/WinNotch-Plugins/tree/main/BetterAnimation",
+      "iconUrl": "https://raw.githubusercontent.com/N3uralCreativity/WinNotch-Plugins/main/BetterAnimation/icon.png",
+      "category": "Animation",
+      "permissions": [],
+      "dependencies": [],
+      "sha256": "example_hash_here",
+      "releaseDate": "2026-04-19T00:00:00Z",
+      "isVerified": true
+    },
+    {
+      "id": "com.winnotch.chatgpt",
+      "name": "ChatGPT Add-on",
+      "version": "1.0.0",
+      "author": "WinNotch Team",
+      "description": "Adds ChatGPT voice and text integration with easy access from the notch. Supports both text chat and voice input for seamless AI assistance.",
+      "minimumWinNotchVersion": "0.2.3",
+      "downloadUrl": "https://github.com/N3uralCreativity/WinNotch-Plugins/releases/download/chatgpt-v1.0.0/ChatGPTAddonPlugin.dll",
+      "homepage": "https://github.com/N3uralCreativity/WinNotch-Plugins/tree/main/ChatGPTAddon",
+      "iconUrl": "https://raw.githubusercontent.com/N3uralCreativity/WinNotch-Plugins/main/ChatGPTAddon/icon.png",
+      "category": "Integration",
+      "permissions": ["network"],
+      "dependencies": [],
+      "sha256": "example_hash_here",
+      "releaseDate": "2026-04-19T00:00:00Z",
+      "isVerified": true
+    },
+    {
+      "id": "com.example.weather",
+      "name": "Weather Widget",
+      "version": "1.2.0",
+      "author": "Community Developer",
+      "description": "Displays current weather conditions and forecast in the notch with auto-location detection",
+      "minimumWinNotchVersion": "0.2.3",
+      "downloadUrl": "https://github.com/example/weather-plugin/releases/download/v1.2.0/WeatherPlugin.dll",
+      "homepage": "https://github.com/example/weather-plugin",
+      "category": "Widget",
+      "permissions": ["network", "location"],
+      "dependencies": [],
+      "sha256": "example_hash_here",
+      "releaseDate": "2026-04-15T00:00:00Z",
+      "isVerified": false
+    },
+    {
+      "id": "com.example.spotifylyrics",
+      "name": "Spotify Lyrics",
+      "version": "2.0.1",
+      "author": "Music Fan",
+      "description": "Shows synchronized lyrics for Spotify tracks in real-time",
+      "minimumWinNotchVersion": "0.2.3",
+      "downloadUrl": "https://github.com/example/spotify-lyrics/releases/download/v2.0.1/SpotifyLyricsPlugin.dll",
+      "homepage": "https://github.com/example/spotify-lyrics",
+      "category": "Media",
+      "permissions": ["network"],
+      "dependencies": [],
+      "sha256": "example_hash_here",
+      "releaseDate": "2026-04-10T00:00:00Z",
+      "isVerified": false
+    }
+  ]
+}
