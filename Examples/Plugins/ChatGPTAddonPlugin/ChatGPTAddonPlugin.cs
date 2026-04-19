@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using WinNotch.Models;
 using WinNotch.Plugins;
 
 namespace ChatGPTAddonPlugin;
@@ -41,9 +42,9 @@ public class ChatGPTAddonPlugin : PluginBase, IUIPlugin
         };
     }
 
-    public void OnNotchStateChanged(Models.NotchState newState)
+    public void OnNotchStateChanged(NotchState newState)
     {
-        if (newState == Models.NotchState.Open && _chatPanel != null)
+        if (newState == NotchState.Open && _chatPanel != null)
         {
             _chatPanel.Focus();
         }
