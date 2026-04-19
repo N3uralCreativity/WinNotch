@@ -24,6 +24,20 @@ public sealed class UpdateService
         Timeout = TimeSpan.FromSeconds(15)
     };
 
+    // Separate client for large binary downloads — no API headers, longer timeout
+    private static readonly HttpClient _downloadHttp = new(new HttpClientHandler
+    {
+        AllowAutoRedirect = true,
+        MaxAutomaticRedirections = 10
+    })
+    {
+        DefaultRequestHeaders =
+        {
+            { "User-Agent", "WinNotch-Updater" }
+        },
+        Timeout = TimeSpan.FromMinutes(10)
+    };
+
     public string CurrentVersion { get; }
     public string? LatestVersion { get; private set; }
     public string? InstallerDownloadUrl { get; private set; }
@@ -84,8 +98,8 @@ public sealed class UpdateService
             Directory.CreateDirectory(tempDir);
             var installerPath = Path.Combine(tempDir, $"WinNotch-{LatestVersion}-Setup.exe");
 
-            // Download with progress
-            using var response = await _http.GetAsync(InstallerDownloadUrl,
+            // Download with progress using dedicated download client
+            using var response = await _downloadHttp.GetAsync(InstallerDownloadUrl,
                 HttpCompletionOption.ResponseHeadersRead, ct);
             response.EnsureSuccessStatusCode();
 
