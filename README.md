@@ -21,6 +21,8 @@ Built with **WPF / .NET 8 / C#**.
 - **Themes** — Dark, Light, and Auto (follows Windows) with smooth crossfade transitions
 - **Settings** — inline settings panel with toggles for every feature
 - **Global Hotkey** — Ctrl+Alt+N to toggle the notch open/closed
+- **Plugin System** — extremely modular architecture with support for UI, service, and animation plugins
+- **Plugin Library** — discover and install community plugins from the online library
 
 ## Installation
 
@@ -53,6 +55,31 @@ dotnet publish src/WinNotch/WinNotch.csproj -c Release -r win-x64 --self-contain
 - **Ctrl+Alt+N** to toggle from anywhere
 - **Right-click** the system tray icon to quit
 
+## Plugin System
+
+WinNotch features a powerful plugin architecture that allows you to extend functionality with custom features:
+
+- **UI Plugins** — Add custom controls, widgets, or entire tabs to the notch
+- **Service Plugins** — Run background services for integrations (ChatGPT, Discord, etc.)
+- **Animation Plugins** — Replace or enhance notch animations with custom effects
+- **Plugin Library** — Browse and install plugins from the online repository
+
+### Creating Plugins
+
+See the [Plugin Development Guide](PLUGIN_DEVELOPMENT.md) for detailed instructions on creating your own plugins.
+
+### Example Plugins
+
+Check out the `Examples/Plugins` directory for working examples:
+- **BetterAnimation** — Enhanced animations with elastic easing and fade effects
+- **ChatGPT Add-on** — Voice and text ChatGPT integration in the notch
+
+### Installing Plugins
+
+1. Browse plugins from Settings → Plugin Manager
+2. Or manually place `.dll` files in `%AppData%\WinNotch\Plugins\<plugin-id>\`
+3. Restart WinNotch to load new plugins
+
 ## Tech Stack
 
 - WPF (.NET 8) with custom spring animations
@@ -60,6 +87,18 @@ dotnet publish src/WinNotch/WinNotch.csproj -c Release -r win-x64 --self-contain
 - Windows SMTC for media session integration
 - WinRT MediaCapture for webcam
 - Win32 interop for overlay behavior
+- Dynamic plugin loading via reflection
+
+## Contributing
+
+Contributions are welcome! Whether it's bug fixes, features, or plugins:
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+For plugin contributions, see the [WinNotch-Plugins](https://github.com/N3uralCreativity/WinNotch-Plugins) repository.
 
 ## License
 
