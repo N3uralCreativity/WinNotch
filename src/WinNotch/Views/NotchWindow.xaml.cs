@@ -5,6 +5,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using WinNotch.Helpers;
 using WinNotch.Models;
+using WinNotch.Plugins;
 using WinNotch.Services;
 using MouseEventArgs = System.Windows.Input.MouseEventArgs;
 using MouseButtonEventArgs = System.Windows.Input.MouseButtonEventArgs;
@@ -78,6 +79,11 @@ public partial class NotchWindow : Window
 
     // Settings
     private AppSettings _settings;
+
+    // Plugin system
+    private PluginManager? _pluginManager;
+    private PluginLibraryService? _pluginLibraryService;
+    private PluginContext? _pluginContext;
 
     public NotchWindow(AppSettings settings, ThemeService themeService)
     {
@@ -175,6 +181,9 @@ public partial class NotchWindow : Window
 
         // Initialize media services
         _ = InitializeServicesAsync();
+
+        // Initialize plugin system
+        _ = InitializePluginsAsync();
     }
 
     private async System.Threading.Tasks.Task InitializeServicesAsync()
@@ -325,6 +334,49 @@ public partial class NotchWindow : Window
                 _heightSpring.AnimateTo(NotchConstants.ClosedWidth, _currentHeight);
             }
         });
+    }
+
+    private async System.Threading.Tasks.Task InitializePluginsAsync()
+    {
+        try
+        {
+            _pluginContext = new PluginContext(
+                this, _vm,
+                _mediaService, _themeService, _volumeService,
+                _brightnessService, _batteryService, _calendarService,
+                _audioCaptureService, _shelfService, _webcamService,
+                _fullscreenService, _settings);
+
+            _pluginManager = new PluginManager(_pluginContext);
+            _pluginLibraryService = new PluginLibraryService();
+
+            await _pluginManager.LoadAllPluginsAsync();
+
+            // Wire settings "Manage Plugins" button
+            InlineSettings.ManagePluginsRequested += OpenPluginManager;
+            VerticalInlineSettings.ManagePluginsRequested += OpenPluginManager;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Plugin system initialization failed: {ex.Message}");
+        }
+    }
+
+    private void OpenPluginManager()
+    {
+        if (_pluginManager == null || _pluginLibraryService == null) return;
+
+        var pluginView = new PluginManagerView(_pluginManager, _pluginLibraryService);
+        var window = new Window
+        {
+            Title = "WinNotch Plugin Manager",
+            Width = 600,
+            Height = 500,
+            WindowStartupLocation = WindowStartupLocation.CenterScreen,
+            Background = new SolidColorBrush(Color.FromRgb(28, 28, 30)),
+            Content = pluginView
+        };
+        window.ShowDialog();
     }
 
     private void UpdateClosedContentVisibility()
@@ -1325,6 +1377,7 @@ public partial class NotchWindow : Window
     {
         CompositionTarget.Rendering -= OnRenderBackdrop;
         CompositionTarget.Rendering -= OnRendering;
+        _pluginManager?.Dispose();
         _audioCaptureService.Dispose();
         _mediaService.Dispose();
         _volumeService.Dispose();

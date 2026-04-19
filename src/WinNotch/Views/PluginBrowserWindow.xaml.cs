@@ -163,7 +163,7 @@ public partial class PluginBrowserWindow : Window
         return _pluginManager?.LoadedPlugins.Any(p => p.Id == pluginId) ?? false;
     }
 
-    private async System.Threading.Tasks.Task InstallPlugin(PluginManifest manifest, Button button)
+    private async System.Threading.Tasks.Task InstallPlugin(PluginManifest manifest, System.Windows.Controls.Button button)
     {
         button.IsEnabled = false;
         button.Content = "Installing...";
@@ -187,7 +187,7 @@ public partial class PluginBrowserWindow : Window
             if (filePath != null)
             {
                 // Load the plugin
-                var plugin = await _pluginManager.LoadPluginFromFileAsync(filePath);
+                var plugin = await _pluginManager!.LoadPluginFromFileAsync(filePath);
 
                 if (plugin != null)
                 {

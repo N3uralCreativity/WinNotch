@@ -199,6 +199,17 @@
                               Checked="OnLiquidGlassChanged" Unchecked="OnLiquidGlassChanged"/>
                 </Grid>
 
+                <!-- Plugins -->
+                <TextBlock Text="PLUGINS" Style="{StaticResource SectionHeader}"/>
+
+                <Button x:Name="ManagePluginsButton" Click="OnManagePluginsClick"
+                        HorizontalAlignment="Left" Cursor="Hand"
+                        Background="Transparent" BorderThickness="0" Padding="0" Margin="0,2,0,4">
+                    <TextBlock Text="Manage plugins"
+                               Foreground="{DynamicResource TextSubtleBrush}" FontSize="11"
+                               TextDecorations="Underline"/>
+                </Button>
+
                 <!-- About -->
                 <TextBlock Text="ABOUT" Style="{StaticResource SectionHeader}"/>
                 <TextBlock x:Name="VersionText" Foreground="{DynamicResource TextFaintBrush}" FontSize="10" Text="WinNotch v0.2.0" Margin="0,0,0,2"/>
