@@ -352,6 +352,9 @@ public partial class NotchWindow : Window
 
             await _pluginManager.LoadAllPluginsAsync();
 
+            // Inject UI plugin elements into the notch
+            InjectPluginUI();
+
             // Wire settings "Manage Plugins" button
             InlineSettings.ManagePluginsRequested += OpenPluginManager;
             VerticalInlineSettings.ManagePluginsRequested += OpenPluginManager;
@@ -359,6 +362,48 @@ public partial class NotchWindow : Window
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Plugin system initialization failed: {ex.Message}");
+        }
+    }
+
+    private void InjectPluginUI()
+    {
+        if (_pluginManager == null) return;
+
+        PluginClosedPanel.Children.Clear();
+        PluginOpenPanel.Children.Clear();
+
+        foreach (var uiPlugin in _pluginManager.GetUIPlugins())
+        {
+            try
+            {
+                var closedElement = uiPlugin.GetUIElement(UIPluginLocation.ClosedContent);
+                if (closedElement != null)
+                    PluginClosedPanel.Children.Add(closedElement);
+
+                var openElement = uiPlugin.GetUIElement(UIPluginLocation.OpenContent);
+                if (openElement != null)
+                    PluginOpenPanel.Children.Add(openElement);
+
+                // Notify initial state
+                uiPlugin.OnNotchStateChanged(_vm.NotchState);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to inject UI for plugin {uiPlugin.Name}: {ex.Message}");
+            }
+        }
+    }
+
+    private void NotifyPluginsStateChanged(NotchState state)
+    {
+        if (_pluginManager == null) return;
+        foreach (var uiPlugin in _pluginManager.GetUIPlugins())
+        {
+            try { uiPlugin.OnNotchStateChanged(state); }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Plugin state notification error ({uiPlugin.Name}): {ex.Message}");
+            }
         }
     }
 
@@ -374,9 +419,12 @@ public partial class NotchWindow : Window
             Height = 500,
             WindowStartupLocation = WindowStartupLocation.CenterScreen,
             Background = new SolidColorBrush(Color.FromRgb(28, 28, 30)),
-            Content = pluginView
+            Content = pluginView,
+            Topmost = true
         };
-        window.ShowDialog();
+        window.Show();
+        window.Activate();
+        window.Topmost = false;
     }
 
     private void UpdateClosedContentVisibility()
@@ -767,6 +815,7 @@ public partial class NotchWindow : Window
     {
         if (_vm.NotchState == NotchState.Open) return;
         _vm.Open();
+        NotifyPluginsStateChanged(NotchState.Open);
 
         _widthSpring.Response = 0.42;
         _widthSpring.DampingFraction = 0.80;
@@ -803,6 +852,7 @@ public partial class NotchWindow : Window
     {
         if (_vm.NotchState == NotchState.Peeking || _vm.NotchState == NotchState.Open) return;
         _vm.Peek();
+        NotifyPluginsStateChanged(NotchState.Peeking);
 
         _widthSpring.Response = 0.30;
         _widthSpring.DampingFraction = 0.90;
@@ -824,6 +874,7 @@ public partial class NotchWindow : Window
     private void TransitionToClose()
     {
         if (_vm.NotchState == NotchState.Closed) return;
+        NotifyPluginsStateChanged(NotchState.Closed);
 
         // Collapse settings if open
         if (_isSettingsExpanded)
