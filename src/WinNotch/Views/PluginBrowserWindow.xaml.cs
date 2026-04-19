@@ -204,9 +204,9 @@ public partial class PluginBrowserWindow : Window
 
             if (filePath != null)
             {
-                button.Content = "Restart Now";
-                button.IsEnabled = true;
-                button.Click += (s2, e2) => RestartApp();
+                button.Content = "Installed";
+                button.IsEnabled = false;
+                ShowRestartPopup($"{manifest.Name} has been installed.");
             }
         }
         catch (Exception ex)
@@ -217,7 +217,21 @@ public partial class PluginBrowserWindow : Window
         }
     }
 
-    private static void RestartApp()
+    internal static void ShowRestartPopup(string reason)
+    {
+        var result = MessageBox.Show(
+            $"{reason}\n\nWinNotch must restart to apply the changes. Restart now?",
+            "Restart Required",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Information);
+
+        if (result == MessageBoxResult.Yes)
+        {
+            RestartApp();
+        }
+    }
+
+    internal static void RestartApp()
     {
         var exePath = Environment.ProcessPath;
         if (exePath != null)

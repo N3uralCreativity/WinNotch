@@ -131,6 +131,7 @@ public partial class PluginManagerView : UserControl
             if (_pluginManager != null)
             {
                 await _pluginManager.EnablePluginAsync(plugin.Id);
+                PluginBrowserWindow.ShowRestartPopup($"{plugin.Name} has been enabled.");
             }
         };
 
@@ -139,6 +140,7 @@ public partial class PluginManagerView : UserControl
             if (_pluginManager != null)
             {
                 await _pluginManager.DisablePluginAsync(plugin.Id);
+                PluginBrowserWindow.ShowRestartPopup($"{plugin.Name} has been disabled.");
             }
         };
 

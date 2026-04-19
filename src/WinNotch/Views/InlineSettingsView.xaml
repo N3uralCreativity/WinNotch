@@ -212,7 +212,7 @@
 
                 <!-- About -->
                 <TextBlock Text="ABOUT" Style="{StaticResource SectionHeader}"/>
-                <TextBlock x:Name="VersionText" Foreground="{DynamicResource TextFaintBrush}" FontSize="10" Text="WinNotch v0.3.5" Margin="0,0,0,2"/>
+                <TextBlock x:Name="VersionText" Foreground="{DynamicResource TextFaintBrush}" FontSize="10" Text="WinNotch v0.3.6" Margin="0,0,0,2"/>
                 <TextBlock Foreground="{DynamicResource TextFaintestBrush}" FontSize="9" Text="Inspired by boring.notch for macOS"
                            Margin="0,0,0,4"/>
 
