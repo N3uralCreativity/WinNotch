@@ -371,6 +371,8 @@ public partial class NotchWindow : Window
 
         PluginClosedPanel.Children.Clear();
         PluginOpenPanel.Children.Clear();
+        PluginAccessoryPanel.Children.Clear();
+        PluginAccessoryPanel.Visibility = Visibility.Collapsed;
         VerticalPluginClosedPanel.Children.Clear();
         VerticalPluginOpenPanel.Children.Clear();
 
@@ -387,13 +389,25 @@ public partial class NotchWindow : Window
                         VerticalPluginClosedPanel.Children.Add(closedElement);
                 }
 
-                var openElement = uiPlugin.GetUIElement(UIPluginLocation.OpenContent);
-                if (openElement != null)
+                if (_dock == NotchDock.Top)
                 {
-                    if (_dock == NotchDock.Top)
+                    var accessoryElement = uiPlugin.GetUIElement(UIPluginLocation.OpenAccessory);
+                    if (accessoryElement != null)
+                    {
+                        PluginAccessoryPanel.Children.Add(WrapAccessoryElement(accessoryElement));
+                        PluginAccessoryPanel.Visibility = Visibility.Visible;
+                    }
+
+                    var openElement = uiPlugin.GetUIElement(UIPluginLocation.OpenContent);
+                    if (openElement != null)
                         PluginOpenPanel.Children.Add(openElement);
-                    else
-                        VerticalPluginOpenPanel.Children.Add(openElement);
+                }
+                else
+                {
+                    var verticalOpenElement = uiPlugin.GetUIElement(UIPluginLocation.VerticalOpenContent)
+                        ?? uiPlugin.GetUIElement(UIPluginLocation.OpenContent);
+                    if (verticalOpenElement != null)
+                        VerticalPluginOpenPanel.Children.Add(verticalOpenElement);
                 }
 
                 // Notify initial state
@@ -406,6 +420,20 @@ public partial class NotchWindow : Window
         }
 
         RefreshPluginHostLayout();
+    }
+
+    private static UIElement WrapAccessoryElement(UIElement element)
+    {
+        var host = new StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal };
+        host.Children.Add(new Border
+        {
+            Width = 1,
+            Margin = new Thickness(8, 4, 8, 4),
+            Background = (System.Windows.Media.Brush?)Application.Current.TryFindResource("SeparatorBrush")
+                ?? new SolidColorBrush(Color.FromRgb(72, 72, 76))
+        });
+        host.Children.Add(element);
+        return host;
     }
 
     private void NotifyPluginsStateChanged(NotchState state)
@@ -636,13 +664,15 @@ public partial class NotchWindow : Window
     private void UpdateFixedWindowBounds()
     {
         double padding = NotchConstants.WindowPadding;
-        double maxTopOpenWidth = new[]
+        double maxBaseTopOpenWidth = new[]
         {
             NotchConstants.OpenWidth,
             NotchConstants.OpenWidthWithCalendar,
             NotchConstants.OpenWidthWithWebcam,
             NotchConstants.OpenWidthWithCalendarAndWebcam
         }.Max();
+        double maxTopOpenWidth = maxBaseTopOpenWidth
+            + GetMeasuredPanelWidth(PluginAccessoryPanel, NotchConstants.OpenHeight);
 
         double maxTopHeight = Math.Max(GetTopOpenHeight(), GetTopSettingsHeight());
         double sideExpandedWidth = NotchConstants.SideOpenWidth + 280 + NotchConstants.OpenTopRadius;
@@ -667,6 +697,8 @@ public partial class NotchWindow : Window
 
         if (_dock == NotchDock.Top)
         {
+            _widthSpring.AnimateTo(GetOpenWidth(), _currentWidth);
+
             var targetHeight = _isSettingsExpanded
                 ? GetTopSettingsHeight()
                 : GetTopOpenHeight();
@@ -713,6 +745,15 @@ public partial class NotchWindow : Window
 
         panel.Measure(new Size(availableWidth, double.PositiveInfinity));
         return Math.Ceiling(panel.DesiredSize.Height);
+    }
+
+    private static double GetMeasuredPanelWidth(System.Windows.Controls.Panel panel, double availableHeight)
+    {
+        if (panel.Children.Count == 0)
+            return 0;
+
+        panel.Measure(new Size(double.PositiveInfinity, availableHeight));
+        return Math.Ceiling(panel.DesiredSize.Width);
     }
 
     #region Animation Loop
@@ -1574,12 +1615,19 @@ public partial class NotchWindow : Window
 
     private double GetOpenWidth()
     {
+        double accessoryWidth = GetMeasuredPanelWidth(PluginAccessoryPanel, NotchConstants.OpenHeight);
         bool cal = _settings.ShowCalendar;
         bool cam = _settings.ShowWebcam;
-        if (cal && cam) return NotchConstants.OpenWidthWithCalendarAndWebcam;
-        if (cal) return NotchConstants.OpenWidthWithCalendar;
-        if (cam) return NotchConstants.OpenWidthWithWebcam;
-        return NotchConstants.OpenWidth;
+
+        double baseWidth = NotchConstants.OpenWidth;
+        if (cal && cam)
+            baseWidth = NotchConstants.OpenWidthWithCalendarAndWebcam;
+        else if (cal)
+            baseWidth = NotchConstants.OpenWidthWithCalendar;
+        else if (cam)
+            baseWidth = NotchConstants.OpenWidthWithWebcam;
+
+        return baseWidth + accessoryWidth;
     }
 
     private void ApplyLiquidGlassEffect(bool enable)

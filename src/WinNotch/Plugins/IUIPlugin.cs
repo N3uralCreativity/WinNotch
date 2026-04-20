@@ -30,6 +30,12 @@ public enum UIPluginLocation
     /// <summary>Content shown in the expanded notch (main area).</summary>
     OpenContent,
 
+    /// <summary>Accessory content shown inline in the expanded top-row layout.</summary>
+    OpenAccessory,
+
+    /// <summary>Content shown only in the vertical expanded notch layout.</summary>
+    VerticalOpenContent,
+
     /// <summary>Additional tab in the expanded view.</summary>
     CustomTab,
 
