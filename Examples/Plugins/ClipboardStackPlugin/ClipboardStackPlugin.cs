@@ -13,16 +13,20 @@ using WinNotch.Services;
 
 namespace ClipboardStackPlugin;
 
-[WinNotchPlugin("com.winnotch.clipboardstack", "Clipboard Stack", "1.0.1", "WinNotch Team")]
+[WinNotchPlugin("com.winnotch.clipboardstack", "Clipboard Stack", "1.0.2", "WinNotch Team")]
 [PluginPermission("clipboard", "Required to read recent clipboard text and file copies.")]
 public sealed class ClipboardStackPlugin : PluginBase, IUIPlugin
 {
     private const int MaxEntries = 5;
+    private const double OpenViewportHeight = 84;
+    private const double VerticalViewportHeight = 72;
     private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(1100);
+    private static readonly Uri RoundedScrollBarStyleUri =
+        new("pack://application:,,,/WinNotch;component/Views/Components/RoundedScrollBarStyle.xaml", UriKind.Absolute);
 
     public override string Id => "com.winnotch.clipboardstack";
     public override string Name => "Clipboard Stack";
-    public override string Version => "1.0.1";
+    public override string Version => "1.0.2";
     public override string Author => "WinNotch Team";
     public override string Description => "Keeps the last five copied text snippets and file lists ready to copy back into the clipboard.";
     public override string MinimumWinNotchVersion => "0.3.8";
@@ -100,6 +104,7 @@ public sealed class ClipboardStackPlugin : PluginBase, IUIPlugin
             Margin = new Thickness(0, 4, 0, 0),
             BorderThickness = new Thickness(0)
         };
+        EnsureRoundedScrollResources(root);
 
         var outer = new StackPanel();
 
@@ -158,15 +163,28 @@ public sealed class ClipboardStackPlugin : PluginBase, IUIPlugin
         };
         outer.Children.Add(detailText);
 
-        var entryHost = new StackPanel
+        var entryHost = new StackPanel();
+        var entryScroll = new ScrollViewer
         {
-            Margin = new Thickness(0, 10, 0, 0)
+            Content = entryHost,
+            Height = compact ? VerticalViewportHeight : OpenViewportHeight,
+            Margin = new Thickness(0, 10, 0, 0),
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            CanContentScroll = true,
+            Padding = new Thickness(0, 0, 2, 0)
         };
-        outer.Children.Add(entryHost);
+
+        if (root.TryFindResource("RoundedScrollViewer") is Style roundedStyle)
+        {
+            entryScroll.Style = roundedStyle;
+        }
+
+        outer.Children.Add(entryScroll);
 
         root.Child = outer;
 
-        return new ClipboardStackView(root, titleText, summaryText, statusText, detailText, entryHost, clearButton, compact);
+        return new ClipboardStackView(root, titleText, summaryText, statusText, detailText, entryHost, entryScroll, clearButton, compact);
     }
 
     private void OnPollTick(object? sender, EventArgs e)
@@ -521,6 +539,29 @@ public sealed class ClipboardStackPlugin : PluginBase, IUIPlugin
         view.ClearButton.Foreground = GetSecondaryForeground();
     }
 
+    private static void EnsureRoundedScrollResources(Border root)
+    {
+        root.Resources ??= new ResourceDictionary();
+
+        if (root.Resources.MergedDictionaries.Any(dictionary =>
+                dictionary.Source?.OriginalString?.Contains("RoundedScrollBarStyle.xaml", StringComparison.OrdinalIgnoreCase) == true))
+        {
+            return;
+        }
+
+        try
+        {
+            root.Resources.MergedDictionaries.Add(new ResourceDictionary
+            {
+                Source = RoundedScrollBarStyleUri
+            });
+        }
+        catch
+        {
+            // Best effort only. The ScrollViewer still works with the default style.
+        }
+    }
+
     private void OnThemeChanged()
     {
         _isLight = _themeService?.IsLight ?? false;
@@ -608,6 +649,7 @@ public sealed class ClipboardStackPlugin : PluginBase, IUIPlugin
         TextBlock StatusText,
         TextBlock DetailText,
         StackPanel EntryHost,
+        ScrollViewer EntryScroll,
         Button ClearButton,
         bool Compact);
 

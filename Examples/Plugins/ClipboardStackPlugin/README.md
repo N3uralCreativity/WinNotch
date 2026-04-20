@@ -8,6 +8,7 @@
 - Saves the last `5` copied text snippets or file selections
 - Lets you copy any saved item back into the clipboard with one click
 - Highlights the most recent item in the stack
+- Shows the history in a compact one-item viewport with a rounded scrollbar
 - Adapts to light and dark themes
 - Includes a compact vertical-friendly layout for side docking
 
