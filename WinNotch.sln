@@ -1,4 +1,4 @@
-
+﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
@@ -12,6 +12,8 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Plugins", "Plugins", "{E28B380F-F60F-4CBA-9DEE-D0F94D6BD615}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TodoPeekPlugin", "Examples\Plugins\TodoPeekPlugin\TodoPeekPlugin.csproj", "{2A0B29A9-AD23-4A99-8667-89A26D822D0E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClipboardStackPlugin", "Examples\Plugins\ClipboardStackPlugin\ClipboardStackPlugin.csproj", "{47B7D60A-E931-4371-A02C-A15914EE81DD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -31,9 +33,14 @@ Global
 		{2A0B29A9-AD23-4A99-8667-89A26D822D0E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2A0B29A9-AD23-4A99-8667-89A26D822D0E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2A0B29A9-AD23-4A99-8667-89A26D822D0E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{47B7D60A-E931-4371-A02C-A15914EE81DD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{47B7D60A-E931-4371-A02C-A15914EE81DD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{47B7D60A-E931-4371-A02C-A15914EE81DD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{47B7D60A-E931-4371-A02C-A15914EE81DD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{E28B380F-F60F-4CBA-9DEE-D0F94D6BD615} = {45726F8B-BC59-48E1-96BA-964273B7B0A3}
 		{2A0B29A9-AD23-4A99-8667-89A26D822D0E} = {E28B380F-F60F-4CBA-9DEE-D0F94D6BD615}
+		{47B7D60A-E931-4371-A02C-A15914EE81DD} = {E28B380F-F60F-4CBA-9DEE-D0F94D6BD615}
 	EndGlobalSection
 EndGlobal
