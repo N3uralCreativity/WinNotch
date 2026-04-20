@@ -429,7 +429,7 @@ public partial class NotchWindow : Window
         {
             Width = 1,
             Margin = new Thickness(8, 4, 8, 4),
-            Background = (System.Windows.Media.Brush?)Application.Current.TryFindResource("SeparatorBrush")
+            Background = (System.Windows.Media.Brush?)Application.Current?.TryFindResource("SeparatorBrush")
                 ?? new SolidColorBrush(Color.FromRgb(72, 72, 76))
         });
         host.Children.Add(element);

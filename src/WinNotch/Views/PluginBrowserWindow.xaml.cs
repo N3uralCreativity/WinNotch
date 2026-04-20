@@ -57,31 +57,34 @@ public partial class PluginBrowserWindow : Window
             .ThenBy(plugin => plugin.Name, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
 
+        ShowPluginGrid();
         PluginGridPanel.Children.Clear();
         ResultsText.Text = pluginList.Count == 0
             ? "No matches"
             : $"{pluginList.Count} plugin{(pluginList.Count == 1 ? string.Empty : "s")}";
 
+        if (pluginList.Count == 0)
+        {
+            ShowEmptyState(
+                "No plugins found.",
+                "Try a different search term or clear the search field.");
+            return;
+        }
+
         foreach (var plugin in pluginList)
         {
             PluginGridPanel.Children.Add(CreatePluginCard(plugin));
-        }
-
-        if (pluginList.Count == 0)
-        {
-            PluginGridPanel.Children.Add(CreateEmptyState(
-                "No plugins found.",
-                "Try a different search term or clear the search field."));
         }
     }
 
     private void DisplayError(string detail)
     {
+        ShowPluginGrid();
         PluginGridPanel.Children.Clear();
         ResultsText.Text = "Library unavailable";
-        PluginGridPanel.Children.Add(CreateEmptyState(
+        ShowEmptyState(
             "Failed to load the plugin library.",
-            detail));
+            detail);
     }
 
     private Border CreatePluginCard(PluginManifest manifest)
@@ -174,7 +177,7 @@ public partial class PluginBrowserWindow : Window
         {
             Content = IsPluginInstalled(manifest.Id) ? "Installed" : "Get",
             MinWidth = 88,
-            Style = (Style?)FindResource(IsPluginInstalled(manifest.Id) ? "PluginSecondaryButton" : "PluginPrimaryButton"),
+            Style = TryGetStyle(IsPluginInstalled(manifest.Id) ? "PluginSecondaryButton" : "PluginPrimaryButton"),
             IsEnabled = !IsPluginInstalled(manifest.Id)
         };
         installButton.Click += async (_, _) => await InstallPlugin(manifest, installButton);
@@ -188,7 +191,7 @@ public partial class PluginBrowserWindow : Window
                 Content = "View",
                 MinWidth = 72,
                 Margin = new Thickness(10, 0, 0, 0),
-                Style = (Style?)FindResource("PluginGhostButton")
+                Style = TryGetStyle("PluginGhostButton")
             };
             openPageButton.Click += (_, _) => OpenExternal(manifest.Homepage);
             Grid.SetColumn(openPageButton, 1);
@@ -204,37 +207,18 @@ public partial class PluginBrowserWindow : Window
         return card;
     }
 
-    private Border CreateEmptyState(string title, string body)
+    private void ShowEmptyState(string title, string body)
     {
-        var card = new Border
-        {
-            Width = 760,
-            Padding = new Thickness(28),
-            CornerRadius = new CornerRadius(24),
-            Background = GetCardBrush()
-        };
+        PluginGridPanel.Visibility = Visibility.Collapsed;
+        EmptyStateTitleText.Text = title;
+        EmptyStateBodyText.Text = body;
+        EmptyStatePanel.Visibility = Visibility.Visible;
+    }
 
-        var stack = new StackPanel();
-        stack.Children.Add(new TextBlock
-        {
-            Text = title,
-            FontSize = 17,
-            FontWeight = FontWeights.SemiBold,
-            Foreground = GetPrimaryBrush(),
-            HorizontalAlignment = HorizontalAlignment.Center
-        });
-        stack.Children.Add(new TextBlock
-        {
-            Text = body,
-            Margin = new Thickness(0, 8, 0, 0),
-            FontSize = 12,
-            TextWrapping = TextWrapping.Wrap,
-            TextAlignment = TextAlignment.Center,
-            Foreground = GetSecondaryBrush()
-        });
-
-        card.Child = stack;
-        return card;
+    private void ShowPluginGrid()
+    {
+        EmptyStatePanel.Visibility = Visibility.Collapsed;
+        PluginGridPanel.Visibility = Visibility.Visible;
     }
 
     private Border CreateTag(string text, System.Windows.Media.Brush background, System.Windows.Media.Brush foreground)
@@ -286,7 +270,7 @@ public partial class PluginBrowserWindow : Window
             if (filePath != null)
             {
                 button.Content = "Installed";
-                button.Style = (Style?)FindResource("PluginSecondaryButton");
+                button.Style = TryGetStyle("PluginSecondaryButton");
                 ShowRestartPopup($"{manifest.Name} has been installed.");
                 DisplayPlugins(_libraryService.SearchPlugins(SearchBox.Text));
             }
@@ -296,7 +280,7 @@ public partial class PluginBrowserWindow : Window
             MessageBox.Show($"Failed to install plugin: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             button.IsEnabled = true;
             button.Content = "Get";
-            button.Style = (Style?)FindResource("PluginPrimaryButton");
+            button.Style = TryGetStyle("PluginPrimaryButton");
         }
     }
 
@@ -346,7 +330,7 @@ public partial class PluginBrowserWindow : Window
             Process.Start(exePath);
         }
 
-        Application.Current.Shutdown();
+        Application.Current?.Shutdown();
     }
 
     private System.Windows.Media.Brush GetPrimaryBrush() => GetBrush("TextPrimaryBrush", Color.FromRgb(255, 255, 255));
@@ -359,8 +343,18 @@ public partial class PluginBrowserWindow : Window
 
     private System.Windows.Media.Brush GetBrush(string resourceKey, Color fallback)
     {
-        return (System.Windows.Media.Brush?)TryFindResource(resourceKey)
-            ?? (System.Windows.Media.Brush?)Application.Current.TryFindResource(resourceKey)
-            ?? new SolidColorBrush(fallback);
+        if (TryFindResource(resourceKey) is System.Windows.Media.Brush localBrush)
+            return localBrush;
+
+        if (Application.Current?.TryFindResource(resourceKey) is System.Windows.Media.Brush applicationBrush)
+            return applicationBrush;
+
+        return new SolidColorBrush(fallback);
+    }
+
+    private Style? TryGetStyle(string resourceKey)
+    {
+        return TryFindResource(resourceKey) as Style
+            ?? Application.Current?.TryFindResource(resourceKey) as Style;
     }
 }

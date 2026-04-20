@@ -115,8 +115,7 @@ public partial class PluginManagerView : UserControl
 
         var tags = new WrapPanel
         {
-            Margin = new Thickness(0, 12, 0, 0),
-            ItemHeight = 26
+            Margin = new Thickness(0, 12, 0, 0)
         };
         AddPluginTag(tags, plugin is IUIPlugin ? "UI" : null);
         AddPluginTag(tags, plugin is IServicePlugin ? "Service" : null);
@@ -149,7 +148,7 @@ public partial class PluginManagerView : UserControl
         var switchToggle = new CheckBox
         {
             IsChecked = enabledState,
-            Style = (Style?)FindResource("PluginSwitchStyle")
+            Style = TryGetStyle("PluginSwitchStyle")
         };
 
         switchToggle.Checked += async (_, _) =>
@@ -307,8 +306,18 @@ public partial class PluginManagerView : UserControl
 
     private System.Windows.Media.Brush GetBrush(string resourceKey, Color fallback)
     {
-        return (System.Windows.Media.Brush?)TryFindResource(resourceKey)
-            ?? (System.Windows.Media.Brush?)Application.Current.TryFindResource(resourceKey)
-            ?? new SolidColorBrush(fallback);
+        if (TryFindResource(resourceKey) is System.Windows.Media.Brush localBrush)
+            return localBrush;
+
+        if (Application.Current?.TryFindResource(resourceKey) is System.Windows.Media.Brush applicationBrush)
+            return applicationBrush;
+
+        return new SolidColorBrush(fallback);
+    }
+
+    private Style? TryGetStyle(string resourceKey)
+    {
+        return TryFindResource(resourceKey) as Style
+            ?? Application.Current?.TryFindResource(resourceKey) as Style;
     }
 }
