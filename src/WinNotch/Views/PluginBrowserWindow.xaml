@@ -4,47 +4,107 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="Browse Plugins" Height="550" Width="700"
-        Background="#1C1C1E"
-        WindowStartupLocation="CenterOwner"
-        ResizeMode="CanResize">
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
+        Title="Browse Plugins"
+        Width="900"
+        Height="680"
+        Background="Transparent"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Components/PluginSurfaceStyles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
 
-        <!-- Search Bar -->
-        <Grid Grid.Row="0" Margin="20,20,20,10">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
+            <DropShadowEffect x:Key="PluginWindowShadow"
+                              BlurRadius="34"
+                              ShadowDepth="0"
+                              Opacity="0.24"
+                              Color="Black"/>
+        </ResourceDictionary>
+    </Window.Resources>
 
-            <TextBox x:Name="SearchBox"
-                     Grid.Column="0"
-                     Height="36"
-                     VerticalContentAlignment="Center"
-                     Padding="10,0"
-                     FontSize="13"
-                     Background="#2C2C2E"
-                     Foreground="White"
-                     BorderBrush="#3A3A3C"
-                     BorderThickness="1"/>
+    <Grid Background="Transparent">
+        <Border Margin="18"
+                Padding="24"
+                Background="{DynamicResource NotchFillBrush}"
+                CornerRadius="30"
+                Effect="{StaticResource PluginWindowShadow}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
 
-            <Button x:Name="SearchButton"
-                    Grid.Column="1"
-                    Content="Search"
-                    Width="80"
-                    Height="36"
-                    Margin="10,0,0,0"/>
-        </Grid>
+                <Grid Grid.Row="0" Margin="0,0,0,18" MouseLeftButtonDown="OnHeaderMouseDown">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
 
-        <!-- Plugin List -->
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="20,0,20,20">
-            <StackPanel x:Name="PluginListPanel">
-                <!-- Available plugins will be added here dynamically -->
-            </StackPanel>
-        </ScrollViewer>
+                    <StackPanel>
+                        <TextBlock Text="Browse Plugins"
+                                   FontSize="28"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"/>
+                        <TextBlock Text="Discover verified widgets and utilities that fit directly into WinNotch."
+                                   Margin="0,6,0,0"
+                                   FontSize="12"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    </StackPanel>
+
+                    <Button x:Name="CloseButton"
+                            Grid.Column="1"
+                            Width="32"
+                            Height="32"
+                            Content="X"
+                            Style="{StaticResource PluginTitlebarButton}"/>
+                </Grid>
+
+                <Grid Grid.Row="1" Margin="0,0,0,18">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBox x:Name="SearchBox"
+                             Height="42"
+                             VerticalContentAlignment="Center"
+                             Style="{StaticResource PluginSearchTextBox}"/>
+
+                    <TextBlock x:Name="ResultsText"
+                               Grid.Column="1"
+                               Margin="14,0,0,0"
+                               VerticalAlignment="Center"
+                               FontSize="11"
+                               Foreground="{DynamicResource TextMutedBrush}"/>
+
+                    <Button x:Name="SearchButton"
+                            Grid.Column="2"
+                            MinWidth="96"
+                            Margin="14,0,0,0"
+                            Content="Search"
+                            Style="{StaticResource PluginPrimaryButton}"/>
+                </Grid>
+
+                <Border Grid.Row="2"
+                        Background="{DynamicResource SegmentedBgBrush}"
+                        CornerRadius="26"
+                        Padding="18,18,10,18">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  Style="{StaticResource RoundedScrollViewer}">
+                        <WrapPanel x:Name="PluginGridPanel"
+                                   ItemWidth="256"
+                                   Orientation="Horizontal"/>
+                    </ScrollViewer>
+                </Border>
+            </Grid>
+        </Border>
     </Grid>
 </Window>

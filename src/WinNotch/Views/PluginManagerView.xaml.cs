@@ -1,7 +1,9 @@
 using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using WinNotch.Plugins;
 
@@ -22,9 +24,10 @@ public partial class PluginManagerView : UserControl
         _pluginManager = pluginManager;
         _libraryService = libraryService;
 
-        RefreshLibraryButton.Click += async (s, e) => await RefreshLibrary();
-        BrowsePluginsButton.Click += (s, e) => BrowsePlugins();
-        OpenPluginsFolderButton.Click += (s, e) => OpenPluginsFolder();
+        CloseButton.Click += (_, _) => Window.GetWindow(this)?.Close();
+        RefreshLibraryButton.Click += async (_, _) => await RefreshLibrary();
+        BrowsePluginsButton.Click += (_, _) => BrowsePlugins();
+        OpenPluginsFolderButton.Click += (_, _) => OpenPluginsFolder();
 
         LoadPlugins();
     }
@@ -33,26 +36,21 @@ public partial class PluginManagerView : UserControl
     {
         PluginListPanel.Children.Clear();
 
-        if (_pluginManager == null) return;
+        if (_pluginManager == null)
+            return;
 
-        foreach (var plugin in _pluginManager.LoadedPlugins)
+        InstalledCountText.Text = $"{_pluginManager.LoadedPlugins.Count} plugin{(_pluginManager.LoadedPlugins.Count == 1 ? string.Empty : "s")} installed";
+
+        foreach (var plugin in _pluginManager.LoadedPlugins.OrderBy(plugin => plugin.Name, StringComparer.CurrentCultureIgnoreCase))
         {
-            var pluginCard = CreatePluginCard(plugin);
-            PluginListPanel.Children.Add(pluginCard);
+            PluginListPanel.Children.Add(CreatePluginCard(plugin));
         }
 
         if (_pluginManager.LoadedPlugins.Count == 0)
         {
-            var emptyText = new TextBlock
-            {
-                Text = "No plugins installed. Click 'Browse Plugins' to discover available plugins.",
-                FontSize = 13,
-                Foreground = new SolidColorBrush(Color.FromRgb(170, 170, 170)),
-                TextWrapping = TextWrapping.Wrap,
-                Margin = new Thickness(10),
-                HorizontalAlignment = HorizontalAlignment.Center
-            };
-            PluginListPanel.Children.Add(emptyText);
+            PluginListPanel.Children.Add(CreateEmptyState(
+                "No plugins installed yet.",
+                "Browse the library to start building your notch setup."));
         }
     }
 
@@ -60,74 +58,104 @@ public partial class PluginManagerView : UserControl
     {
         var card = new Border
         {
-            Background = new SolidColorBrush(Color.FromRgb(40, 40, 42)),
-            CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(15),
-            Margin = new Thickness(0, 0, 0, 10)
+            Background = GetSurfaceBrush(),
+            CornerRadius = new CornerRadius(22),
+            Padding = new Thickness(18),
+            Margin = new Thickness(0, 0, 0, 12)
         };
 
-        var grid = new Grid();
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var layout = new Grid();
+        layout.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        layout.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-        // Left side: Plugin info
         var infoStack = new StackPanel();
 
-        var nameBlock = new TextBlock
+        var topRow = new Grid();
+        topRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        topRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        var title = new TextBlock
         {
             Text = plugin.Name,
-            FontSize = 16,
+            FontSize = 17,
             FontWeight = FontWeights.SemiBold,
-            Foreground = Brushes.White
+            Foreground = GetPrimaryBrush()
         };
-        infoStack.Children.Add(nameBlock);
+        Grid.SetColumn(title, 0);
+        topRow.Children.Add(title);
 
-        var versionAuthor = new TextBlock
+        var version = new TextBlock
         {
-            Text = $"v{plugin.Version} by {plugin.Author}",
+            Text = $"v{plugin.Version}",
             FontSize = 11,
-            Foreground = new SolidColorBrush(Color.FromRgb(150, 150, 150)),
-            Margin = new Thickness(0, 2, 0, 5)
+            Foreground = GetSecondaryBrush(),
+            VerticalAlignment = VerticalAlignment.Center
         };
-        infoStack.Children.Add(versionAuthor);
+        Grid.SetColumn(version, 1);
+        topRow.Children.Add(version);
 
-        var descBlock = new TextBlock
+        infoStack.Children.Add(topRow);
+
+        infoStack.Children.Add(new TextBlock
+        {
+            Text = $"by {plugin.Author}",
+            FontSize = 11,
+            Margin = new Thickness(0, 4, 0, 0),
+            Foreground = GetMutedBrush()
+        });
+
+        infoStack.Children.Add(new TextBlock
         {
             Text = plugin.Description,
             FontSize = 12,
-            Foreground = new SolidColorBrush(Color.FromRgb(200, 200, 200)),
+            Margin = new Thickness(0, 10, 0, 0),
             TextWrapping = TextWrapping.Wrap,
-            Margin = new Thickness(0, 0, 10, 0)
-        };
-        infoStack.Children.Add(descBlock);
+            Foreground = GetSecondaryBrush()
+        });
 
-        var typeIndicator = new TextBlock
+        var tags = new WrapPanel
         {
-            FontSize = 10,
-            Foreground = new SolidColorBrush(Color.FromRgb(100, 150, 255)),
-            Margin = new Thickness(0, 5, 0, 0)
+            Margin = new Thickness(0, 12, 0, 0),
+            ItemHeight = 26
         };
-
-        if (plugin is IUIPlugin) typeIndicator.Text += "UI • ";
-        if (plugin is IServicePlugin) typeIndicator.Text += "Service • ";
-        if (plugin is IAnimationPlugin) typeIndicator.Text += "Animation • ";
-        typeIndicator.Text = typeIndicator.Text.TrimEnd(' ', '•');
-
-        infoStack.Children.Add(typeIndicator);
+        AddPluginTag(tags, plugin is IUIPlugin ? "UI" : null);
+        AddPluginTag(tags, plugin is IServicePlugin ? "Service" : null);
+        AddPluginTag(tags, plugin is IAnimationPlugin ? "Animation" : null);
+        AddPluginTag(tags, $"ID {plugin.Id}");
+        infoStack.Children.Add(tags);
 
         Grid.SetColumn(infoStack, 0);
-        grid.Children.Add(infoStack);
+        layout.Children.Add(infoStack);
 
-        // Right side: Toggle switch
-        var toggleButton = new CheckBox
+        var controlStack = new StackPanel
         {
-            IsChecked = _pluginManager?.IsPluginEnabled(plugin.Id) ?? false,
+            Margin = new Thickness(18, 0, 0, 0),
             VerticalAlignment = VerticalAlignment.Center,
-            Content = "Enabled"
+            HorizontalAlignment = HorizontalAlignment.Right
         };
 
-        toggleButton.Checked += async (s, e) =>
+        var enabledState = _pluginManager?.IsPluginEnabled(plugin.Id) ?? false;
+        var stateLabel = new TextBlock
         {
+            Text = enabledState ? "On" : "Off",
+            FontSize = 11,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Margin = new Thickness(0, 0, 0, 8),
+            Foreground = enabledState ? GetAccentBrush() : GetMutedBrush(),
+            FontWeight = FontWeights.SemiBold
+        };
+        controlStack.Children.Add(stateLabel);
+
+        var switchToggle = new CheckBox
+        {
+            IsChecked = enabledState,
+            Style = (Style?)FindResource("PluginSwitchStyle")
+        };
+
+        switchToggle.Checked += async (_, _) =>
+        {
+            stateLabel.Text = "On";
+            stateLabel.Foreground = GetAccentBrush();
             if (_pluginManager != null)
             {
                 await _pluginManager.EnablePluginAsync(plugin.Id);
@@ -135,8 +163,10 @@ public partial class PluginManagerView : UserControl
             }
         };
 
-        toggleButton.Unchecked += async (s, e) =>
+        switchToggle.Unchecked += async (_, _) =>
         {
+            stateLabel.Text = "Off";
+            stateLabel.Foreground = GetMutedBrush();
             if (_pluginManager != null)
             {
                 await _pluginManager.DisablePluginAsync(plugin.Id);
@@ -144,16 +174,73 @@ public partial class PluginManagerView : UserControl
             }
         };
 
-        Grid.SetColumn(toggleButton, 1);
-        grid.Children.Add(toggleButton);
+        controlStack.Children.Add(switchToggle);
 
-        card.Child = grid;
+        Grid.SetColumn(controlStack, 1);
+        layout.Children.Add(controlStack);
+
+        card.Child = layout;
         return card;
+    }
+
+    private Border CreateEmptyState(string title, string body)
+    {
+        var card = new Border
+        {
+            Background = GetSurfaceBrush(),
+            CornerRadius = new CornerRadius(22),
+            Padding = new Thickness(24),
+            Margin = new Thickness(0, 2, 0, 0)
+        };
+
+        var stack = new StackPanel();
+        stack.Children.Add(new TextBlock
+        {
+            Text = title,
+            FontSize = 16,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = GetPrimaryBrush(),
+            HorizontalAlignment = HorizontalAlignment.Center
+        });
+        stack.Children.Add(new TextBlock
+        {
+            Text = body,
+            FontSize = 12,
+            Margin = new Thickness(0, 8, 0, 0),
+            Foreground = GetSecondaryBrush(),
+            TextWrapping = TextWrapping.Wrap,
+            TextAlignment = TextAlignment.Center
+        });
+
+        card.Child = stack;
+        return card;
+    }
+
+    private void AddPluginTag(System.Windows.Controls.Panel host, string? label)
+    {
+        if (string.IsNullOrWhiteSpace(label))
+            return;
+
+        var pill = new Border
+        {
+            Background = GetTagBrush(),
+            CornerRadius = new CornerRadius(13),
+            Padding = new Thickness(10, 5, 10, 5),
+            Margin = new Thickness(0, 0, 8, 8)
+        };
+        pill.Child = new TextBlock
+        {
+            Text = label,
+            FontSize = 10,
+            Foreground = GetSecondaryBrush()
+        };
+        host.Children.Add(pill);
     }
 
     private async System.Threading.Tasks.Task RefreshLibrary()
     {
-        if (_libraryService == null) return;
+        if (_libraryService == null)
+            return;
 
         RefreshLibraryButton.IsEnabled = false;
         RefreshLibraryButton.Content = "Refreshing...";
@@ -167,7 +254,7 @@ public partial class PluginManagerView : UserControl
             }
             else
             {
-                var detail = _libraryService?.LastError ?? "Unknown error";
+                var detail = _libraryService.LastError ?? "Unknown error";
                 MessageBox.Show($"Failed to refresh plugin library.\n\n{detail}", "Plugin Manager", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
@@ -180,25 +267,48 @@ public partial class PluginManagerView : UserControl
 
     private void BrowsePlugins()
     {
-        if (_libraryService == null) return;
+        if (_libraryService == null)
+            return;
 
-        var browseWindow = new PluginBrowserWindow(_libraryService, _pluginManager);
-        browseWindow.Owner = Window.GetWindow(this);
+        var browseWindow = new PluginBrowserWindow(_libraryService, _pluginManager)
+        {
+            Owner = Window.GetWindow(this)
+        };
         browseWindow.ShowDialog();
-
-        // Reload plugins after browsing
         LoadPlugins();
     }
 
     private void OpenPluginsFolder()
     {
-        if (_pluginManager == null) return;
+        if (_pluginManager == null)
+            return;
 
-        var path = _pluginManager.GetPluginsDirectory();
         Process.Start(new ProcessStartInfo
         {
-            FileName = path,
+            FileName = _pluginManager.GetPluginsDirectory(),
             UseShellExecute = true
         });
+    }
+
+    private void OnHeaderMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Left)
+            return;
+
+        Window.GetWindow(this)?.DragMove();
+    }
+
+    private System.Windows.Media.Brush GetPrimaryBrush() => GetBrush("TextPrimaryBrush", Color.FromRgb(255, 255, 255));
+    private System.Windows.Media.Brush GetSecondaryBrush() => GetBrush("TextSecondaryBrush", Color.FromRgb(204, 204, 204));
+    private System.Windows.Media.Brush GetMutedBrush() => GetBrush("TextMutedBrush", Color.FromRgb(136, 136, 136));
+    private System.Windows.Media.Brush GetSurfaceBrush() => GetBrush("SegmentedBgBrush", Color.FromRgb(26, 26, 28));
+    private System.Windows.Media.Brush GetTagBrush() => GetBrush("HoverOverlayBrush", Color.FromArgb(24, 255, 255, 255));
+    private System.Windows.Media.Brush GetAccentBrush() => GetBrush("PluginAccentBrush", Color.FromRgb(10, 132, 255));
+
+    private System.Windows.Media.Brush GetBrush(string resourceKey, Color fallback)
+    {
+        return (System.Windows.Media.Brush?)TryFindResource(resourceKey)
+            ?? (System.Windows.Media.Brush?)Application.Current.TryFindResource(resourceKey)
+            ?? new SolidColorBrush(fallback);
     }
 }

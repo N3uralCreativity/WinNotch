@@ -457,10 +457,14 @@ public partial class NotchWindow : Window
         var window = new Window
         {
             Title = "WinNotch Plugin Manager",
-            Width = 600,
-            Height = 500,
+            Width = 760,
+            Height = 640,
             WindowStartupLocation = WindowStartupLocation.CenterScreen,
-            Background = new SolidColorBrush(Color.FromRgb(28, 28, 30)),
+            Background = Brushes.Transparent,
+            WindowStyle = WindowStyle.None,
+            AllowsTransparency = true,
+            ResizeMode = ResizeMode.NoResize,
+            ShowInTaskbar = false,
             Content = pluginView,
             Topmost = true
         };

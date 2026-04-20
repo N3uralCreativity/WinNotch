@@ -4,32 +4,125 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
-             d:DesignHeight="450" d:DesignWidth="600">
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+             d:DesignHeight="620" d:DesignWidth="760"
+             Background="Transparent">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Components/PluginSurfaceStyles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
 
-        <!-- Header -->
-        <StackPanel Grid.Row="0" Margin="20,20,20,10">
-            <TextBlock Text="Plugin Manager" FontSize="20" FontWeight="Bold" Foreground="White"/>
-            <TextBlock Text="Extend WinNotch with custom plugins" FontSize="12" Foreground="#AAAAAA" Margin="0,5,0,0"/>
-        </StackPanel>
+            <DropShadowEffect x:Key="PluginWindowShadow"
+                              BlurRadius="32"
+                              ShadowDepth="0"
+                              Opacity="0.22"
+                              Color="Black"/>
+        </ResourceDictionary>
+    </UserControl.Resources>
 
-        <!-- Plugin List -->
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="20,0,20,10">
-            <StackPanel x:Name="PluginListPanel">
-                <!-- Plugins will be added here dynamically -->
-            </StackPanel>
-        </ScrollViewer>
+    <Grid Background="Transparent">
+        <Border Margin="18"
+                Padding="24"
+                Background="{DynamicResource NotchFillBrush}"
+                CornerRadius="28"
+                Effect="{StaticResource PluginWindowShadow}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
 
-        <!-- Actions -->
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="20,0,20,20">
-            <Button x:Name="RefreshLibraryButton" Content="Refresh Library" Width="120" Height="32" Margin="0,0,10,0"/>
-            <Button x:Name="BrowsePluginsButton" Content="Browse Plugins" Width="120" Height="32" Margin="0,0,10,0"/>
-            <Button x:Name="OpenPluginsFolderButton" Content="Open Folder" Width="110" Height="32"/>
-        </StackPanel>
+                <Grid Grid.Row="0" Margin="0,0,0,18" MouseLeftButtonDown="OnHeaderMouseDown">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel>
+                        <TextBlock Text="Plugin Manager"
+                                   FontSize="26"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"/>
+                        <TextBlock Text="Enable, disable, and organize what lives inside WinNotch."
+                                   Margin="0,6,0,0"
+                                   FontSize="12"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    </StackPanel>
+
+                    <Button x:Name="CloseButton"
+                            Grid.Column="1"
+                            Width="32"
+                            Height="32"
+                            Content="X"
+                            Style="{StaticResource PluginTitlebarButton}"/>
+                </Grid>
+
+                <Grid Grid.Row="1" Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel>
+                        <TextBlock x:Name="InstalledCountText"
+                                   FontSize="13"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"/>
+                        <TextBlock Text="Installed plugins can be toggled with the switches on the right."
+                                   Margin="0,4,0,0"
+                                   FontSize="11"
+                                   Foreground="{DynamicResource TextMutedBrush}"/>
+                    </StackPanel>
+
+                    <Button x:Name="RefreshLibraryButton"
+                            Grid.Column="1"
+                            MinWidth="128"
+                            Margin="12,0,0,0"
+                            Content="Refresh Library"
+                            Style="{StaticResource PluginSecondaryButton}"/>
+
+                    <Button x:Name="BrowsePluginsButton"
+                            Grid.Column="2"
+                            MinWidth="118"
+                            Margin="10,0,0,0"
+                            Content="Browse Plugins"
+                            Style="{StaticResource PluginPrimaryButton}"/>
+                </Grid>
+
+                <Border Grid.Row="2"
+                        Background="{DynamicResource SegmentedBgBrush}"
+                        CornerRadius="24"
+                        Padding="16,16,10,16">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  Style="{StaticResource RoundedScrollViewer}">
+                        <StackPanel x:Name="PluginListPanel"/>
+                    </ScrollViewer>
+                </Border>
+
+                <Grid Grid.Row="3" Margin="0,18,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Button x:Name="OpenPluginsFolderButton"
+                            Grid.Column="0"
+                            MinWidth="118"
+                            HorizontalAlignment="Left"
+                            Content="Open Folder"
+                            Style="{StaticResource PluginGhostButton}"/>
+
+                    <TextBlock Grid.Column="1"
+                               VerticalAlignment="Center"
+                               FontSize="11"
+                               Foreground="{DynamicResource TextMutedBrush}"
+                               Text="Changes apply after restart when needed."/>
+                </Grid>
+            </Grid>
+        </Border>
     </Grid>
 </UserControl>
