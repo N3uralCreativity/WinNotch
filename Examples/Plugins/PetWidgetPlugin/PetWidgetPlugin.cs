@@ -1,8 +1,8 @@
 using System;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using System.Windows.Media.Animation;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 using WinNotch.Models;
@@ -11,42 +11,43 @@ using WinNotch.Services;
 
 namespace PetWidgetPlugin;
 
-[WinNotchPlugin("com.winnotch.petwidget", "Pet Widget", "1.0.0", "WinNotch Team")]
+[WinNotchPlugin("com.winnotch.petwidget", "Pet Widget", "1.0.1", "WinNotch Team")]
 public class PetWidgetPlugin : PluginBase, IUIPlugin
 {
     public override string Id => "com.winnotch.petwidget";
     public override string Name => "Pet Widget";
-    public override string Version => "1.0.0";
+    public override string Version => "1.0.1";
     public override string Author => "WinNotch Team";
-    public override string Description => "A cute animated pet that lives in your notch! It reacts to your activity and has different moods.";
+    public override string Description => "A tiny notch cat that reacts to battery level, mood, and attention.";
     public override string MinimumWinNotchVersion => "0.3.0";
 
-    // Services
     private ThemeService? _themeService;
     private BatteryService? _batteryService;
 
-    // Closed UI
     private TextBlock? _closedEmoji;
-
-    // Open UI
     private Border? _openContainer;
-    private Canvas? _petCanvas;
-    private TextBlock? _petBody;
     private TextBlock? _moodLabel;
+    private TextBlock? _happinessLabel;
     private TextBlock? _statusText;
     private ProgressBar? _happinessBar;
+    private Button? _petButton;
+    private Canvas? _petCanvas;
+    private Line? _floorLine;
+    private TextBlock? _petSprite;
 
-    // State
     private DispatcherTimer? _animTimer;
     private DispatcherTimer? _moodTimer;
+
     private readonly Random _rng = new();
     private PetMood _mood = PetMood.Happy;
     private PetAction _action = PetAction.Idle;
-    private int _happiness = 80;
-    private int _petX = 60;
+    private int _happiness = 78;
+    private double _petX = 18;
+    private double _arenaWidth = 120;
     private int _direction = 1;
     private int _idleTicks;
-    private int _sleepZCount;
+    private int _sleepTicks;
+    private int _frame;
     private bool _isLight;
     private DateTime _lastPetTime = DateTime.MinValue;
 
@@ -59,23 +60,23 @@ public class PetWidgetPlugin : PluginBase, IUIPlugin
         _isLight = _themeService.IsLight;
         _themeService.ThemeChanged += OnThemeChanged;
 
-        // Animation timer — ~12fps for smooth movement
-        _animTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(80) };
+        _animTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(90) };
         _animTimer.Tick += OnAnimTick;
         _animTimer.Start();
 
-        // Mood decay timer — every 30s
-        _moodTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
+        _moodTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(20) };
         _moodTimer.Tick += OnMoodTick;
         _moodTimer.Start();
+
+        PickNextAction();
     }
 
     public UIElement? GetUIElement(UIPluginLocation location)
     {
         return location switch
         {
-            UIPluginLocation.ClosedContent => BuildClosedUI(),
-            UIPluginLocation.OpenContent => BuildOpenUI(),
+            UIPluginLocation.ClosedContent => BuildClosedUi(),
+            UIPluginLocation.OpenContent => BuildOpenUi(),
             _ => null
         };
     }
@@ -83,307 +84,423 @@ public class PetWidgetPlugin : PluginBase, IUIPlugin
     public void OnNotchStateChanged(NotchState newState)
     {
         if (newState == NotchState.Open)
-            UpdateOpenUI();
+        {
+            UpdateOpenUi();
+        }
     }
 
-    // ── Closed UI ──────────────────────────────────────────────
-    private UIElement BuildClosedUI()
+    private UIElement BuildClosedUi()
     {
         _closedEmoji = new TextBlock
         {
-            Text = GetMoodEmoji(),
             FontSize = 14,
-            VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(4, 0, 4, 0),
-            ToolTip = $"Pet is {_mood}"
+            VerticalAlignment = VerticalAlignment.Center
         };
+
+        UpdateClosedUi();
         return _closedEmoji;
     }
 
-    // ── Open UI ────────────────────────────────────────────────
-    private UIElement BuildOpenUI()
+    private UIElement BuildOpenUi()
     {
         _openContainer = new Border
         {
-            CornerRadius = new CornerRadius(10),
-            Padding = new Thickness(12),
-            Margin = new Thickness(8, 4, 8, 4),
-            Background = GetCardBackground(),
-            MinHeight = 140
+            CornerRadius = new CornerRadius(12),
+            Padding = new Thickness(10),
+            Margin = new Thickness(0, 4, 0, 0),
+            MinHeight = 112,
+            HorizontalAlignment = HorizontalAlignment.Stretch
         };
 
         var root = new StackPanel();
 
-        // Header row
         var header = new Grid();
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
         _moodLabel = new TextBlock
         {
-            Text = $"{GetMoodEmoji()} {_mood}",
-            FontSize = 14,
+            FontSize = 13,
             FontWeight = FontWeights.SemiBold,
-            Foreground = GetPrimaryForeground(),
             VerticalAlignment = VerticalAlignment.Center
         };
         Grid.SetColumn(_moodLabel, 0);
         header.Children.Add(_moodLabel);
 
-        var petButton = new Button
+        _petButton = new Button
         {
-            Content = "Pet 🤚",
+            Content = "Pet",
             FontSize = 11,
             Padding = new Thickness(8, 3, 8, 3),
-            Background = new SolidColorBrush(_isLight ? Color.FromRgb(230, 230, 235) : Color.FromRgb(60, 60, 65)),
-            Foreground = GetPrimaryForeground(),
             BorderThickness = new Thickness(0),
-            Cursor = System.Windows.Input.Cursors.Hand
+            Cursor = System.Windows.Input.Cursors.Hand,
+            HorizontalAlignment = HorizontalAlignment.Right
         };
-        petButton.Click += OnPetClicked;
-        Grid.SetColumn(petButton, 1);
-        header.Children.Add(petButton);
+        _petButton.Click += OnPetClicked;
+        Grid.SetColumn(_petButton, 1);
+        header.Children.Add(_petButton);
 
         root.Children.Add(header);
 
-        // Pet canvas — where the pet walks around
         _petCanvas = new Canvas
         {
-            Height = 50,
-            Margin = new Thickness(0, 6, 0, 6),
-            ClipToBounds = true
+            Height = 48,
+            ClipToBounds = true,
+            Margin = new Thickness(0, 8, 0, 6)
         };
+        _petCanvas.SizeChanged += OnPetCanvasSizeChanged;
 
-        // Floor line
-        var floor = new Line
+        _floorLine = new Line
         {
-            X1 = 0, X2 = 300, Y1 = 48, Y2 = 48,
-            Stroke = new SolidColorBrush(_isLight ? Color.FromRgb(200, 200, 200) : Color.FromRgb(70, 70, 70)),
+            X1 = 0,
+            Y1 = 44,
+            Y2 = 44,
             StrokeThickness = 1
         };
-        _petCanvas.Children.Add(floor);
+        _petCanvas.Children.Add(_floorLine);
 
-        _petBody = new TextBlock
+        _petSprite = new TextBlock
         {
-            Text = GetPetSprite(),
-            FontSize = 26,
-            RenderTransformOrigin = new Point(0.5, 1)
+            FontSize = 24,
+            RenderTransformOrigin = new Point(0.5, 0.5)
         };
-        Canvas.SetLeft(_petBody, _petX);
-        Canvas.SetTop(_petBody, 12);
-        _petCanvas.Children.Add(_petBody);
+        _petCanvas.Children.Add(_petSprite);
 
         root.Children.Add(_petCanvas);
 
-        // Happiness bar
-        var barRow = new Grid { Margin = new Thickness(0, 2, 0, 4) };
-        barRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        barRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-
-        var barLabel = new TextBlock
+        _happinessLabel = new TextBlock
         {
-            Text = "❤️ ",
-            FontSize = 12,
-            VerticalAlignment = VerticalAlignment.Center,
-            Foreground = GetSecondaryForeground()
+            Text = "Happiness",
+            FontSize = 11,
+            Margin = new Thickness(0, 0, 0, 4)
         };
-        Grid.SetColumn(barLabel, 0);
-        barRow.Children.Add(barLabel);
+        root.Children.Add(_happinessLabel);
 
         _happinessBar = new ProgressBar
         {
             Minimum = 0,
             Maximum = 100,
-            Value = _happiness,
-            Height = 6,
-            Background = new SolidColorBrush(_isLight ? Color.FromRgb(220, 220, 225) : Color.FromRgb(50, 50, 55)),
-            Foreground = GetHappinessColor(),
-            VerticalAlignment = VerticalAlignment.Center
+            Height = 6
         };
-        Grid.SetColumn(_happinessBar, 1);
-        barRow.Children.Add(_happinessBar);
+        root.Children.Add(_happinessBar);
 
-        root.Children.Add(barRow);
-
-        // Status text
         _statusText = new TextBlock
         {
-            Text = GetStatusText(),
             FontSize = 11,
-            Foreground = GetSecondaryForeground(),
+            Margin = new Thickness(0, 6, 0, 0),
             TextWrapping = TextWrapping.Wrap
         };
         root.Children.Add(_statusText);
 
         _openContainer.Child = root;
-        UpdateOpenUI();
+
+        ApplyTheme();
+        UpdateOpenUi();
         return _openContainer;
     }
 
-    // ── Animation ──────────────────────────────────────────────
     private void OnAnimTick(object? sender, EventArgs e)
     {
+        _frame++;
+
         switch (_action)
         {
             case PetAction.Walking:
-                _petX += _direction * 4;
-                if (_petX > 160) { _direction = -1; PickNextAction(); }
-                if (_petX < 10) { _direction = 1; PickNextAction(); }
+                MovePet(3.2);
+                if (_petX <= 4 || _petX >= GetRightBoundary())
+                {
+                    _direction *= -1;
+                    PickNextAction();
+                }
+                break;
+
+            case PetAction.Playing:
+                MovePet(4.6);
+                if (_petX <= 4 || _petX >= GetRightBoundary())
+                {
+                    _direction *= -1;
+                }
+
+                _idleTicks++;
+                if (_idleTicks > 18)
+                {
+                    PickNextAction();
+                }
+                break;
+
+            case PetAction.Sleeping:
+                _sleepTicks++;
+                if (_sleepTicks > 42)
+                {
+                    _action = PetAction.Idle;
+                    _idleTicks = 0;
+                    _sleepTicks = 0;
+                }
                 break;
 
             case PetAction.Idle:
                 _idleTicks++;
-                if (_idleTicks > 25) PickNextAction();
-                break;
-
-            case PetAction.Sleeping:
-                _sleepZCount++;
-                if (_sleepZCount > 60) { _action = PetAction.Idle; _idleTicks = 0; }
-                break;
-
-            case PetAction.Playing:
-                _petX += (_rng.Next(2) == 0 ? 1 : -1) * 3;
-                _petX = Math.Clamp(_petX, 10, 160);
-                _idleTicks++;
-                if (_idleTicks > 20) PickNextAction();
+                if (_idleTicks > 24)
+                {
+                    PickNextAction();
+                }
                 break;
         }
 
-        // Update pet sprite position
-        if (_petBody != null)
-        {
-            Canvas.SetLeft(_petBody, _petX);
-            _petBody.Text = GetPetSprite();
-            _petBody.RenderTransform = _direction < 0 ? new ScaleTransform(-1, 1) : null;
-        }
+        UpdatePetVisual();
+        UpdateClosedUi();
 
-        // Update closed emoji occasionally
-        if (_closedEmoji != null)
+        if (_statusText != null)
         {
-            _closedEmoji.Text = GetMoodEmoji();
-            _closedEmoji.ToolTip = $"Pet is {_mood}";
+            _statusText.Text = GetStatusText();
         }
     }
 
-    private void PickNextAction()
-    {
-        _idleTicks = 0;
-        _sleepZCount = 0;
-
-        if (_happiness < 20)
-        {
-            _action = _rng.Next(3) == 0 ? PetAction.Sleeping : PetAction.Idle;
-        }
-        else if (_happiness > 70)
-        {
-            var roll = _rng.Next(100);
-            _action = roll < 40 ? PetAction.Walking : roll < 70 ? PetAction.Playing : PetAction.Idle;
-        }
-        else
-        {
-            _action = _rng.Next(2) == 0 ? PetAction.Walking : PetAction.Idle;
-        }
-
-        if (_action == PetAction.Walking)
-            _direction = _rng.Next(2) == 0 ? 1 : -1;
-    }
-
-    // ── Mood ───────────────────────────────────────────────────
     private void OnMoodTick(object? sender, EventArgs e)
     {
-        // Happiness decays slowly
         _happiness = Math.Max(0, _happiness - 2);
 
-        // Battery low makes pet worried
-        if (_batteryService != null)
+        if (IsBatteryLow())
         {
-            try
-            {
-                var pct = _batteryService.ChargePercent;
-                if (pct < 15 && pct >= 0) _happiness = Math.Max(0, _happiness - 3);
-            }
-            catch { /* battery not available */ }
+            _happiness = Math.Max(0, _happiness - 4);
         }
 
-        _mood = _happiness switch
-        {
-            >= 80 => PetMood.Ecstatic,
-            >= 60 => PetMood.Happy,
-            >= 40 => PetMood.Content,
-            >= 20 => PetMood.Sad,
-            _ => PetMood.Sleepy
-        };
+        UpdateMoodFromHappiness();
 
-        UpdateOpenUI();
+        if (_happiness < 25 && _action == PetAction.Playing)
+        {
+            PickNextAction();
+        }
+
+        UpdateOpenUi();
+        UpdateClosedUi();
     }
 
     private void OnPetClicked(object sender, RoutedEventArgs e)
     {
-        // Petting boosts happiness (cooldown 3s)
-        if ((DateTime.Now - _lastPetTime).TotalSeconds < 3) return;
-        _lastPetTime = DateTime.Now;
-
-        _happiness = Math.Min(100, _happiness + 15);
-        _action = PetAction.Playing;
-        _idleTicks = 0;
-
-        _mood = _happiness switch
+        if ((DateTime.Now - _lastPetTime).TotalSeconds < 3)
         {
-            >= 80 => PetMood.Ecstatic,
-            >= 60 => PetMood.Happy,
-            >= 40 => PetMood.Content,
-            >= 20 => PetMood.Sad,
-            _ => PetMood.Sleepy
-        };
-
-        UpdateOpenUI();
-    }
-
-    // ── UI Updates ─────────────────────────────────────────────
-    private void UpdateOpenUI()
-    {
-        if (_moodLabel != null)
-            _moodLabel.Text = $"{GetMoodEmoji()} {_mood}";
-
-        if (_happinessBar != null)
-        {
-            _happinessBar.Value = _happiness;
-            _happinessBar.Foreground = GetHappinessColor();
+            return;
         }
 
-        if (_statusText != null)
-            _statusText.Text = GetStatusText();
+        _lastPetTime = DateTime.Now;
+        _happiness = Math.Min(100, _happiness + 15);
+        _direction = _rng.Next(2) == 0 ? 1 : -1;
+        _action = PetAction.Playing;
+        _idleTicks = 0;
+        _sleepTicks = 0;
+
+        UpdateMoodFromHappiness();
+        UpdateOpenUi();
+        UpdateClosedUi();
     }
 
     private void OnThemeChanged()
     {
         _isLight = _themeService?.IsLight ?? false;
-
-        if (_openContainer != null)
-            _openContainer.Background = GetCardBackground();
-
-        if (_moodLabel != null)
-            _moodLabel.Foreground = GetPrimaryForeground();
-
-        if (_statusText != null)
-            _statusText.Foreground = GetSecondaryForeground();
+        ApplyTheme();
     }
 
-    // ── Sprites & Text ─────────────────────────────────────────
+    private void OnPetCanvasSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        _arenaWidth = Math.Max(72, e.NewSize.Width);
+
+        if (_floorLine != null)
+        {
+            _floorLine.X2 = Math.Max(0, _arenaWidth);
+        }
+
+        _petX = Math.Clamp(_petX, 4, GetRightBoundary());
+        UpdatePetVisual();
+    }
+
+    private void PickNextAction()
+    {
+        _idleTicks = 0;
+        _sleepTicks = 0;
+
+        if (IsBatteryLow() || _happiness < 20)
+        {
+            _action = _rng.Next(3) == 0 ? PetAction.Sleeping : PetAction.Idle;
+            return;
+        }
+
+        if (_happiness >= 80)
+        {
+            var roll = _rng.Next(100);
+            _action = roll switch
+            {
+                < 35 => PetAction.Walking,
+                < 70 => PetAction.Playing,
+                _ => PetAction.Idle
+            };
+        }
+        else if (_happiness >= 45)
+        {
+            _action = _rng.Next(2) == 0 ? PetAction.Walking : PetAction.Idle;
+        }
+        else
+        {
+            _action = PetAction.Idle;
+        }
+
+        if (_action is PetAction.Walking or PetAction.Playing)
+        {
+            _direction = _rng.Next(2) == 0 ? 1 : -1;
+        }
+    }
+
+    private void MovePet(double amount)
+    {
+        _petX = Math.Clamp(_petX + amount * _direction, 4, GetRightBoundary());
+    }
+
+    private double GetRightBoundary()
+    {
+        return Math.Max(4, _arenaWidth - 28);
+    }
+
+    private void UpdateMoodFromHappiness()
+    {
+        _mood = _happiness switch
+        {
+            >= 85 => PetMood.Ecstatic,
+            >= 60 => PetMood.Happy,
+            >= 40 => PetMood.Content,
+            >= 20 => PetMood.Sad,
+            _ => PetMood.Sleepy
+        };
+    }
+
+    private void UpdateClosedUi()
+    {
+        if (_closedEmoji == null)
+        {
+            return;
+        }
+
+        _closedEmoji.Text = GetMoodEmoji();
+        _closedEmoji.ToolTip = $"Pet mood: {_mood}";
+    }
+
+    private void UpdateOpenUi()
+    {
+        if (_moodLabel != null)
+        {
+            _moodLabel.Text = $"{GetMoodEmoji()} {_mood}";
+        }
+
+        if (_happinessBar != null)
+        {
+            _happinessBar.Value = _happiness;
+            _happinessBar.Foreground = GetHappinessBrush();
+        }
+
+        if (_statusText != null)
+        {
+            _statusText.Text = GetStatusText();
+        }
+
+        UpdatePetVisual();
+        ApplyTheme();
+    }
+
+    private void UpdatePetVisual()
+    {
+        if (_petSprite == null)
+        {
+            return;
+        }
+
+        var bounce = _action switch
+        {
+            PetAction.Walking => _frame % 2 == 0 ? 0 : -2,
+            PetAction.Playing => _frame % 4 < 2 ? -4 : -1,
+            PetAction.Sleeping => 1,
+            _ => 0
+        };
+
+        _petSprite.Text = GetPetSprite();
+        _petSprite.RenderTransform = _direction < 0
+            ? new ScaleTransform(-1, 1)
+            : Transform.Identity;
+
+        Canvas.SetLeft(_petSprite, _petX);
+        Canvas.SetTop(_petSprite, 10 + bounce);
+    }
+
+    private void ApplyTheme()
+    {
+        if (_openContainer != null)
+        {
+            _openContainer.Background = GetCardBackground();
+        }
+
+        if (_moodLabel != null)
+        {
+            _moodLabel.Foreground = GetPrimaryForeground();
+        }
+
+        if (_statusText != null)
+        {
+            _statusText.Foreground = GetSecondaryForeground();
+        }
+
+        if (_happinessLabel != null)
+        {
+            _happinessLabel.Foreground = GetSecondaryForeground();
+        }
+
+        if (_petButton != null)
+        {
+            _petButton.Background = GetButtonBackground();
+            _petButton.Foreground = GetPrimaryForeground();
+        }
+
+        if (_happinessBar != null)
+        {
+            _happinessBar.Background = GetTrackBrush();
+            _happinessBar.Foreground = GetHappinessBrush();
+        }
+
+        if (_floorLine != null)
+        {
+            _floorLine.Stroke = GetFloorBrush();
+        }
+    }
+
+    private bool IsBatteryLow()
+    {
+        if (_batteryService == null)
+        {
+            return false;
+        }
+
+        try
+        {
+            return _batteryService.ChargePercent is >= 0 and < 15;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     private string GetPetSprite()
     {
         return _action switch
         {
             PetAction.Sleeping => "😴",
-            PetAction.Playing => _idleTicks % 4 < 2 ? "😺" : "🙀",
-            PetAction.Walking => _idleTicks % 2 == 0 ? "🐱" : "😺",
+            PetAction.Playing => _frame % 4 < 2 ? "😸" : "😺",
+            PetAction.Walking => _frame % 2 == 0 ? "🐱" : "😺",
             _ => _mood switch
             {
                 PetMood.Ecstatic => "😸",
                 PetMood.Happy => "😺",
                 PetMood.Content => "🐱",
                 PetMood.Sad => "😿",
-                PetMood.Sleepy => "😾",
+                PetMood.Sleepy => "😴",
                 _ => "🐱"
             }
         };
@@ -404,47 +521,95 @@ public class PetWidgetPlugin : PluginBase, IUIPlugin
 
     private string GetStatusText()
     {
-        var actionText = _action switch
+        if (IsBatteryLow())
         {
-            PetAction.Walking => "Walking around...",
-            PetAction.Playing => "Playing! 🎉",
-            PetAction.Sleeping => "Zzz" + new string('z', Math.Min(_sleepZCount / 10, 5)) + "...",
+            return "Battery is low, so your cat is curling up nearby.";
+        }
+
+        return _action switch
+        {
+            PetAction.Walking => "Padding around the notch.",
+            PetAction.Playing => "Full zoomies mode.",
+            PetAction.Sleeping => "Sleeping through the notifications.",
             _ => _mood switch
             {
-                PetMood.Ecstatic => "Purring loudly! ✨",
-                PetMood.Happy => "Feeling good~",
-                PetMood.Content => "Just hanging out.",
-                PetMood.Sad => "Could use some attention...",
-                PetMood.Sleepy => "So tired...",
-                _ => "..."
+                PetMood.Ecstatic => "Purring loudly and claiming the notch.",
+                PetMood.Happy => "Very content right now.",
+                PetMood.Content => "Watching everything quietly.",
+                PetMood.Sad => "Would appreciate a quick pet.",
+                PetMood.Sleepy => "Ready for a nap.",
+                _ => "Hanging out."
             }
         };
-        return actionText;
     }
 
-    // ── Theme-aware colors ─────────────────────────────────────
-    private Brush GetCardBackground() =>
-        new SolidColorBrush(_isLight ? Color.FromArgb(180, 240, 240, 245) : Color.FromArgb(180, 35, 35, 38));
-
-    private Brush GetPrimaryForeground() =>
-        new SolidColorBrush(_isLight ? Color.FromRgb(30, 30, 30) : Color.FromRgb(240, 240, 240));
-
-    private Brush GetSecondaryForeground() =>
-        new SolidColorBrush(_isLight ? Color.FromRgb(100, 100, 100) : Color.FromRgb(170, 170, 170));
-
-    private Brush GetHappinessColor()
+    private Brush GetCardBackground()
     {
-        if (_happiness >= 60) return new SolidColorBrush(Color.FromRgb(80, 200, 120));
-        if (_happiness >= 30) return new SolidColorBrush(Color.FromRgb(240, 180, 50));
-        return new SolidColorBrush(Color.FromRgb(220, 70, 70));
+        return new SolidColorBrush(_isLight
+            ? Color.FromArgb(190, 245, 246, 250)
+            : Color.FromArgb(190, 38, 40, 46));
     }
 
-    // ── Cleanup ────────────────────────────────────────────────
+    private Brush GetButtonBackground()
+    {
+        return new SolidColorBrush(_isLight
+            ? Color.FromRgb(228, 231, 238)
+            : Color.FromRgb(68, 72, 80));
+    }
+
+    private Brush GetTrackBrush()
+    {
+        return new SolidColorBrush(_isLight
+            ? Color.FromRgb(222, 225, 232)
+            : Color.FromRgb(54, 57, 64));
+    }
+
+    private Brush GetFloorBrush()
+    {
+        return new SolidColorBrush(_isLight
+            ? Color.FromRgb(198, 201, 208)
+            : Color.FromRgb(88, 92, 100));
+    }
+
+    private Brush GetPrimaryForeground()
+    {
+        return new SolidColorBrush(_isLight
+            ? Color.FromRgb(32, 35, 41)
+            : Color.FromRgb(241, 244, 250));
+    }
+
+    private Brush GetSecondaryForeground()
+    {
+        return new SolidColorBrush(_isLight
+            ? Color.FromRgb(96, 102, 112)
+            : Color.FromRgb(175, 181, 191));
+    }
+
+    private Brush GetHappinessBrush()
+    {
+        if (_happiness >= 60)
+        {
+            return new SolidColorBrush(Color.FromRgb(86, 194, 118));
+        }
+
+        if (_happiness >= 30)
+        {
+            return new SolidColorBrush(Color.FromRgb(230, 178, 64));
+        }
+
+        return new SolidColorBrush(Color.FromRgb(223, 90, 90));
+    }
+
     public override Task ShutdownAsync()
     {
         _animTimer?.Stop();
         _moodTimer?.Stop();
-        if (_themeService != null) _themeService.ThemeChanged -= OnThemeChanged;
+
+        if (_themeService != null)
+        {
+            _themeService.ThemeChanged -= OnThemeChanged;
+        }
+
         return base.ShutdownAsync();
     }
 

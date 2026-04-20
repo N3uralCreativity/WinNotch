@@ -180,6 +180,9 @@
                 <!-- Vertical closed content (side dock) -->
                 <StackPanel x:Name="VerticalClosedContent" Visibility="Collapsed"
                             VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <StackPanel x:Name="VerticalPluginClosedPanel"
+                                HorizontalAlignment="Center"
+                                Margin="0,0,0,8"/>
                     <TextBlock x:Name="SideTimeSmall" Text="12:00"
                                FontSize="11" FontWeight="SemiBold"
                                Foreground="{DynamicResource TextPrimaryBrush}"
@@ -288,6 +291,9 @@
                                 </Button>
                             </StackPanel>
                         </StackPanel>
+
+                        <StackPanel x:Name="VerticalPluginOpenPanel"
+                                    Margin="0,14,0,0"/>
 
                         <!-- Bottom -->
                         <Border Height="1" Background="{DynamicResource SeparatorBrush}"

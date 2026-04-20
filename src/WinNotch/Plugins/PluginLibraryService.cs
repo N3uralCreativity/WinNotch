@@ -31,7 +31,7 @@ public class PluginLibraryService
         {
             Timeout = TimeSpan.FromSeconds(30)
         };
-        _httpClient.DefaultRequestHeaders.Add("User-Agent", "WinNotch/0.3.6");
+        _httpClient.DefaultRequestHeaders.Add("User-Agent", "WinNotch/0.3.7");
     }
 
     /// <summary>
@@ -47,6 +47,7 @@ public class PluginLibraryService
             var library = JsonSerializer.Deserialize<PluginLibrary>(json);
             if (library?.Plugins != null)
             {
+                LastError = null;
                 _availablePlugins = library.Plugins;
                 LibraryUpdated?.Invoke();
                 return true;

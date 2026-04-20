@@ -1,6 +1,9 @@
 @echo off
+for /f "usebackq delims=" %%V in (`powershell -NoProfile -Command "[xml]$proj = Get-Content 'src\WinNotch\WinNotch.csproj'; $proj.Project.PropertyGroup.Version"`) do set "APP_VERSION=%%V"
+if not defined APP_VERSION set "APP_VERSION=unknown"
+
 echo ========================================
-echo  WinNotch v0.3.6 - Build Release
+echo  WinNotch v%APP_VERSION% - Build Release
 echo ========================================
 echo.
 
@@ -47,9 +50,9 @@ if defined ISCC (
     echo.
     echo ========================================
     echo  Installer created!
-    echo  Output: publish\installer\WinNotch-0.3.6-Setup.exe
+    echo  Output: publish\installer\WinNotch-%APP_VERSION%-Setup.exe
     echo ========================================
-    for %%A in ("publish\installer\WinNotch-0.3.6-Setup.exe") do echo  Size: %%~zA bytes
+    for %%A in ("publish\installer\WinNotch-%APP_VERSION%-Setup.exe") do echo  Size: %%~zA bytes
 ) else (
     echo [2/2] Inno Setup not found - skipping installer.
     echo  Install from: https://jrsoftware.org/isinfo.php
@@ -59,6 +62,6 @@ if defined ISCC (
 echo.
 echo Done! Release artifacts:
 echo   - publish\WinNotch.exe          (standalone)
-if defined ISCC echo   - publish\installer\WinNotch-0.1.0-Setup.exe (installer)
+if defined ISCC echo   - publish\installer\WinNotch-%APP_VERSION%-Setup.exe (installer)
 echo.
 pause

@@ -371,6 +371,8 @@ public partial class NotchWindow : Window
 
         PluginClosedPanel.Children.Clear();
         PluginOpenPanel.Children.Clear();
+        VerticalPluginClosedPanel.Children.Clear();
+        VerticalPluginOpenPanel.Children.Clear();
 
         foreach (var uiPlugin in _pluginManager.GetUIPlugins())
         {
@@ -378,11 +380,21 @@ public partial class NotchWindow : Window
             {
                 var closedElement = uiPlugin.GetUIElement(UIPluginLocation.ClosedContent);
                 if (closedElement != null)
-                    PluginClosedPanel.Children.Add(closedElement);
+                {
+                    if (_dock == NotchDock.Top)
+                        PluginClosedPanel.Children.Add(closedElement);
+                    else
+                        VerticalPluginClosedPanel.Children.Add(closedElement);
+                }
 
                 var openElement = uiPlugin.GetUIElement(UIPluginLocation.OpenContent);
                 if (openElement != null)
-                    PluginOpenPanel.Children.Add(openElement);
+                {
+                    if (_dock == NotchDock.Top)
+                        PluginOpenPanel.Children.Add(openElement);
+                    else
+                        VerticalPluginOpenPanel.Children.Add(openElement);
+                }
 
                 // Notify initial state
                 uiPlugin.OnNotchStateChanged(_vm.NotchState);
@@ -392,6 +404,8 @@ public partial class NotchWindow : Window
                 System.Diagnostics.Debug.WriteLine($"Failed to inject UI for plugin {uiPlugin.Name}: {ex.Message}");
             }
         }
+
+        RefreshPluginHostLayout();
     }
 
     private void NotifyPluginsStateChanged(NotchState state)
@@ -557,9 +571,7 @@ public partial class NotchWindow : Window
             InlineSettings.LoadSettings(_settings);
             InlineSettings.Visibility = Visibility.Visible;
 
-            double targetH = _shelfService.HasItems
-                ? NotchConstants.OpenSettingsHeightWithShelf
-                : NotchConstants.OpenSettingsHeight;
+            double targetH = GetTopSettingsHeight();
             _heightSpring.Response = 0.42;
             _heightSpring.DampingFraction = 0.80;
             _heightSpring.AnimateTo(targetH, _currentHeight);
@@ -586,9 +598,7 @@ public partial class NotchWindow : Window
             // Top dock: Hide settings and shrink back to normal open height
             InlineSettings.Visibility = Visibility.Collapsed;
 
-            double targetH = _shelfService.HasItems
-                ? NotchConstants.OpenHeightWithShelf
-                : NotchConstants.OpenHeight;
+            double targetH = GetTopOpenHeight();
             _heightSpring.Response = 0.42;
             _heightSpring.DampingFraction = 0.80;
             _heightSpring.AnimateTo(targetH, _currentHeight);
@@ -613,17 +623,7 @@ public partial class NotchWindow : Window
     /// </summary>
     private void PositionFixedWindow()
     {
-        double padding = NotchConstants.WindowPadding;
-        double maxOpenWidth = new[] {
-            NotchConstants.OpenWidth,
-            NotchConstants.OpenWidthWithCalendar,
-            NotchConstants.OpenWidthWithWebcam,
-            NotchConstants.OpenWidthWithCalendarAndWebcam
-        }.Max();
-        _fixedWindowWidth = maxOpenWidth + padding * 2;
-        double maxHeight = Math.Max(NotchConstants.OpenSettingsHeightWithShelf,
-            Math.Max(NotchConstants.OpenHeightWithShelf, NotchConstants.OpenSettingsHeight));
-        _fixedWindowHeight = maxHeight + padding + 10;
+        UpdateFixedWindowBounds();
 
         var screenBounds = ScreenHelper.GetPrimaryScreenBounds(this);
 
@@ -631,6 +631,88 @@ public partial class NotchWindow : Window
         Height = _fixedWindowHeight;
         Left = screenBounds.Left + (screenBounds.Width - _fixedWindowWidth) / 2;
         Top = screenBounds.Top - 2;
+    }
+
+    private void UpdateFixedWindowBounds()
+    {
+        double padding = NotchConstants.WindowPadding;
+        double maxTopOpenWidth = new[]
+        {
+            NotchConstants.OpenWidth,
+            NotchConstants.OpenWidthWithCalendar,
+            NotchConstants.OpenWidthWithWebcam,
+            NotchConstants.OpenWidthWithCalendarAndWebcam
+        }.Max();
+
+        double maxTopHeight = Math.Max(GetTopOpenHeight(), GetTopSettingsHeight());
+        double sideExpandedWidth = NotchConstants.SideOpenWidth + 280 + NotchConstants.OpenTopRadius;
+        double maxShortAxis = Math.Max(maxTopHeight, sideExpandedWidth);
+        double maxTallAxis = Math.Max(maxTopOpenWidth, GetSideOpenHeight());
+
+        _fixedWindowWidth = maxTallAxis + padding * 2;
+        _fixedWindowHeight = maxShortAxis + padding + 10;
+    }
+
+    private void RefreshPluginHostLayout()
+    {
+        UpdateFixedWindowBounds();
+
+        if (!IsLoaded || _isDragging)
+            return;
+
+        RepositionForDock();
+
+        if (_vm.NotchState != NotchState.Open)
+            return;
+
+        if (_dock == NotchDock.Top)
+        {
+            var targetHeight = _isSettingsExpanded
+                ? GetTopSettingsHeight()
+                : GetTopOpenHeight();
+
+            _heightSpring.AnimateTo(targetHeight, _currentHeight);
+            return;
+        }
+
+        _heightSpring.AnimateTo(GetSideOpenHeight(), _currentHeight);
+    }
+
+    private bool ShouldReserveShelfSpace()
+    {
+        return _shelfService.HasItems || ShelfPanel.Visibility == Visibility.Visible;
+    }
+
+    private double GetTopOpenHeight()
+    {
+        double baseHeight = ShouldReserveShelfSpace()
+            ? NotchConstants.OpenHeightWithShelf
+            : NotchConstants.OpenHeight;
+
+        return baseHeight + GetMeasuredPanelHeight(PluginOpenPanel, Math.Max(220, GetOpenWidth() - 48));
+    }
+
+    private double GetTopSettingsHeight()
+    {
+        double baseHeight = ShouldReserveShelfSpace()
+            ? NotchConstants.OpenSettingsHeightWithShelf
+            : NotchConstants.OpenSettingsHeight;
+
+        return baseHeight + GetMeasuredPanelHeight(PluginOpenPanel, Math.Max(220, GetOpenWidth() - 48));
+    }
+
+    private double GetSideOpenHeight()
+    {
+        return NotchConstants.SideOpenHeight + GetMeasuredPanelHeight(VerticalPluginOpenPanel, 136);
+    }
+
+    private static double GetMeasuredPanelHeight(System.Windows.Controls.Panel panel, double availableWidth)
+    {
+        if (panel.Children.Count == 0)
+            return 0;
+
+        panel.Measure(new Size(availableWidth, double.PositiveInfinity));
+        return Math.Ceiling(panel.DesiredSize.Height);
     }
 
     #region Animation Loop
@@ -825,9 +907,7 @@ public partial class NotchWindow : Window
         if (_dock == NotchDock.Top)
         {
             double openW = GetOpenWidth();
-            double openH = _shelfService.HasItems
-                ? NotchConstants.OpenHeightWithShelf
-                : NotchConstants.OpenHeight;
+            double openH = GetTopOpenHeight();
 
             _widthSpring.AnimateTo(openW, _currentWidth);
             _heightSpring.AnimateTo(openH, _currentHeight);
@@ -836,7 +916,7 @@ public partial class NotchWindow : Window
         {
             // Side dock: width = protrusion from edge, height = tall axis
             double openW = NotchConstants.SideOpenWidth;
-            double openH = NotchConstants.SideOpenHeight;
+            double openH = GetSideOpenHeight();
 
             _widthSpring.AnimateTo(openW, _currentWidth);
             _heightSpring.AnimateTo(openH, _currentHeight);
@@ -1179,6 +1259,8 @@ public partial class NotchWindow : Window
             VerticalOpenContent.Visibility = Visibility.Visible;
         }
 
+        InjectPluginUI();
+
         // Animate back to closed dimensions
         _widthSpring.Response = 0.40;
         _widthSpring.DampingFraction = 0.82;
@@ -1482,9 +1564,7 @@ public partial class NotchWindow : Window
 
                 if (!_isSettingsExpanded)
                 {
-                    double targetH = _shelfService.HasItems
-                        ? NotchConstants.OpenHeightWithShelf
-                        : NotchConstants.OpenHeight;
+                    double targetH = GetTopOpenHeight();
                     _heightSpring.AnimateTo(targetH, _currentHeight);
                 }
             }
@@ -1601,9 +1681,7 @@ public partial class NotchWindow : Window
         // Adjust open height if notch is open
         if (_vm.NotchState == NotchState.Open && !_isSettingsExpanded)
         {
-            double targetHeight = hasItems
-                ? NotchConstants.OpenHeightWithShelf
-                : NotchConstants.OpenHeight;
+            double targetHeight = GetTopOpenHeight();
             _heightSpring.AnimateTo(targetHeight, _currentHeight);
         }
     }
@@ -1624,7 +1702,7 @@ public partial class NotchWindow : Window
 
             if (!_isSettingsExpanded)
             {
-                _heightSpring.AnimateTo(NotchConstants.OpenHeightWithShelf, _currentHeight);
+                _heightSpring.AnimateTo(GetTopOpenHeight(), _currentHeight);
             }
 
             e.Handled = true;
@@ -1650,7 +1728,7 @@ public partial class NotchWindow : Window
             ShelfPanel.Visibility = Visibility.Collapsed;
             if (_vm.NotchState == NotchState.Open && !_isSettingsExpanded)
             {
-                _heightSpring.AnimateTo(NotchConstants.OpenHeight, _currentHeight);
+                _heightSpring.AnimateTo(GetTopOpenHeight(), _currentHeight);
             }
         }
     }

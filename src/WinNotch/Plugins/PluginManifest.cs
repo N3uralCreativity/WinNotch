@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace WinNotch.Plugins;
@@ -69,7 +70,7 @@ public class PluginManifest
     public bool IsVerified { get; set; }
 }
 
-[JsonConverter(typeof(JsonStringEnumConverter))]
+[JsonConverter(typeof(PluginCategoryJsonConverter))]
 public enum PluginCategory
 {
     Animation,
@@ -79,5 +80,81 @@ public enum PluginCategory
     SystemUtility,
     Theme,
     Widget,
+    Fun,
     Other
+}
+
+internal sealed class PluginCategoryJsonConverter : JsonConverter<PluginCategory>
+{
+    public override PluginCategory Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType == JsonTokenType.Null)
+        {
+            return PluginCategory.Other;
+        }
+
+        if (reader.TokenType == JsonTokenType.String)
+        {
+            var rawValue = reader.GetString();
+            if (TryParse(rawValue, out var category))
+            {
+                return category;
+            }
+
+            return PluginCategory.Other;
+        }
+
+        if (reader.TokenType == JsonTokenType.Number && reader.TryGetInt32(out var numericValue))
+        {
+            if (Enum.IsDefined(typeof(PluginCategory), numericValue))
+            {
+                return (PluginCategory)numericValue;
+            }
+
+            return PluginCategory.Other;
+        }
+
+        throw new JsonException($"Unexpected token {reader.TokenType} when parsing plugin category.");
+    }
+
+    public override void Write(Utf8JsonWriter writer, PluginCategory value, JsonSerializerOptions options)
+    {
+        writer.WriteStringValue(value.ToString());
+    }
+
+    private static bool TryParse(string? rawValue, out PluginCategory category)
+    {
+        if (string.IsNullOrWhiteSpace(rawValue))
+        {
+            category = PluginCategory.Other;
+            return false;
+        }
+
+        var normalized = rawValue.Trim()
+            .Replace("-", string.Empty, StringComparison.Ordinal)
+            .Replace("_", string.Empty, StringComparison.Ordinal)
+            .Replace(" ", string.Empty, StringComparison.Ordinal);
+
+        return normalized.ToLowerInvariant() switch
+        {
+            "animation" => Match(PluginCategory.Animation, out category),
+            "integration" => Match(PluginCategory.Integration, out category),
+            "productivity" => Match(PluginCategory.Productivity, out category),
+            "media" => Match(PluginCategory.Media, out category),
+            "systemutility" => Match(PluginCategory.SystemUtility, out category),
+            "system" => Match(PluginCategory.SystemUtility, out category),
+            "utility" => Match(PluginCategory.SystemUtility, out category),
+            "theme" => Match(PluginCategory.Theme, out category),
+            "widget" => Match(PluginCategory.Widget, out category),
+            "fun" => Match(PluginCategory.Fun, out category),
+            "other" => Match(PluginCategory.Other, out category),
+            _ => Enum.TryParse(rawValue, ignoreCase: true, out category)
+        };
+    }
+
+    private static bool Match(PluginCategory categoryValue, out PluginCategory category)
+    {
+        category = categoryValue;
+        return true;
+    }
 }
