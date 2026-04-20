@@ -256,7 +256,7 @@ public class PluginManager : IDisposable
     {
         try
         {
-            var currentVersion = new Version("0.5.0"); // WinNotch version
+            var currentVersion = new Version("0.5.1"); // WinNotch version
             var required = new Version(requiredVersion);
             return currentVersion >= required;
         }
