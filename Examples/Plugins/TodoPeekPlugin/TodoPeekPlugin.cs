@@ -21,7 +21,7 @@ using WinNotch.Services;
 
 namespace TodoPeekPlugin;
 
-[WinNotchPlugin("com.winnotch.todopeek", "Todo Peek", "1.0.0", "WinNotch Team")]
+[WinNotchPlugin("com.winnotch.todopeek", "Todo Peek", "1.0.1", "WinNotch Team")]
 [PluginPermission("network", "Required to fetch tasks from Todoist or Microsoft Graph.")]
 public sealed class TodoPeekPlugin : PluginBase, IUIPlugin
 {
@@ -30,7 +30,7 @@ public sealed class TodoPeekPlugin : PluginBase, IUIPlugin
 
     public override string Id => "com.winnotch.todopeek";
     public override string Name => "Todo Peek";
-    public override string Version => "1.0.0";
+    public override string Version => "1.0.1";
     public override string Author => "WinNotch Team";
     public override string Description => "Expanded-view task widget with quick completion for Todoist, plus manual-token Microsoft To Do support.";
     public override string MinimumWinNotchVersion => "0.3.8";
@@ -126,10 +126,9 @@ public sealed class TodoPeekPlugin : PluginBase, IUIPlugin
         var root = new Border
         {
             Width = width,
-            CornerRadius = new CornerRadius(14),
-            Padding = new Thickness(compact ? 10 : 12),
+            Padding = new Thickness(0),
             Margin = new Thickness(0, 4, 0, 0),
-            BorderThickness = new Thickness(1)
+            BorderThickness = new Thickness(0)
         };
 
         var outer = new StackPanel();
@@ -661,12 +660,19 @@ public sealed class TodoPeekPlugin : PluginBase, IUIPlugin
 
     private UIElement CreateEmptyState(bool compact)
     {
-        var card = new Border
+        var row = new Grid
         {
-            CornerRadius = new CornerRadius(10),
-            Padding = new Thickness(10),
-            BorderThickness = new Thickness(1)
+            Margin = new Thickness(0, 2, 0, 0)
         };
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        row.Children.Add(new Border
+        {
+            Width = 2,
+            Margin = new Thickness(0, 1, 10, 1),
+            Background = GetSeparatorBrush()
+        });
 
         var stack = new StackPanel();
 
@@ -688,30 +694,30 @@ public sealed class TodoPeekPlugin : PluginBase, IUIPlugin
         };
         stack.Children.Add(body);
 
-        card.Child = stack;
-        card.Background = GetSecondaryCardBrush();
-        card.BorderBrush = GetBorderBrush();
-
         title.Foreground = GetPrimaryForeground();
         body.Foreground = GetSecondaryForeground();
-        return card;
+
+        Grid.SetColumn(stack, 1);
+        row.Children.Add(stack);
+        return row;
     }
 
     private UIElement CreateTaskRow(TodoTaskSnapshot task, bool compact)
     {
-        var card = new Border
+        var row = new Grid
         {
-            CornerRadius = new CornerRadius(10),
-            Padding = new Thickness(10),
-            Margin = new Thickness(0, 0, 0, 8),
-            BorderThickness = new Thickness(1),
-            Background = GetSecondaryCardBrush(),
-            BorderBrush = GetBorderBrush()
+            Margin = new Thickness(0, 0, 0, 10)
         };
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-        var layout = new Grid();
-        layout.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        layout.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        row.Children.Add(new Border
+        {
+            Width = 2,
+            Margin = new Thickness(0, 2, 10, 2),
+            Background = GetTaskBarBrush(task)
+        });
 
         var textStack = new StackPanel();
 
@@ -750,8 +756,8 @@ public sealed class TodoPeekPlugin : PluginBase, IUIPlugin
         topLine.Foreground = GetPrimaryForeground();
         metaLine.Foreground = GetSecondaryForeground();
 
-        Grid.SetColumn(textStack, 0);
-        layout.Children.Add(textStack);
+        Grid.SetColumn(textStack, 1);
+        row.Children.Add(textStack);
 
         var actionStack = new StackPanel
         {
@@ -766,7 +772,10 @@ public sealed class TodoPeekPlugin : PluginBase, IUIPlugin
             Padding = new Thickness(8, 3, 8, 3),
             FontSize = 10,
             BorderThickness = new Thickness(0),
-            Cursor = System.Windows.Input.Cursors.Hand
+            Cursor = System.Windows.Input.Cursors.Hand,
+            Background = Brushes.Transparent,
+            Foreground = GetAccentBrush(),
+            FontWeight = FontWeights.SemiBold
         };
         doneButton.Click += async (_, _) =>
         {
@@ -800,17 +809,16 @@ public sealed class TodoPeekPlugin : PluginBase, IUIPlugin
 
         ApplyButtonTheme(doneButton, secondary: false);
 
-        Grid.SetColumn(actionStack, 1);
-        layout.Children.Add(actionStack);
-
-        card.Child = layout;
-        return card;
+        Grid.SetColumn(actionStack, 2);
+        row.Children.Add(actionStack);
+        return row;
     }
 
     private void ApplyTheme(TodoPeekView view)
     {
-        view.Root.Background = GetCardBrush();
-        view.Root.BorderBrush = GetBorderBrush();
+        view.Root.Background = Brushes.Transparent;
+        view.Root.BorderBrush = Brushes.Transparent;
+        view.Root.BorderThickness = new Thickness(0);
         view.TitleText.Foreground = GetPrimaryForeground();
         view.SummaryText.Foreground = GetSecondaryForeground();
         view.StatusText.Foreground = GetPrimaryForeground();
@@ -823,8 +831,10 @@ public sealed class TodoPeekPlugin : PluginBase, IUIPlugin
 
     private void ApplyButtonTheme(Button button, bool secondary)
     {
-        button.Background = secondary ? GetSecondaryButtonBrush() : GetAccentBrush();
-        button.Foreground = secondary ? GetPrimaryForeground() : Brushes.White;
+        button.Background = Brushes.Transparent;
+        button.BorderBrush = Brushes.Transparent;
+        button.Foreground = secondary ? GetSecondaryForeground() : GetAccentBrush();
+        button.FontWeight = secondary ? FontWeights.Medium : FontWeights.SemiBold;
     }
 
     private void OnThemeChanged()
@@ -902,25 +912,11 @@ public sealed class TodoPeekPlugin : PluginBase, IUIPlugin
             : "Loading your filtered task list.";
     }
 
-    private Brush GetCardBrush()
+    private Brush GetSeparatorBrush()
     {
         return new SolidColorBrush(_isLight
-            ? Color.FromArgb(194, 246, 248, 252)
-            : Color.FromArgb(194, 34, 38, 44));
-    }
-
-    private Brush GetSecondaryCardBrush()
-    {
-        return new SolidColorBrush(_isLight
-            ? Color.FromArgb(164, 255, 255, 255)
-            : Color.FromArgb(164, 45, 50, 57));
-    }
-
-    private Brush GetBorderBrush()
-    {
-        return new SolidColorBrush(_isLight
-            ? Color.FromArgb(128, 201, 209, 222)
-            : Color.FromArgb(128, 89, 96, 106));
+            ? Color.FromRgb(210, 216, 226)
+            : Color.FromRgb(82, 88, 98));
     }
 
     private Brush GetAccentBrush()
@@ -928,13 +924,6 @@ public sealed class TodoPeekPlugin : PluginBase, IUIPlugin
         return new SolidColorBrush(_isLight
             ? Color.FromRgb(53, 116, 219)
             : Color.FromRgb(78, 148, 245));
-    }
-
-    private Brush GetSecondaryButtonBrush()
-    {
-        return new SolidColorBrush(_isLight
-            ? Color.FromRgb(228, 232, 240)
-            : Color.FromRgb(67, 72, 82));
     }
 
     private Brush GetPrimaryForeground()
@@ -956,6 +945,26 @@ public sealed class TodoPeekPlugin : PluginBase, IUIPlugin
         return new SolidColorBrush(_isLight
             ? Color.FromRgb(122, 129, 139)
             : Color.FromRgb(148, 156, 166));
+    }
+
+    private Brush GetTaskBarBrush(TodoTaskSnapshot task)
+    {
+        if (task.DueSortValue is { } dueDate && dueDate.Date < DateTime.Today)
+        {
+            return new SolidColorBrush(Color.FromRgb(214, 96, 96));
+        }
+
+        if (task.DueSortValue is { } todayDate && todayDate.Date == DateTime.Today)
+        {
+            return GetAccentBrush();
+        }
+
+        if (task.Priority >= 4)
+        {
+            return new SolidColorBrush(Color.FromRgb(230, 176, 72));
+        }
+
+        return GetSeparatorBrush();
     }
 
     private static DateTime? ParseTodoistDue(TodoistDue? due)
@@ -1034,7 +1043,7 @@ public sealed class TodoPeekPlugin : PluginBase, IUIPlugin
         {
             Timeout = TimeSpan.FromSeconds(12)
         };
-        client.DefaultRequestHeaders.Add("User-Agent", "WinNotch-TodoPeek/1.0.0");
+        client.DefaultRequestHeaders.Add("User-Agent", "WinNotch-TodoPeek/1.0.1");
         return client;
     }
 

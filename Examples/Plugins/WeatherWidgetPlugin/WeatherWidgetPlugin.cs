@@ -13,7 +13,7 @@ using WinNotch.Services;
 
 namespace WeatherWidgetPlugin;
 
-[WinNotchPlugin("com.winnotch.weatherwidget", "Weather", "1.0.0", "WinNotch Team")]
+[WinNotchPlugin("com.winnotch.weatherwidget", "Weather", "1.0.1", "WinNotch Team")]
 public sealed class WeatherWidgetPlugin : PluginBase, IUIPlugin
 {
     private static readonly HttpClient HttpClient = CreateHttpClient();
@@ -22,7 +22,7 @@ public sealed class WeatherWidgetPlugin : PluginBase, IUIPlugin
 
     public override string Id => "com.winnotch.weatherwidget";
     public override string Name => "Weather";
-    public override string Version => "1.0.0";
+    public override string Version => "1.0.1";
     public override string Author => "WinNotch Team";
     public override string Description => "Shows current weather in the expanded notch.";
     public override string MinimumWinNotchVersion => "0.3.8";
@@ -99,8 +99,7 @@ public sealed class WeatherWidgetPlugin : PluginBase, IUIPlugin
         var root = new Border
         {
             Width = width,
-            CornerRadius = new CornerRadius(12),
-            Padding = new Thickness(10, 8, 10, 8),
+            Padding = new Thickness(0),
             Margin = new Thickness(0)
         };
 
@@ -297,9 +296,9 @@ public sealed class WeatherWidgetPlugin : PluginBase, IUIPlugin
         if (view == null)
             return;
 
-        view.Root.Background = GetCardBackground();
-        view.Root.BorderBrush = GetBorderBrush();
-        view.Root.BorderThickness = new Thickness(1);
+        view.Root.Background = Brushes.Transparent;
+        view.Root.BorderBrush = Brushes.Transparent;
+        view.Root.BorderThickness = new Thickness(0);
         view.CityText.Foreground = GetSecondaryForeground();
         view.TemperatureText.Foreground = GetPrimaryForeground();
         view.SummaryText.Foreground = GetPrimaryForeground();
@@ -330,20 +329,6 @@ public sealed class WeatherWidgetPlugin : PluginBase, IUIPlugin
             96 or 99 => "Storm and hail",
             _ => "Weather update"
         };
-    }
-
-    private Brush GetCardBackground()
-    {
-        return new SolidColorBrush(_isLight
-            ? Color.FromArgb(188, 245, 247, 252)
-            : Color.FromArgb(188, 38, 42, 48));
-    }
-
-    private Brush GetBorderBrush()
-    {
-        return new SolidColorBrush(_isLight
-            ? Color.FromArgb(120, 200, 208, 220)
-            : Color.FromArgb(120, 90, 100, 114));
     }
 
     private Brush GetPrimaryForeground()
@@ -394,7 +379,7 @@ public sealed class WeatherWidgetPlugin : PluginBase, IUIPlugin
         {
             Timeout = TimeSpan.FromSeconds(12)
         };
-        client.DefaultRequestHeaders.Add("User-Agent", "WinNotch-Weather/1.0.0");
+        client.DefaultRequestHeaders.Add("User-Agent", "WinNotch-Weather/1.0.1");
         return client;
     }
 

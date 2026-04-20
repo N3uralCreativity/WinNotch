@@ -13,7 +13,7 @@ using WinNotch.Services;
 
 namespace ClipboardStackPlugin;
 
-[WinNotchPlugin("com.winnotch.clipboardstack", "Clipboard Stack", "1.0.0", "WinNotch Team")]
+[WinNotchPlugin("com.winnotch.clipboardstack", "Clipboard Stack", "1.0.1", "WinNotch Team")]
 [PluginPermission("clipboard", "Required to read recent clipboard text and file copies.")]
 public sealed class ClipboardStackPlugin : PluginBase, IUIPlugin
 {
@@ -22,7 +22,7 @@ public sealed class ClipboardStackPlugin : PluginBase, IUIPlugin
 
     public override string Id => "com.winnotch.clipboardstack";
     public override string Name => "Clipboard Stack";
-    public override string Version => "1.0.0";
+    public override string Version => "1.0.1";
     public override string Author => "WinNotch Team";
     public override string Description => "Keeps the last five copied text snippets and file lists ready to copy back into the clipboard.";
     public override string MinimumWinNotchVersion => "0.3.8";
@@ -96,10 +96,9 @@ public sealed class ClipboardStackPlugin : PluginBase, IUIPlugin
         var root = new Border
         {
             Width = width,
-            CornerRadius = new CornerRadius(14),
-            Padding = new Thickness(compact ? 10 : 12),
+            Padding = new Thickness(0),
             Margin = new Thickness(0, 4, 0, 0),
-            BorderThickness = new Thickness(1)
+            BorderThickness = new Thickness(0)
         };
 
         var outer = new StackPanel();
@@ -374,14 +373,19 @@ public sealed class ClipboardStackPlugin : PluginBase, IUIPlugin
 
     private UIElement CreateEmptyState(bool compact)
     {
-        var card = new Border
+        var row = new Grid
         {
-            CornerRadius = new CornerRadius(10),
-            Padding = new Thickness(10),
-            BorderThickness = new Thickness(1),
-            Background = GetSecondaryCardBrush(),
-            BorderBrush = GetBorderBrush()
+            Margin = new Thickness(0, 2, 0, 0)
         };
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        row.Children.Add(new Border
+        {
+            Width = 2,
+            Margin = new Thickness(0, 1, 10, 1),
+            Background = GetSeparatorBrush()
+        });
 
         var stack = new StackPanel();
 
@@ -405,27 +409,29 @@ public sealed class ClipboardStackPlugin : PluginBase, IUIPlugin
         };
         stack.Children.Add(body);
 
-        card.Child = stack;
-        return card;
+        Grid.SetColumn(stack, 1);
+        row.Children.Add(stack);
+        return row;
     }
 
     private UIElement CreateEntryCard(ClipboardEntry entry, bool compact)
     {
-        var card = new Border
+        var row = new Grid
         {
-            CornerRadius = new CornerRadius(10),
-            Padding = new Thickness(10),
-            Margin = new Thickness(0, 0, 0, 8),
-            BorderThickness = new Thickness(1),
-            Background = GetSecondaryCardBrush(),
-            BorderBrush = ReferenceEquals(entry, _entries.FirstOrDefault())
-                ? GetAccentBorderBrush()
-                : GetBorderBrush()
+            Margin = new Thickness(0, 0, 0, 10)
         };
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-        var layout = new Grid();
-        layout.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        layout.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        row.Children.Add(new Border
+        {
+            Width = 2,
+            Margin = new Thickness(0, 2, 10, 2),
+            Background = ReferenceEquals(entry, _entries.FirstOrDefault())
+                ? GetAccentBrush()
+                : GetSeparatorBrush()
+        });
 
         var textStack = new StackPanel();
 
@@ -464,8 +470,8 @@ public sealed class ClipboardStackPlugin : PluginBase, IUIPlugin
             textStack.Children.Add(preview);
         }
 
-        Grid.SetColumn(textStack, 0);
-        layout.Children.Add(textStack);
+        Grid.SetColumn(textStack, 1);
+        row.Children.Add(textStack);
 
         var copyButton = new Button
         {
@@ -475,8 +481,9 @@ public sealed class ClipboardStackPlugin : PluginBase, IUIPlugin
             BorderThickness = new Thickness(0),
             Cursor = System.Windows.Input.Cursors.Hand,
             Margin = new Thickness(10, 0, 0, 0),
-            Background = GetAccentBrush(),
-            Foreground = Brushes.White
+            Background = Brushes.Transparent,
+            Foreground = GetAccentBrush(),
+            FontWeight = FontWeights.SemiBold
         };
         copyButton.Click += async (_, _) =>
         {
@@ -491,27 +498,27 @@ public sealed class ClipboardStackPlugin : PluginBase, IUIPlugin
             }
         };
 
-        Grid.SetColumn(copyButton, 1);
-        layout.Children.Add(copyButton);
+        Grid.SetColumn(copyButton, 2);
+        row.Children.Add(copyButton);
 
-        card.Child = layout;
-        card.ToolTip = entry.Kind == ClipboardEntryKind.Text
+        row.ToolTip = entry.Kind == ClipboardEntryKind.Text
             ? entry.TextValue
             : string.Join(Environment.NewLine, entry.FilePaths);
 
-        return card;
+        return row;
     }
 
     private void ApplyTheme(ClipboardStackView view)
     {
-        view.Root.Background = GetCardBrush();
-        view.Root.BorderBrush = GetBorderBrush();
+        view.Root.Background = Brushes.Transparent;
+        view.Root.BorderBrush = Brushes.Transparent;
+        view.Root.BorderThickness = new Thickness(0);
         view.TitleText.Foreground = GetPrimaryForeground();
         view.SummaryText.Foreground = GetSecondaryForeground();
         view.StatusText.Foreground = GetPrimaryForeground();
         view.DetailText.Foreground = GetSecondaryForeground();
-        view.ClearButton.Background = GetSecondaryButtonBrush();
-        view.ClearButton.Foreground = GetPrimaryForeground();
+        view.ClearButton.Background = Brushes.Transparent;
+        view.ClearButton.Foreground = GetSecondaryForeground();
     }
 
     private void OnThemeChanged()
@@ -538,32 +545,11 @@ public sealed class ClipboardStackPlugin : PluginBase, IUIPlugin
         };
     }
 
-    private Brush GetCardBrush()
+    private Brush GetSeparatorBrush()
     {
         return new SolidColorBrush(_isLight
-            ? Color.FromArgb(194, 247, 248, 252)
-            : Color.FromArgb(194, 34, 38, 44));
-    }
-
-    private Brush GetSecondaryCardBrush()
-    {
-        return new SolidColorBrush(_isLight
-            ? Color.FromArgb(164, 255, 255, 255)
-            : Color.FromArgb(164, 45, 50, 57));
-    }
-
-    private Brush GetBorderBrush()
-    {
-        return new SolidColorBrush(_isLight
-            ? Color.FromArgb(128, 201, 209, 222)
-            : Color.FromArgb(128, 89, 96, 106));
-    }
-
-    private Brush GetAccentBorderBrush()
-    {
-        return new SolidColorBrush(_isLight
-            ? Color.FromRgb(121, 169, 240)
-            : Color.FromRgb(98, 161, 248));
+            ? Color.FromRgb(210, 216, 226)
+            : Color.FromRgb(82, 88, 98));
     }
 
     private Brush GetAccentBrush()
@@ -571,13 +557,6 @@ public sealed class ClipboardStackPlugin : PluginBase, IUIPlugin
         return new SolidColorBrush(_isLight
             ? Color.FromRgb(53, 116, 219)
             : Color.FromRgb(78, 148, 245));
-    }
-
-    private Brush GetSecondaryButtonBrush()
-    {
-        return new SolidColorBrush(_isLight
-            ? Color.FromRgb(228, 232, 240)
-            : Color.FromRgb(67, 72, 82));
     }
 
     private Brush GetPrimaryForeground()
