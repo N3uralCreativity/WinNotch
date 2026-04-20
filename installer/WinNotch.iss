@@ -2,7 +2,7 @@
 ; Requires Inno Setup 6.x (https://jrsoftware.org/isinfo.php)
 
 #define MyAppName "WinNotch"
-#define MyAppVersion "0.4.0"
+#define MyAppVersion "0.5.0"
 #define MyAppPublisher "N3uralCreativity"
 #define MyAppURL "https://github.com/N3uralCreativity/WinNotch"
 #define MyAppExeName "WinNotch.exe"
@@ -90,21 +90,24 @@ begin
     // Always remove startup registry entry
     RegDeleteValue(HKCU, 'Software\Microsoft\Windows\CurrentVersion\Run', '{#MyAppName}');
 
-    // Ask user if they want to delete all data
-    if MsgBox('Do you want to delete all WinNotch data?' + #13#10 + #13#10 +
-              'This includes plugins, settings, logs, and all user data.' + #13#10 +
-              '(Located in: ' + ExpandConstant('{userappdata}\WinNotch') + ')',
-              mbConfirmation, MB_YESNO) = IDYES then
+    // Ask user if they want to delete all data during interactive uninstalls only
+    if not UninstallSilent() then
     begin
-      // Delete %AppData%\WinNotch (plugins, settings, logs)
-      AppDataDir := ExpandConstant('{userappdata}\WinNotch');
-      if DirExists(AppDataDir) then
-        DelTree(AppDataDir, True, True, True);
+      if MsgBox('Do you want to delete all WinNotch data?' + #13#10 + #13#10 +
+                'This includes plugins, settings, logs, and all user data.' + #13#10 +
+                '(Located in: ' + ExpandConstant('{userappdata}\WinNotch') + ')',
+                mbConfirmation, MB_YESNO) = IDYES then
+      begin
+        // Delete %AppData%\WinNotch (plugins, settings, logs)
+        AppDataDir := ExpandConstant('{userappdata}\WinNotch');
+        if DirExists(AppDataDir) then
+          DelTree(AppDataDir, True, True, True);
 
-      // Delete %LocalAppData%\WinNotch
-      AppDataDir := ExpandConstant('{localappdata}\WinNotch');
-      if DirExists(AppDataDir) then
-        DelTree(AppDataDir, True, True, True);
+        // Delete %LocalAppData%\WinNotch
+        AppDataDir := ExpandConstant('{localappdata}\WinNotch');
+        if DirExists(AppDataDir) then
+          DelTree(AppDataDir, True, True, True);
+      end;
     end;
   end;
 end;
@@ -177,7 +180,7 @@ begin
       begin
         // Uninstall
         UninstallString := RemoveQuotes(GetUninstallString());
-        Exec(UninstallString, '/SILENT', '', SW_SHOW, ewWaitUntilTerminated, ResultCode);
+        Exec(UninstallString, '/VERYSILENT /NORESTART', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
         Result := False; // exit installer after uninstall
       end
       else
@@ -196,7 +199,7 @@ begin
       begin
         // Silently uninstall old version first, then install new
         UninstallString := RemoveQuotes(GetUninstallString());
-        Exec(UninstallString, '/SILENT /NORESTART', '', SW_SHOW, ewWaitUntilTerminated, ResultCode);
+        Exec(UninstallString, '/VERYSILENT /NORESTART', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
         Result := True;
       end
       else

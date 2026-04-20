@@ -92,11 +92,13 @@ public sealed class UpdateService
     {
         if (InstallerDownloadUrl == null) return false;
 
+        string? installerPath = null;
+
         try
         {
             var tempDir = Path.Combine(Path.GetTempPath(), "WinNotch-Update");
             Directory.CreateDirectory(tempDir);
-            var installerPath = Path.Combine(tempDir, $"WinNotch-{LatestVersion}-Setup.exe");
+            installerPath = Path.Combine(tempDir, $"WinNotch-{LatestVersion}-Setup.exe");
 
             // Download with progress using dedicated download client
             using var response = await _downloadHttp.GetAsync(InstallerDownloadUrl,
@@ -125,19 +127,35 @@ public sealed class UpdateService
             Process.Start(new ProcessStartInfo
             {
                 FileName = installerPath,
+                Arguments = "/SILENT",
                 UseShellExecute = true
             });
 
-            // Shut down the current app so the installer can replace files
-            System.Windows.Application.Current.Dispatcher.Invoke(() =>
+            // Give the launched installer a moment to spin up before shutting down.
+            await Task.Delay(250, CancellationToken.None);
+
+            var application = System.Windows.Application.Current;
+            if (application != null)
             {
-                System.Windows.Application.Current.Shutdown();
-            });
+                _ = application.Dispatcher.BeginInvoke(new Action(application.Shutdown));
+            }
 
             return true;
         }
         catch
         {
+            if (!string.IsNullOrEmpty(installerPath) && File.Exists(installerPath))
+            {
+                try
+                {
+                    File.Delete(installerPath);
+                }
+                catch
+                {
+                    // Best effort cleanup only.
+                }
+            }
+
             return false;
         }
     }
