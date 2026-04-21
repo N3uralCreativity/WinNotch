@@ -14,7 +14,7 @@ using WinNotch.Services;
 
 namespace ChatGPTAddonPlugin;
 
-[WinNotchPlugin("com.winnotch.chatgpt", "ChatGPT Add-on", "1.0.1", "WinNotch Team")]
+[WinNotchPlugin("com.winnotch.chatgpt", "ChatGPT Add-on", "1.0.2", "WinNotch Team")]
 [PluginPermission("clipboard", "Required to copy prompts before opening ChatGPT.")]
 public sealed class ChatGPTAddonPlugin : PluginBase, IUIPlugin, IConfigurablePlugin
 {
@@ -26,7 +26,7 @@ public sealed class ChatGPTAddonPlugin : PluginBase, IUIPlugin, IConfigurablePlu
 
     public override string Id => "com.winnotch.chatgpt";
     public override string Name => "ChatGPT Add-on";
-    public override string Version => "1.0.1";
+    public override string Version => "1.0.2";
     public override string Author => "WinNotch Team";
     public override string Description => "Quick-launch ChatGPT from the notch with reusable prompt presets and a shared prompt scratchpad.";
     public override string MinimumWinNotchVersion => "0.5.3";
