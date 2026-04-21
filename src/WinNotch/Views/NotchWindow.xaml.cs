@@ -346,6 +346,7 @@ public partial class NotchWindow : Window
                 _brightnessService, _batteryService, _calendarService,
                 _audioCaptureService, _shelfService, _webcamService,
                 _fullscreenService, _settings);
+            _pluginContext.RegisterService(new PluginManagerNavigationService(OpenPluginManager));
 
             _pluginManager = new PluginManager(_pluginContext);
             _pluginLibraryService = new PluginLibraryService();
@@ -451,14 +452,19 @@ public partial class NotchWindow : Window
 
     private void OpenPluginManager()
     {
+        OpenPluginManager(null);
+    }
+
+    private void OpenPluginManager(string? focusPluginId)
+    {
         if (_pluginManager == null || _pluginLibraryService == null) return;
 
-        var pluginView = new PluginManagerView(_pluginManager, _pluginLibraryService);
+        var pluginView = new PluginManagerView(_pluginManager, _pluginLibraryService, focusPluginId);
         var window = new Window
         {
             Title = "WinNotch Plugin Manager",
-            Width = 760,
-            Height = 640,
+            Width = 980,
+            Height = 680,
             WindowStartupLocation = WindowStartupLocation.CenterScreen,
             Background = Brushes.Transparent,
             WindowStyle = WindowStyle.None,

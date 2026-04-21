@@ -14,9 +14,9 @@ using WinNotch.Services;
 
 namespace ChatGPTAddonPlugin;
 
-[WinNotchPlugin("com.winnotch.chatgpt", "ChatGPT Add-on", "1.0.0", "WinNotch Team")]
+[WinNotchPlugin("com.winnotch.chatgpt", "ChatGPT Add-on", "1.0.1", "WinNotch Team")]
 [PluginPermission("clipboard", "Required to copy prompts before opening ChatGPT.")]
-public sealed class ChatGPTAddonPlugin : PluginBase, IUIPlugin
+public sealed class ChatGPTAddonPlugin : PluginBase, IUIPlugin, IConfigurablePlugin
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -26,10 +26,10 @@ public sealed class ChatGPTAddonPlugin : PluginBase, IUIPlugin
 
     public override string Id => "com.winnotch.chatgpt";
     public override string Name => "ChatGPT Add-on";
-    public override string Version => "1.0.0";
+    public override string Version => "1.0.1";
     public override string Author => "WinNotch Team";
     public override string Description => "Quick-launch ChatGPT from the notch with reusable prompt presets and a shared prompt scratchpad.";
-    public override string MinimumWinNotchVersion => "0.3.8";
+    public override string MinimumWinNotchVersion => "0.5.3";
 
     private ThemeService? _themeService;
     private ChatView? _openView;
@@ -138,7 +138,7 @@ public sealed class ChatGPTAddonPlugin : PluginBase, IUIPlugin
         header.Children.Add(titleStack);
 
         var configButton = CreateActionButton("Config");
-        configButton.Click += (_, _) => OpenSettingsDirectory();
+        configButton.Click += (_, _) => OpenConfigurationPanel();
         Grid.SetColumn(configButton, 1);
         header.Children.Add(configButton);
 
@@ -235,6 +235,8 @@ public sealed class ChatGPTAddonPlugin : PluginBase, IUIPlugin
 
         view.SummaryText.Text = "Prompt helper for quick launches";
         view.StatusText.Text = _statusText;
+        view.ConfigButton.Content = "Configure";
+        view.ConfigButton.ToolTip = "Open ChatGPT Add-on settings in the Plugin Manager.";
 
         if (!ReferenceEquals(view.PromptBox, sourceTextBox) && view.PromptBox.Text != _currentPrompt)
         {
@@ -440,23 +442,103 @@ public sealed class ChatGPTAddonPlugin : PluginBase, IUIPlugin
         UpdateViews();
     }
 
-    private void OpenSettingsDirectory()
+    private void OpenConfigurationPanel()
     {
-        if (string.IsNullOrWhiteSpace(_settingsDirectory))
-            return;
+        OpenPluginManagerConfiguration();
+    }
 
-        try
+    public PluginConfigurationDefinition GetConfigurationDefinition()
+    {
+        return new PluginConfigurationDefinition
         {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = _settingsDirectory,
-                UseShellExecute = true
-            });
-        }
-        catch
-        {
-            // Best effort only.
-        }
+            Title = "ChatGPT Add-on",
+            Description = "Tweak the launch URL and the quick prompt chips that appear inside the notch.",
+            StatusText = "Optional settings. The default configuration already works out of the box.",
+            RequiresConfiguration = false,
+            IsConfigured = true,
+            Sections =
+            [
+                new PluginConfigurationSection
+                {
+                    Title = "Launch",
+                    Description = "Control where the Open action sends you when launching ChatGPT.",
+                    Fields =
+                    [
+                        new PluginConfigurationField
+                        {
+                            Key = "chatUrl",
+                            Label = "Chat URL",
+                            HelpText = "Use the full URL you want the Open button to launch. The default goes to chatgpt.com.",
+                            Value = _settings.ChatUrl,
+                            Placeholder = "Example: https://chatgpt.com/"
+                        }
+                    ]
+                },
+                new PluginConfigurationSection
+                {
+                    Title = "Quick prompts",
+                    Description = "Enter one prompt per line. The first prompts appear as chips in the widget.",
+                    Fields =
+                    [
+                        new PluginConfigurationField
+                        {
+                            Key = "quickPrompts",
+                            Label = "Prompt list",
+                            HelpText = "Add up to six prompts. Blank lines are ignored automatically.",
+                            Value = string.Join(Environment.NewLine, _settings.QuickPrompts),
+                            Placeholder = "One prompt per line.",
+                            FieldType = PluginConfigurationFieldType.Multiline
+                        }
+                    ]
+                }
+            ]
+        };
+    }
+
+    public async Task<PluginConfigurationResult> ApplyConfigurationAsync(IReadOnlyDictionary<string, string?> values)
+    {
+        var settings = ChatAddonSettings.CreateDefault();
+        settings.ChatUrl = ReadValue(values, "chatUrl", _settings.ChatUrl).Trim();
+        settings.QuickPrompts = ReadMultilineValues(values, "quickPrompts", _settings.QuickPrompts);
+        settings.Normalize();
+
+        if (!Uri.TryCreate(settings.ChatUrl, UriKind.Absolute, out _))
+            return PluginConfigurationResult.Fail("Chat URL must be a valid absolute URL.");
+
+        await SaveSettingsAsync(settings);
+        return PluginConfigurationResult.Ok("ChatGPT Add-on settings saved.");
+    }
+
+    private async Task SaveSettingsAsync(ChatAddonSettings settings)
+    {
+        if (string.IsNullOrWhiteSpace(_settingsPath))
+            throw new InvalidOperationException("ChatGPT Add-on settings path is not available.");
+
+        Directory.CreateDirectory(Path.GetDirectoryName(_settingsPath)!);
+
+        var json = JsonSerializer.Serialize(settings, JsonOptions);
+        await File.WriteAllTextAsync(_settingsPath, json, Encoding.UTF8);
+
+        _settings = settings;
+        _settingsLastWriteUtc = File.GetLastWriteTimeUtc(_settingsPath);
+        UpdateViews();
+    }
+
+    private static string ReadValue(IReadOnlyDictionary<string, string?> values, string key, string fallback)
+    {
+        return values.TryGetValue(key, out var value) && value != null ? value : fallback;
+    }
+
+    private static List<string> ReadMultilineValues(IReadOnlyDictionary<string, string?> values, string key, IReadOnlyCollection<string> fallback)
+    {
+        if (!values.TryGetValue(key, out var rawValue) || rawValue == null)
+            return fallback.ToList();
+
+        return rawValue
+            .Split(["\r\n", "\n"], StringSplitOptions.RemoveEmptyEntries)
+            .Select(prompt => prompt.Trim())
+            .Where(prompt => !string.IsNullOrWhiteSpace(prompt))
+            .ToList();
     }
 
     private void OnThemeChanged()

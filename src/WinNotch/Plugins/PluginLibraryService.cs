@@ -31,7 +31,7 @@ public class PluginLibraryService
         {
             Timeout = TimeSpan.FromSeconds(30)
         };
-        _httpClient.DefaultRequestHeaders.Add("User-Agent", "WinNotch/0.5.2");
+        _httpClient.DefaultRequestHeaders.Add("User-Agent", "WinNotch/0.5.3");
     }
 
     public PluginManifest? GetAvailablePlugin(string pluginId)

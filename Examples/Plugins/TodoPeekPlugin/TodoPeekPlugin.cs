@@ -21,19 +21,19 @@ using WinNotch.Services;
 
 namespace TodoPeekPlugin;
 
-[WinNotchPlugin("com.winnotch.todopeek", "Todo Peek", "1.0.1", "WinNotch Team")]
+[WinNotchPlugin("com.winnotch.todopeek", "Todo Peek", "1.0.2", "WinNotch Team")]
 [PluginPermission("network", "Required to fetch tasks from Todoist or Microsoft Graph.")]
-public sealed class TodoPeekPlugin : PluginBase, IUIPlugin
+public sealed class TodoPeekPlugin : PluginBase, IUIPlugin, IConfigurablePlugin
 {
     private static readonly HttpClient HttpClient = CreateHttpClient();
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
     public override string Id => "com.winnotch.todopeek";
     public override string Name => "Todo Peek";
-    public override string Version => "1.0.1";
+    public override string Version => "1.0.2";
     public override string Author => "WinNotch Team";
     public override string Description => "Expanded-view task widget with quick completion for Todoist, plus manual-token Microsoft To Do support.";
-    public override string MinimumWinNotchVersion => "0.3.8";
+    public override string MinimumWinNotchVersion => "0.5.3";
 
     private ThemeService? _themeService;
     private DispatcherTimer? _refreshTimer;
@@ -210,7 +210,7 @@ public sealed class TodoPeekPlugin : PluginBase, IUIPlugin
             Cursor = System.Windows.Input.Cursors.Hand,
             HorizontalAlignment = HorizontalAlignment.Left
         };
-        configButton.Click += (_, _) => OpenSettingsDirectory();
+        configButton.Click += (_, _) => OpenConfigurationPanel();
         Grid.SetColumn(configButton, 0);
         footer.Children.Add(configButton);
 
@@ -640,7 +640,15 @@ public sealed class TodoPeekPlugin : PluginBase, IUIPlugin
         view.StatusText.Text = _statusText;
         view.DetailText.Text = _detailText;
         view.RefreshButton.IsEnabled = !_isRefreshing;
-        view.ConfigButton.ToolTip = _settingsPath ?? "Config path unavailable";
+        view.ConfigButton.Content = _settings.IsConfigured ? "Configure" : "Finish Setup";
+        view.ConfigButton.ToolTip = _settings.IsConfigured
+            ? "Open Todo Peek settings in the Plugin Manager."
+            : "Open the Plugin Manager to finish setting up Todo Peek.";
+        view.DocsButton.ToolTip = _settings.Provider switch
+        {
+            TodoProvider.MicrosoftTodo => "Learn how to generate a Microsoft Graph token for Microsoft To Do.",
+            _ => "Learn where to find your Todoist token and filter syntax."
+        };
         view.TaskHost.Children.Clear();
 
         if (_tasks.Count == 0)
@@ -843,12 +851,9 @@ public sealed class TodoPeekPlugin : PluginBase, IUIPlugin
         UpdateViews();
     }
 
-    private void OpenSettingsDirectory()
+    private void OpenConfigurationPanel()
     {
-        if (string.IsNullOrWhiteSpace(_settingsDirectory))
-            return;
-
-        OpenExternal(_settingsDirectory);
+        OpenPluginManagerConfiguration();
     }
 
     private void OpenProviderHelp()
@@ -882,20 +887,20 @@ public sealed class TodoPeekPlugin : PluginBase, IUIPlugin
     {
         if (_settings.Provider == TodoProvider.MicrosoftTodo)
         {
-            return "Set microsoftTodo.accessToken and microsoftTodo.listName in settings.json, then refresh.";
+            return "Open the Plugin Manager and add a Microsoft Graph access token plus the list name you want to show.";
         }
 
-        return "Set todoist.apiToken in settings.json. The default filter shows overdue, today, and undated tasks.";
+        return "Open the Plugin Manager and add your Todoist API token. The default filter shows overdue, today, and undated tasks.";
     }
 
     private string GetAuthHint()
     {
         if (_settings.Provider == TodoProvider.MicrosoftTodo)
         {
-            return "Use a fresh Microsoft Graph token with Tasks.Read or Tasks.ReadWrite access.";
+            return "Use a fresh Microsoft Graph token with Tasks.Read or Tasks.ReadWrite access in the Plugin Manager.";
         }
 
-        return "Check your Todoist API token in settings.json and try refreshing again.";
+        return "Check your Todoist API token in the Plugin Manager and try refreshing again.";
     }
 
     private string GetLoadingStatus()
@@ -1043,8 +1048,193 @@ public sealed class TodoPeekPlugin : PluginBase, IUIPlugin
         {
             Timeout = TimeSpan.FromSeconds(12)
         };
-        client.DefaultRequestHeaders.Add("User-Agent", "WinNotch-TodoPeek/1.0.1");
+        client.DefaultRequestHeaders.Add("User-Agent", "WinNotch-TodoPeek/1.0.2");
         return client;
+    }
+
+    public PluginConfigurationDefinition GetConfigurationDefinition()
+    {
+        return new PluginConfigurationDefinition
+        {
+            Title = "Todo Peek Setup",
+            Description = "Connect Todo Peek to a task provider and choose how often it refreshes inside the notch.",
+            StatusText = _hasConfigError
+                ? "The saved Todo Peek settings could not be read. Review the fields below and apply again."
+                : _settings.IsConfigured
+                    ? $"{GetProviderDisplayName(_settings.Provider)} is configured and ready."
+                    : "A provider token is required before Todo Peek can load tasks.",
+            RequiresConfiguration = true,
+            IsConfigured = _settings.IsConfigured && !_hasConfigError,
+            Sections =
+            [
+                new PluginConfigurationSection
+                {
+                    Title = "General",
+                    Description = "Choose your task provider and how much of it should appear in the expanded notch.",
+                    Fields =
+                    [
+                        new PluginConfigurationField
+                        {
+                            Key = "provider",
+                            Label = "Provider",
+                            HelpText = "Pick Todoist for the simplest setup, or Microsoft To Do if you already have a Microsoft Graph token.",
+                            Value = _settings.ProviderName,
+                            FieldType = PluginConfigurationFieldType.Choice,
+                            IsRequired = true,
+                            Options =
+                            [
+                                new PluginConfigurationOption { Value = "Todoist", Label = "Todoist" },
+                                new PluginConfigurationOption { Value = "MicrosoftTodo", Label = "Microsoft To Do" }
+                            ]
+                        },
+                        new PluginConfigurationField
+                        {
+                            Key = "maxTasks",
+                            Label = "Max tasks shown",
+                            HelpText = "Controls how many tasks Todo Peek shows in the notch at once.",
+                            Value = _settings.MaxTasks.ToString(CultureInfo.InvariantCulture),
+                            Placeholder = "Between 1 and 8 tasks.",
+                            FieldType = PluginConfigurationFieldType.Number,
+                            IsRequired = true
+                        },
+                        new PluginConfigurationField
+                        {
+                            Key = "refreshMinutes",
+                            Label = "Refresh every (minutes)",
+                            HelpText = "How often Todo Peek should refresh in the background while WinNotch is running.",
+                            Value = _settings.RefreshMinutes.ToString(CultureInfo.InvariantCulture),
+                            Placeholder = "Between 1 and 60 minutes.",
+                            FieldType = PluginConfigurationFieldType.Number,
+                            IsRequired = true
+                        }
+                    ]
+                },
+                new PluginConfigurationSection
+                {
+                    Title = "Todoist",
+                    Description = "Only needed when Todoist is selected as your provider.",
+                    Fields =
+                    [
+                        new PluginConfigurationField
+                        {
+                            Key = "todoist.apiToken",
+                            Label = "API token",
+                            HelpText = "Find this in Todoist: Settings > Integrations > Developer.",
+                            Value = _settings.Todoist.ApiToken,
+                            Placeholder = "Paste your Todoist personal API token here.",
+                            IsRequired = _settings.Provider == TodoProvider.Todoist
+                        },
+                        new PluginConfigurationField
+                        {
+                            Key = "todoist.filter",
+                            Label = "Task filter",
+                            HelpText = "Todoist filter syntax lets you control exactly which tasks appear in Todo Peek.",
+                            Value = _settings.Todoist.Filter,
+                            Placeholder = "Default: (today | overdue | no date) & !subtask"
+                        }
+                    ]
+                },
+                new PluginConfigurationSection
+                {
+                    Title = "Microsoft To Do",
+                    Description = "Only needed when Microsoft To Do is selected as your provider.",
+                    Fields =
+                    [
+                        new PluginConfigurationField
+                        {
+                            Key = "microsoftTodo.accessToken",
+                            Label = "Access token",
+                            HelpText = "Use a Microsoft Graph token with Tasks.Read or Tasks.ReadWrite access. Graph Explorer is the quickest place to generate one.",
+                            Value = _settings.MicrosoftTodo.AccessToken,
+                            Placeholder = "Paste a fresh Microsoft Graph access token here.",
+                            IsRequired = _settings.Provider == TodoProvider.MicrosoftTodo
+                        },
+                        new PluginConfigurationField
+                        {
+                            Key = "microsoftTodo.listName",
+                            Label = "List name",
+                            HelpText = "Todo Peek will try to open this exact Microsoft To Do list name first.",
+                            Value = _settings.MicrosoftTodo.ListName,
+                            Placeholder = "Example: Tasks"
+                        }
+                    ]
+                }
+            ]
+        };
+    }
+
+    public async Task<PluginConfigurationResult> ApplyConfigurationAsync(IReadOnlyDictionary<string, string?> values)
+    {
+        var settings = TodoPeekSettings.CreateDefault();
+        settings.ProviderName = GetValue(values, "provider", _settings.ProviderName);
+
+        if (!TryReadNumber(values, "maxTasks", out var maxTasks))
+            return PluginConfigurationResult.Fail("Max tasks must be a whole number.");
+
+        if (!TryReadNumber(values, "refreshMinutes", out var refreshMinutes))
+            return PluginConfigurationResult.Fail("Refresh minutes must be a whole number.");
+
+        settings.MaxTasks = maxTasks;
+        settings.RefreshMinutes = refreshMinutes;
+        settings.Todoist.ApiToken = GetValue(values, "todoist.apiToken", _settings.Todoist.ApiToken).Trim();
+        settings.Todoist.Filter = GetValue(values, "todoist.filter", _settings.Todoist.Filter).Trim();
+        settings.MicrosoftTodo.AccessToken = GetValue(values, "microsoftTodo.accessToken", _settings.MicrosoftTodo.AccessToken).Trim();
+        settings.MicrosoftTodo.ListName = GetValue(values, "microsoftTodo.listName", _settings.MicrosoftTodo.ListName).Trim();
+        settings.Normalize();
+
+        if (settings.Provider == TodoProvider.Todoist && string.IsNullOrWhiteSpace(settings.Todoist.ApiToken))
+            return PluginConfigurationResult.Fail("Todoist needs a personal API token before Todo Peek can load tasks.");
+
+        if (settings.Provider == TodoProvider.MicrosoftTodo && string.IsNullOrWhiteSpace(settings.MicrosoftTodo.AccessToken))
+            return PluginConfigurationResult.Fail("Microsoft To Do needs a Microsoft Graph access token before Todo Peek can load tasks.");
+
+        await SaveSettingsAsync(settings);
+        await RefreshTasksAsync(force: true);
+
+        return PluginConfigurationResult.Ok("Todo Peek configuration saved.");
+    }
+
+    private async Task SaveSettingsAsync(TodoPeekSettings settings)
+    {
+        if (string.IsNullOrWhiteSpace(_settingsPath))
+            throw new InvalidOperationException("Todo Peek settings path is not available.");
+
+        Directory.CreateDirectory(Path.GetDirectoryName(_settingsPath)!);
+
+        var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
+        await File.WriteAllTextAsync(_settingsPath, json, Encoding.UTF8);
+
+        _settings = settings;
+        _settingsLastWriteUtc = File.GetLastWriteTimeUtc(_settingsPath);
+        _hasConfigError = false;
+
+        if (_refreshTimer != null)
+            _refreshTimer.Interval = TimeSpan.FromMinutes(_settings.RefreshMinutes);
+
+        UpdateViews();
+    }
+
+    private static string GetValue(IReadOnlyDictionary<string, string?> values, string key, string fallback)
+    {
+        return values.TryGetValue(key, out var value) && value != null ? value : fallback;
+    }
+
+    private static bool TryReadNumber(IReadOnlyDictionary<string, string?> values, string key, out int value)
+    {
+        value = 0;
+        if (!values.TryGetValue(key, out var rawValue))
+            return false;
+
+        return int.TryParse(rawValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out value);
+    }
+
+    private static string GetProviderDisplayName(TodoProvider provider)
+    {
+        return provider switch
+        {
+            TodoProvider.MicrosoftTodo => "Microsoft To Do",
+            _ => "Todoist"
+        };
     }
 
     public override Task ShutdownAsync()

@@ -14,7 +14,14 @@
 
 ## Setup
 
-When the plugin starts for the first time, it creates:
+The easiest setup path is now:
+
+1. Install `Todo Peek`
+2. Open `Plugin Manager`
+3. Click `Set Up` on the Todo Peek card
+4. Fill in the provider fields and press `Apply Configuration`
+
+When the plugin starts for the first time, it also creates:
 
 `%AppData%\WinNotch\Plugins\com.winnotch.todopeek\settings.json`
 
@@ -40,10 +47,10 @@ Default file:
 
 ### Todoist
 
-Add your personal API token to `todoist.apiToken`.
+Paste your personal API token into the `API token` field in Plugin Manager.
 
 ### Microsoft To Do
 
-Add a Microsoft Graph access token with `Tasks.Read` or `Tasks.ReadWrite` to `microsoftTodo.accessToken`.
+Paste a Microsoft Graph access token with `Tasks.Read` or `Tasks.ReadWrite` into the `Access token` field in Plugin Manager.
 
-This first release expects you to provide that token manually in `settings.json`.
+You can still edit `settings.json` manually if you want advanced control, but it is no longer required for normal setup.

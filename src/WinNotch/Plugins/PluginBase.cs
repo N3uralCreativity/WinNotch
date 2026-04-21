@@ -43,6 +43,11 @@ public abstract class PluginBase : IPlugin
         return Task.CompletedTask;
     }
 
+    protected void OpenPluginManagerConfiguration()
+    {
+        Context?.GetService<PluginManagerNavigationService>()?.OpenPluginManager(Id);
+    }
+
     public virtual void Dispose()
     {
         GC.SuppressFinalize(this);

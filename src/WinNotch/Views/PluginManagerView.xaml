@@ -71,7 +71,7 @@
                                    FontSize="13"
                                    FontWeight="SemiBold"
                                    Foreground="{DynamicResource TextPrimaryBrush}"/>
-                        <TextBlock Text="Installed plugins can be toggled with the switches on the right."
+                        <TextBlock Text="Installed plugins can be toggled, updated, and configured from here."
                                    Margin="0,4,0,0"
                                    FontSize="11"
                                    Foreground="{DynamicResource TextMutedBrush}"/>
@@ -92,16 +92,102 @@
                             Style="{StaticResource PluginPrimaryButton}"/>
                 </Grid>
 
-                <Border Grid.Row="2"
-                        Background="{DynamicResource SegmentedBgBrush}"
-                        CornerRadius="24"
-                        Padding="16,16,10,16">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto"
-                                  HorizontalScrollBarVisibility="Disabled"
-                                  Style="{StaticResource RoundedScrollViewer}">
-                        <StackPanel x:Name="PluginListPanel"/>
-                    </ScrollViewer>
-                </Border>
+                <Grid Grid.Row="2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition x:Name="ConfigurationColumn" Width="0"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0"
+                            Background="{DynamicResource SegmentedBgBrush}"
+                            CornerRadius="24"
+                            Padding="16,16,10,16">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      Style="{StaticResource RoundedScrollViewer}">
+                            <StackPanel x:Name="PluginListPanel"/>
+                        </ScrollViewer>
+                    </Border>
+
+                    <Border x:Name="ConfigurationPanelBorder"
+                            Grid.Column="1"
+                            Margin="16,0,0,0"
+                            Padding="18"
+                            Background="{DynamicResource SegmentedBgBrush}"
+                            CornerRadius="24"
+                            Visibility="Collapsed">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <Grid Grid.Row="0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel>
+                                    <TextBlock x:Name="ConfigurationTitleText"
+                                               FontSize="18"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                    <TextBlock x:Name="ConfigurationBodyText"
+                                               Margin="0,6,0,0"
+                                               FontSize="11"
+                                               TextWrapping="Wrap"
+                                               Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                </StackPanel>
+
+                                <Button x:Name="CloseConfigurationButton"
+                                        Grid.Column="1"
+                                        Width="28"
+                                        Height="28"
+                                        Content="X"
+                                        Style="{StaticResource PluginTitlebarButton}"/>
+                            </Grid>
+
+                            <Border Grid.Row="1"
+                                    Margin="0,14,0,0"
+                                    Padding="12"
+                                    Background="{DynamicResource NotchFillBrush}"
+                                    CornerRadius="18">
+                                <TextBlock x:Name="ConfigurationStatusText"
+                                           FontSize="11"
+                                           TextWrapping="Wrap"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+                            </Border>
+
+                            <TextBlock x:Name="ConfigurationApplyResultText"
+                                       Grid.Row="2"
+                                       Margin="0,12,0,0"
+                                       FontSize="11"
+                                       TextWrapping="Wrap"
+                                       Visibility="Collapsed"
+                                       Foreground="{StaticResource PluginPositiveBrush}"/>
+
+                            <ScrollViewer Grid.Row="3"
+                                          Margin="0,14,0,0"
+                                          VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Disabled"
+                                          Style="{StaticResource RoundedScrollViewer}">
+                                <StackPanel x:Name="ConfigurationFieldHost"/>
+                            </ScrollViewer>
+
+                            <Button x:Name="ApplyConfigurationButton"
+                                    Grid.Row="4"
+                                    Margin="0,16,0,0"
+                                    MinWidth="140"
+                                    HorizontalAlignment="Left"
+                                    Content="Apply Configuration"
+                                    Style="{StaticResource PluginPrimaryButton}"/>
+                        </Grid>
+                    </Border>
+                </Grid>
 
                 <Grid Grid.Row="3" Margin="0,18,0,0">
                     <Grid.ColumnDefinitions>

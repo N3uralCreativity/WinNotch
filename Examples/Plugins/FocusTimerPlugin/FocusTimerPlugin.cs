@@ -15,17 +15,17 @@ using WinNotch.Services;
 
 namespace FocusTimerPlugin;
 
-[WinNotchPlugin("com.winnotch.focustimer", "Focus Timer", "1.0.0", "WinNotch Team")]
-public sealed class FocusTimerPlugin : PluginBase, IUIPlugin
+[WinNotchPlugin("com.winnotch.focustimer", "Focus Timer", "1.0.1", "WinNotch Team")]
+public sealed class FocusTimerPlugin : PluginBase, IUIPlugin, IConfigurablePlugin
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true, WriteIndented = true };
 
     public override string Id => "com.winnotch.focustimer";
     public override string Name => "Focus Timer";
-    public override string Version => "1.0.0";
+    public override string Version => "1.0.1";
     public override string Author => "WinNotch Team";
     public override string Description => "Pomodoro-style focus timer with break cycles, streak tracking, and compact session controls.";
-    public override string MinimumWinNotchVersion => "0.3.8";
+    public override string MinimumWinNotchVersion => "0.5.3";
 
     private ThemeService? _themeService;
     private DispatcherTimer? _timer;
@@ -150,7 +150,7 @@ public sealed class FocusTimerPlugin : PluginBase, IUIPlugin
             Cursor = System.Windows.Input.Cursors.Hand,
             Background = Brushes.Transparent
         };
-        configButton.Click += (_, _) => OpenSettingsDirectory();
+        configButton.Click += (_, _) => OpenConfigurationPanel();
         Grid.SetColumn(configButton, 1);
         header.Children.Add(configButton);
 
@@ -441,6 +441,8 @@ public sealed class FocusTimerPlugin : PluginBase, IUIPlugin
         if (view == null)
             return;
 
+        view.ConfigButton.Content = "Configure";
+        view.ConfigButton.ToolTip = "Open Focus Timer settings in the Plugin Manager.";
         view.SummaryText.Text = $"Pomodoro  {_settings.FocusMinutes}/{_settings.ShortBreakMinutes}/{_settings.LongBreakMinutes}";
         view.TimerText.Text = $"{(int)_remaining.TotalMinutes:00}:{_remaining.Seconds:00}";
         view.PhaseText.Text = GetPhaseLabel();
@@ -490,23 +492,120 @@ public sealed class FocusTimerPlugin : PluginBase, IUIPlugin
         UpdateViews();
     }
 
-    private void OpenSettingsDirectory()
+    private void OpenConfigurationPanel()
     {
-        if (string.IsNullOrWhiteSpace(_settingsDirectory))
-            return;
+        OpenPluginManagerConfiguration();
+    }
 
-        try
+    public PluginConfigurationDefinition GetConfigurationDefinition()
+    {
+        return new PluginConfigurationDefinition
         {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = _settingsDirectory,
-                UseShellExecute = true
-            });
-        }
-        catch
+            Title = "Focus Timer",
+            Description = "Tune the lengths of your focus and break sessions without leaving the plugin manager.",
+            StatusText = "Optional settings. Focus Timer already works with the classic 25/5/15 Pomodoro defaults.",
+            RequiresConfiguration = false,
+            IsConfigured = true,
+            Sections =
+            [
+                new PluginConfigurationSection
+                {
+                    Title = "Session lengths",
+                    Description = "Choose how long focus and break sessions should last.",
+                    Fields =
+                    [
+                        new PluginConfigurationField
+                        {
+                            Key = "focusMinutes",
+                            Label = "Focus minutes",
+                            HelpText = "How long each work session should last before a break begins.",
+                            Value = _settings.FocusMinutes.ToString(),
+                            Placeholder = "Between 1 and 90 minutes.",
+                            FieldType = PluginConfigurationFieldType.Number,
+                            IsRequired = true
+                        },
+                        new PluginConfigurationField
+                        {
+                            Key = "shortBreakMinutes",
+                            Label = "Short break minutes",
+                            HelpText = "The quick reset between most focus sessions.",
+                            Value = _settings.ShortBreakMinutes.ToString(),
+                            Placeholder = "Between 1 and 30 minutes.",
+                            FieldType = PluginConfigurationFieldType.Number,
+                            IsRequired = true
+                        },
+                        new PluginConfigurationField
+                        {
+                            Key = "longBreakMinutes",
+                            Label = "Long break minutes",
+                            HelpText = "The deeper break that arrives after several focus sessions.",
+                            Value = _settings.LongBreakMinutes.ToString(),
+                            Placeholder = "Between 5 and 45 minutes.",
+                            FieldType = PluginConfigurationFieldType.Number,
+                            IsRequired = true
+                        },
+                        new PluginConfigurationField
+                        {
+                            Key = "longBreakEvery",
+                            Label = "Long break every",
+                            HelpText = "How many focus sessions should complete before a long break is scheduled.",
+                            Value = _settings.LongBreakEvery.ToString(),
+                            Placeholder = "Between 2 and 8 focus sessions.",
+                            FieldType = PluginConfigurationFieldType.Number,
+                            IsRequired = true
+                        }
+                    ]
+                }
+            ]
+        };
+    }
+
+    public async Task<PluginConfigurationResult> ApplyConfigurationAsync(IReadOnlyDictionary<string, string?> values)
+    {
+        if (!TryReadNumber(values, "focusMinutes", out var focusMinutes) ||
+            !TryReadNumber(values, "shortBreakMinutes", out var shortBreakMinutes) ||
+            !TryReadNumber(values, "longBreakMinutes", out var longBreakMinutes) ||
+            !TryReadNumber(values, "longBreakEvery", out var longBreakEvery))
         {
-            // Best effort only.
+            return PluginConfigurationResult.Fail("All Focus Timer values must be whole numbers.");
         }
+
+        var settings = new FocusTimerSettings
+        {
+            FocusMinutes = focusMinutes,
+            ShortBreakMinutes = shortBreakMinutes,
+            LongBreakMinutes = longBreakMinutes,
+            LongBreakEvery = longBreakEvery
+        };
+        settings.Normalize();
+
+        await SaveSettingsAsync(settings);
+        return PluginConfigurationResult.Ok("Focus Timer settings saved.");
+    }
+
+    private async Task SaveSettingsAsync(FocusTimerSettings settings)
+    {
+        if (string.IsNullOrWhiteSpace(_settingsPath))
+            throw new InvalidOperationException("Focus Timer settings path is not available.");
+
+        Directory.CreateDirectory(Path.GetDirectoryName(_settingsPath)!);
+
+        var json = JsonSerializer.Serialize(settings, JsonOptions);
+        await File.WriteAllTextAsync(_settingsPath, json, Encoding.UTF8);
+
+        _settings = settings;
+        _settingsLastWriteUtc = File.GetLastWriteTimeUtc(_settingsPath);
+        _state.Normalize(_settings);
+        _phase = ParsePhase(_state.PhaseName);
+        _remaining = TimeSpan.FromSeconds(Math.Clamp(_state.RemainingSeconds, 1, (int)GetPhaseDuration(_phase).TotalSeconds));
+        UpdateViews();
+        SaveState();
+    }
+
+    private static bool TryReadNumber(IReadOnlyDictionary<string, string?> values, string key, out int value)
+    {
+        value = 0;
+        return values.TryGetValue(key, out var rawValue) && int.TryParse(rawValue, out value);
     }
 
     private string GetPhaseLabel()

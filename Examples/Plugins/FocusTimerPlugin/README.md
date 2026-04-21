@@ -12,7 +12,9 @@
 
 ## Setup
 
-The plugin creates:
+You can configure Focus Timer directly from `Plugin Manager` by clicking `Configure` on the installed plugin.
+
+The plugin also creates:
 
 `%AppData%\WinNotch\Plugins\com.winnotch.focustimer\settings.json`
 
@@ -26,3 +28,5 @@ Default file:
   "longBreakEvery": 4
 }
 ```
+
+Editing the file manually is still supported, but the manager UI is the recommended setup path.
