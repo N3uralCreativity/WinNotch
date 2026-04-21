@@ -13,6 +13,7 @@ public partial class PluginManagerView : UserControl
 {
     private readonly PluginManager? _pluginManager;
     private readonly PluginLibraryService? _libraryService;
+    private bool _hasTriedLibraryRefresh;
 
     public PluginManagerView()
     {
@@ -28,6 +29,7 @@ public partial class PluginManagerView : UserControl
         RefreshLibraryButton.Click += async (_, _) => await RefreshLibrary();
         BrowsePluginsButton.Click += (_, _) => BrowsePlugins();
         OpenPluginsFolderButton.Click += (_, _) => OpenPluginsFolder();
+        Loaded += async (_, _) => await EnsureLibraryLoadedAsync();
 
         LoadPlugins();
     }
@@ -39,7 +41,10 @@ public partial class PluginManagerView : UserControl
         if (_pluginManager == null)
             return;
 
-        InstalledCountText.Text = $"{_pluginManager.LoadedPlugins.Count} plugin{(_pluginManager.LoadedPlugins.Count == 1 ? string.Empty : "s")} installed";
+        var availableUpdateCount = _pluginManager.LoadedPlugins.Count(HasAvailableUpdate) + _pluginManager.LoadedPlugins.Count(HasQueuedUpdate);
+        InstalledCountText.Text = availableUpdateCount > 0
+            ? $"{_pluginManager.LoadedPlugins.Count} plugin{(_pluginManager.LoadedPlugins.Count == 1 ? string.Empty : "s")} installed - {availableUpdateCount} update{(availableUpdateCount == 1 ? string.Empty : "s")} ready"
+            : $"{_pluginManager.LoadedPlugins.Count} plugin{(_pluginManager.LoadedPlugins.Count == 1 ? string.Empty : "s")} installed";
 
         foreach (var plugin in _pluginManager.LoadedPlugins.OrderBy(plugin => plugin.Name, StringComparer.CurrentCultureIgnoreCase))
         {
@@ -56,6 +61,9 @@ public partial class PluginManagerView : UserControl
 
     private Border CreatePluginCard(IPlugin plugin)
     {
+        var queuedUpdate = GetQueuedManifest(plugin);
+        var availableUpdate = queuedUpdate == null ? GetAvailableUpdateManifest(plugin) : null;
+
         var card = new Border
         {
             Background = GetSurfaceBrush(),
@@ -86,9 +94,13 @@ public partial class PluginManagerView : UserControl
 
         var version = new TextBlock
         {
-            Text = $"v{plugin.Version}",
+            Text = queuedUpdate != null
+                ? $"v{plugin.Version} -> v{queuedUpdate.Version}"
+                : availableUpdate != null
+                    ? $"v{plugin.Version} -> v{availableUpdate.Version}"
+                    : $"v{plugin.Version}",
             FontSize = 11,
-            Foreground = GetSecondaryBrush(),
+            Foreground = queuedUpdate != null || availableUpdate != null ? GetAccentBrush() : GetSecondaryBrush(),
             VerticalAlignment = VerticalAlignment.Center
         };
         Grid.SetColumn(version, 1);
@@ -132,6 +144,51 @@ public partial class PluginManagerView : UserControl
             VerticalAlignment = VerticalAlignment.Center,
             HorizontalAlignment = HorizontalAlignment.Right
         };
+
+        if (queuedUpdate != null)
+        {
+            controlStack.Children.Add(new TextBlock
+            {
+                Text = "Restart needed",
+                FontSize = 11,
+                FontWeight = FontWeights.SemiBold,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Margin = new Thickness(0, 0, 0, 8),
+                Foreground = GetAccentBrush()
+            });
+
+            var restartButton = new Button
+            {
+                Content = "Restart",
+                MinWidth = 86,
+                Margin = new Thickness(0, 0, 0, 12),
+                Style = TryGetStyle("PluginSecondaryButton")
+            };
+            restartButton.Click += (_, _) => PluginBrowserWindow.RestartApp();
+            controlStack.Children.Add(restartButton);
+        }
+        else if (availableUpdate != null)
+        {
+            controlStack.Children.Add(new TextBlock
+            {
+                Text = "Update available",
+                FontSize = 11,
+                FontWeight = FontWeights.SemiBold,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Margin = new Thickness(0, 0, 0, 8),
+                Foreground = GetAccentBrush()
+            });
+
+            var updateButton = new Button
+            {
+                Content = "Update",
+                MinWidth = 86,
+                Margin = new Thickness(0, 0, 0, 12),
+                Style = TryGetStyle("PluginSecondaryButton")
+            };
+            updateButton.Click += async (_, _) => await UpdatePluginAsync(plugin, availableUpdate, updateButton);
+            controlStack.Children.Add(updateButton);
+        }
 
         var enabledState = _pluginManager?.IsPluginEnabled(plugin.Id) ?? false;
         var stateLabel = new TextBlock
@@ -215,6 +272,45 @@ public partial class PluginManagerView : UserControl
         return card;
     }
 
+    private async System.Threading.Tasks.Task<bool> EnsureLibraryLoadedAsync(bool forceRefresh = false, bool showErrors = false)
+    {
+        if (_libraryService == null)
+            return false;
+
+        if (!forceRefresh && (_hasTriedLibraryRefresh || _libraryService.AvailablePlugins.Count > 0))
+        {
+            LoadPlugins();
+            return _libraryService.AvailablePlugins.Count > 0;
+        }
+
+        _hasTriedLibraryRefresh = true;
+
+        var originalContent = RefreshLibraryButton.Content;
+        RefreshLibraryButton.IsEnabled = false;
+        RefreshLibraryButton.Content = "Refreshing...";
+
+        try
+        {
+            var success = await _libraryService.RefreshLibraryAsync();
+            if (success)
+            {
+                LoadPlugins();
+            }
+            else if (showErrors)
+            {
+                var detail = _libraryService.LastError ?? "Unknown error";
+                MessageBox.Show($"Failed to refresh plugin library.\n\n{detail}", "Plugin Manager", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+
+            return success;
+        }
+        finally
+        {
+            RefreshLibraryButton.IsEnabled = true;
+            RefreshLibraryButton.Content = originalContent;
+        }
+    }
+
     private void AddPluginTag(System.Windows.Controls.Panel host, string? label)
     {
         if (string.IsNullOrWhiteSpace(label))
@@ -238,29 +334,10 @@ public partial class PluginManagerView : UserControl
 
     private async System.Threading.Tasks.Task RefreshLibrary()
     {
-        if (_libraryService == null)
-            return;
-
-        RefreshLibraryButton.IsEnabled = false;
-        RefreshLibraryButton.Content = "Refreshing...";
-
-        try
+        var success = await EnsureLibraryLoadedAsync(forceRefresh: true, showErrors: true);
+        if (success)
         {
-            var success = await _libraryService.RefreshLibraryAsync();
-            if (success)
-            {
-                MessageBox.Show("Plugin library refreshed successfully!", "Plugin Manager", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-            else
-            {
-                var detail = _libraryService.LastError ?? "Unknown error";
-                MessageBox.Show($"Failed to refresh plugin library.\n\n{detail}", "Plugin Manager", MessageBoxButton.OK, MessageBoxImage.Warning);
-            }
-        }
-        finally
-        {
-            RefreshLibraryButton.IsEnabled = true;
-            RefreshLibraryButton.Content = "Refresh Library";
+            MessageBox.Show("Plugin library refreshed successfully!", "Plugin Manager", MessageBoxButton.OK, MessageBoxImage.Information);
         }
     }
 
@@ -295,6 +372,93 @@ public partial class PluginManagerView : UserControl
             return;
 
         Window.GetWindow(this)?.DragMove();
+    }
+
+    private async System.Threading.Tasks.Task UpdatePluginAsync(IPlugin plugin, PluginManifest manifest, Button updateButton)
+    {
+        if (_libraryService == null || _pluginManager == null)
+            return;
+
+        updateButton.IsEnabled = false;
+        var originalContent = updateButton.Content;
+
+        try
+        {
+            var targetDir = _pluginManager.GetPluginsDirectory();
+            var progress = new Progress<double>(value =>
+            {
+                updateButton.Content = $"{Math.Round(value):0}%";
+            });
+
+            var filePath = await _libraryService.DownloadPluginAsync(plugin.Id, targetDir, progress);
+            if (filePath == null)
+            {
+                throw new InvalidOperationException($"Failed to update {plugin.Name}.");
+            }
+
+            updateButton.Content = "Queued";
+            LoadPlugins();
+            PluginBrowserWindow.ShowRestartPopup($"{plugin.Name} will update to v{manifest.Version}.");
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Failed to update plugin: {ex.Message}", "Plugin Manager", MessageBoxButton.OK, MessageBoxImage.Error);
+            updateButton.IsEnabled = true;
+            updateButton.Content = originalContent;
+        }
+    }
+
+    private bool HasAvailableUpdate(IPlugin plugin)
+    {
+        return GetAvailableUpdateManifest(plugin) != null;
+    }
+
+    private bool HasQueuedUpdate(IPlugin plugin)
+    {
+        return GetQueuedManifest(plugin) != null;
+    }
+
+    private PluginManifest? GetQueuedManifest(IPlugin plugin)
+    {
+        if (_pluginManager == null || _libraryService == null)
+            return null;
+
+        var installedManifest = _libraryService.ReadInstalledManifest(plugin.Id, _pluginManager.GetPluginsDirectory());
+        if (installedManifest == null)
+            return null;
+
+        return CompareVersions(installedManifest.Version, plugin.Version) > 0
+            ? installedManifest
+            : null;
+    }
+
+    private PluginManifest? GetAvailableManifest(string pluginId)
+    {
+        return _libraryService?.GetAvailablePlugin(pluginId);
+    }
+
+    private PluginManifest? GetAvailableUpdateManifest(IPlugin plugin)
+    {
+        var availableManifest = GetAvailableManifest(plugin.Id);
+        if (availableManifest == null)
+            return null;
+
+        if (CompareVersions(availableManifest.Version, plugin.Version) <= 0)
+            return null;
+
+        var queuedManifest = GetQueuedManifest(plugin);
+        if (queuedManifest != null && CompareVersions(queuedManifest.Version, availableManifest.Version) >= 0)
+            return null;
+
+        return availableManifest;
+    }
+
+    private static int CompareVersions(string left, string right)
+    {
+        if (Version.TryParse(left, out var leftVersion) && Version.TryParse(right, out var rightVersion))
+            return leftVersion.CompareTo(rightVersion);
+
+        return string.Compare(left, right, StringComparison.OrdinalIgnoreCase);
     }
 
     private System.Windows.Media.Brush GetPrimaryBrush() => GetBrush("TextPrimaryBrush", Color.FromRgb(255, 255, 255));

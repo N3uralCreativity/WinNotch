@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -241,7 +242,20 @@ public partial class PluginBrowserWindow : Window
 
     private bool IsPluginInstalled(string pluginId)
     {
-        return _pluginManager?.LoadedPlugins.Any(plugin => plugin.Id == pluginId) ?? false;
+        if (_pluginManager?.LoadedPlugins.Any(plugin => plugin.Id == pluginId) == true)
+            return true;
+
+        var pluginsDirectory = _pluginManager?.GetPluginsDirectory();
+        if (string.IsNullOrWhiteSpace(pluginsDirectory))
+            return false;
+
+        var pluginDirectory = Path.Combine(pluginsDirectory, pluginId);
+        if (!Directory.Exists(pluginDirectory))
+            return false;
+
+        return File.Exists(Path.Combine(pluginDirectory, "manifest.json"))
+            || Directory.EnumerateFiles(pluginDirectory, "*.dll", SearchOption.TopDirectoryOnly).Any()
+            || Directory.EnumerateFiles(pluginDirectory, "*.pending", SearchOption.TopDirectoryOnly).Any();
     }
 
     private async System.Threading.Tasks.Task InstallPlugin(PluginManifest manifest, Button button)
@@ -327,7 +341,13 @@ public partial class PluginBrowserWindow : Window
         var exePath = Environment.ProcessPath;
         if (exePath != null)
         {
-            Process.Start(exePath);
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "cmd.exe",
+                Arguments = $"/c ping 127.0.0.1 -n 2 > nul && start \"\" \"{exePath}\"",
+                CreateNoWindow = true,
+                UseShellExecute = false
+            });
         }
 
         Application.Current?.Shutdown();

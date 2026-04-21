@@ -14,6 +14,7 @@ namespace WinNotch;
 public partial class App : Application
 {
     private static Mutex? _mutex;
+    private static bool _ownsMutex;
     private NotchWindow? _notchWindow;
     private Forms.NotifyIcon? _trayIcon;
     private AppSettings _settings = null!;
@@ -34,8 +35,11 @@ public partial class App : Application
         // Single instance enforcement
         const string mutexName = "WinNotch_SingleInstance_Mutex";
         _mutex = new Mutex(true, mutexName, out bool createdNew);
+        _ownsMutex = createdNew;
         if (!createdNew)
         {
+            _mutex.Dispose();
+            _mutex = null;
             Shutdown();
             return;
         }
@@ -127,8 +131,21 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         _trayIcon?.Dispose();
-        _mutex?.ReleaseMutex();
+        if (_ownsMutex && _mutex != null)
+        {
+            try
+            {
+                _mutex.ReleaseMutex();
+            }
+            catch (ApplicationException)
+            {
+                // Another shutdown path may already have released the mutex.
+            }
+        }
+
         _mutex?.Dispose();
+        _mutex = null;
+        _ownsMutex = false;
         base.OnExit(e);
     }
 }

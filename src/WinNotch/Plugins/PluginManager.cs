@@ -75,9 +75,23 @@ public class PluginManager : IDisposable
             _context.Log($"Loading plugin from: {filePath}", PluginLogLevel.Debug);
 
             var assembly = Assembly.LoadFrom(filePath);
-            var pluginTypes = assembly.GetTypes()
-                .Where(t => typeof(IPlugin).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract)
-                .ToList();
+            List<Type> pluginTypes;
+            try
+            {
+                pluginTypes = assembly.GetTypes()
+                    .Where(t => typeof(IPlugin).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract)
+                    .ToList();
+            }
+            catch (ReflectionTypeLoadException ex)
+            {
+                _context.Log($"Type load failure in {filePath}: {ex.Message}", PluginLogLevel.Error);
+                foreach (var loaderException in ex.LoaderExceptions.Where(exception => exception != null))
+                {
+                    _context.Log($"Loader exception for {Path.GetFileName(filePath)}: {loaderException!.Message}", PluginLogLevel.Error);
+                }
+
+                throw;
+            }
 
             if (pluginTypes.Count == 0)
             {
@@ -256,7 +270,7 @@ public class PluginManager : IDisposable
     {
         try
         {
-            var currentVersion = new Version("0.5.1"); // WinNotch version
+            var currentVersion = new Version("0.5.2"); // WinNotch version
             var required = new Version(requiredVersion);
             return currentVersion >= required;
         }

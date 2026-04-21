@@ -31,7 +31,33 @@ public class PluginLibraryService
         {
             Timeout = TimeSpan.FromSeconds(30)
         };
-        _httpClient.DefaultRequestHeaders.Add("User-Agent", "WinNotch/0.5.1");
+        _httpClient.DefaultRequestHeaders.Add("User-Agent", "WinNotch/0.5.2");
+    }
+
+    public PluginManifest? GetAvailablePlugin(string pluginId)
+    {
+        return _availablePlugins.FirstOrDefault(plugin => plugin.Id == pluginId);
+    }
+
+    public PluginManifest? ReadInstalledManifest(string pluginId, string targetDirectory)
+    {
+        var manifestPath = Path.Combine(
+            targetDirectory,
+            SanitizeFileName(pluginId),
+            "manifest.json");
+
+        if (!File.Exists(manifestPath))
+            return null;
+
+        try
+        {
+            var json = File.ReadAllText(manifestPath);
+            return JsonSerializer.Deserialize<PluginManifest>(json);
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     /// <summary>
@@ -133,7 +159,7 @@ public class PluginLibraryService
                     File.Delete(targetPath);
                 File.Move(tempPath, targetPath);
             }
-            catch (IOException)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 // File is locked (plugin already loaded) — write to .pending for next restart
                 var pendingPath = targetPath + ".pending";
@@ -158,6 +184,21 @@ public class PluginLibraryService
         }
         catch (Exception ex)
         {
+            var pluginDir = Path.Combine(targetDirectory, SanitizeFileName(pluginId));
+            var fileName = $"{SanitizeFileName(manifest.Name)}.dll";
+            var tempPath = Path.Combine(pluginDir, fileName) + ".tmp";
+            if (File.Exists(tempPath))
+            {
+                try
+                {
+                    File.Delete(tempPath);
+                }
+                catch
+                {
+                    // Best effort only.
+                }
+            }
+
             System.Diagnostics.Debug.WriteLine($"Failed to download plugin {pluginId}: {ex.Message}");
             throw;
         }
