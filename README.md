@@ -41,7 +41,8 @@ Built with **WPF / .NET 8 / C#**.
 
 ### Pre-built Release
 1. Download `WinNotch.exe` from the [Releases](https://github.com/N3uralCreativity/WinNotch/releases) page
-2. Run it — no installation needed (self-contained, single file)
+2. Run it / Install it (recommanded)
+3. That's it !
 
 ### Build from Source
 
