@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WinNotch</title>
+    <meta name="description" content="WinNotch brings a polished, Dynamic Island-inspired notch experience to Windows with music controls, drag-and-drop, system HUDs, and a growing plugin ecosystem.">
+    <meta name="theme-color" content="#0a0a10">
+    <link rel="icon" type="image/x-icon" href="./assets/icons/winnotch.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+    <div class="page-shell">
+        <div class="ambient ambient-a"></div>
+        <div class="ambient ambient-b"></div>
+        <div class="ambient ambient-c"></div>
+
+        <header class="site-header">
+            <a class="brand" href="#top" aria-label="WinNotch home">
+                <img src="./assets/icons/winnotch.ico" alt="WinNotch logo" class="brand__icon">
+                <span class="brand__name">WinNotch</span>
+            </a>
+
+            <nav class="site-nav" aria-label="Primary">
+                <a href="#experience">Experience</a>
+                <a href="#plugins">Plugins</a>
+                <a href="#download">Download</a>
+            </nav>
+
+            <div class="site-actions">
+                <a class="button button--ghost" href="https://github.com/N3uralCreativity/WinNotch" target="_blank" rel="noreferrer">GitHub</a>
+                <a class="button button--primary" href="https://github.com/N3uralCreativity/WinNotch/releases/latest" target="_blank" rel="noreferrer">Get WinNotch</a>
+            </div>
+        </header>
+
+        <main id="top">
+            <section class="hero reveal">
+                <div class="hero__content">
+                    <div class="eyebrow-pill">
+                        <span class="eyebrow-pill__dot"></span>
+                        Dynamic Island energy for Windows
+                    </div>
+
+                    <h1 class="hero__title">
+                        A quieter
+                        <span>desktop surface</span>
+                        with much more to say.
+                    </h1>
+
+                    <p class="hero__copy">
+                        WinNotch turns the top of your screen into a living control layer for music,
+                        files, calendar, system feedback, and plugins. Hover to peek. Click to expand.
+                        Drag it where it belongs.
+                    </p>
+
+                    <div class="hero__actions">
+                        <a class="button button--primary" href="https://github.com/N3uralCreativity/WinNotch/releases/latest" target="_blank" rel="noreferrer">Download for Windows</a>
+                        <a class="button button--ghost" href="https://github.com/N3uralCreativity/WinNotch-Plugins" target="_blank" rel="noreferrer">Explore Plugins</a>
+                    </div>
+
+                    <dl class="hero__stats">
+                        <div>
+                            <dt>Built with</dt>
+                            <dd>.NET 8 + WPF</dd>
+                        </div>
+                        <div>
+                            <dt>Designed for</dt>
+                            <dd>Windows 10 / 11</dd>
+                        </div>
+                        <div>
+                            <dt>Extensible via</dt>
+                            <dd>UI, service, and animation plugins</dd>
+                        </div>
+                    </dl>
+                </div>
+
+                <div class="hero__visual">
+                    <div class="hero-panel glass-card">
+                        <div class="hero-panel__header">
+                            <div class="hero-panel__lights">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                            <p>Now playing, dragging, glowing, extending.</p>
+                        </div>
+
+                        <div class="hero-panel__stage">
+                            <div class="notch-stage">
+                                <div class="notch-stage__monitor"></div>
+                                <div class="notch-stage__notch">
+                                    <div class="notch-stage__pill">
+                                        <span></span>
+                                        <span></span>
+                                        <span></span>
+                                    </div>
+                                </div>
+                                <div class="float-card float-card--music">
+                                    <strong>Music controls</strong>
+                                    <span>Live visualizer + transport</span>
+                                </div>
+                                <div class="float-card float-card--volume">
+                                    <strong>System HUD</strong>
+                                    <span>Volume and brightness feedback</span>
+                                </div>
+                                <div class="float-card float-card--plugins">
+                                    <strong>Plugin library</strong>
+                                    <span>Weather, pets, tasks, focus</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="feature-strip reveal">
+                <article class="mini-feature glass-card">
+                    <p class="mini-feature__label">Always in reach</p>
+                    <h2>Peek with intent.</h2>
+                    <p>The interface stays out of your way until your cursor arrives, then opens with the kind of motion that feels designed, not bolted on.</p>
+                </article>
+                <article class="mini-feature glass-card">
+                    <p class="mini-feature__label">Actually adaptable</p>
+                    <h2>Move it where it fits.</h2>
+                    <p>Top, side, vertical layouts, and dock-aware plugin surfaces make the notch feel native to your setup instead of forcing one layout.</p>
+                </article>
+                <article class="mini-feature glass-card">
+                    <p class="mini-feature__label">Expandable</p>
+                    <h2>Build your own layer.</h2>
+                    <p>Install plugins, swap animations, surface tools, and turn the notch into a genuinely personal command space.</p>
+                </article>
+            </section>
+
+            <section id="experience" class="story">
+                <div class="story-section reveal">
+                    <div class="story-copy">
+                        <p class="section-kicker">01</p>
+                        <h2>Approach, hover, and the UI answers back.</h2>
+                        <p>
+                            WinNotch stays visually calm until you get near it. The first interaction is about confidence:
+                            hover over the panel, click, and the expanded surface opens like it already belongs on your desktop.
+                        </p>
+                    </div>
+                    <div class="story-media glass-card">
+                        <div class="story-media__meta">
+                            <span>Hover + click behavior</span>
+                            <span>No friction, no clutter</span>
+                        </div>
+                        <div class="video-shell">
+                            <video class="demo-video" autoplay muted playsinline preload="metadata" data-start="1.4" data-title="Hover and open demo">
+                                <source src="./assets/videos/hover-open.mp4" type="video/mp4">
+                            </video>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="story-section story-section--reverse reveal">
+                    <div class="story-copy">
+                        <p class="section-kicker">02</p>
+                        <h2>Drag the notch until it feels like your machine.</h2>
+                        <p>
+                            The overlay is not locked into one "correct" position. Move it across the screen,
+                            dock it differently, and let the layout adapt around where you actually work.
+                        </p>
+                    </div>
+                    <div class="story-media glass-card">
+                        <div class="story-media__meta">
+                            <span>Flexible placement</span>
+                            <span>Top and side-friendly layouts</span>
+                        </div>
+                        <div class="video-shell">
+                            <video class="demo-video" autoplay muted playsinline preload="metadata" data-start="3.0" data-title="Drag and position demo">
+                                <source src="./assets/videos/drag-position.mp4" type="video/mp4">
+                            </video>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="story-section reveal">
+                    <div class="story-copy">
+                        <p class="section-kicker">03</p>
+                        <h2>System feedback that feels premium, not intrusive.</h2>
+                        <p>
+                            Volume and brightness changes surface instantly with a compact, polished HUD.
+                            You get real visual feedback without the desktop being taken over by heavy system chrome.
+                        </p>
+                    </div>
+                    <div class="story-media glass-card">
+                        <div class="story-media__meta">
+                            <span>Volume + brightness HUD</span>
+                            <span>Fast, visual, and context-aware</span>
+                        </div>
+                        <div class="video-shell">
+                            <video class="demo-video" autoplay muted playsinline preload="metadata" data-start="0" data-title="Volume and brightness demo">
+                                <source src="./assets/videos/volume-brightness.mp4" type="video/mp4">
+                            </video>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="story-section story-section--reverse reveal">
+                    <div class="story-copy">
+                        <p class="section-kicker">04</p>
+                        <h2>Grow it with a real plugin ecosystem.</h2>
+                        <p>
+                            The plugin manager and browser turn WinNotch into a platform. Install utilities,
+                            playful widgets, productivity tools, and layout-aware add-ons without leaving the app.
+                        </p>
+                    </div>
+                    <div class="story-media glass-card">
+                        <div class="story-media__meta">
+                            <span>Plugin manager + library</span>
+                            <span>Built for evolving desktops</span>
+                        </div>
+                        <div class="video-shell">
+                            <video class="demo-video" autoplay muted playsinline preload="metadata" data-start="1.3" data-title="Plugin manager demo">
+                                <source src="./assets/videos/plugin-manager.mp4" type="video/mp4">
+                            </video>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="plugins" class="ecosystem reveal">
+                <div class="ecosystem__intro">
+                    <p class="section-kicker">Plugin ecosystem</p>
+                    <h2>From subtle helpers to full new experiences.</h2>
+                    <p>
+                        WinNotch already supports UI plugins, service plugins, and animation plugins, which means the notch
+                        can become a weather surface, a clipboard stack, a task panel, a focus timer, or something entirely custom.
+                    </p>
+                </div>
+
+                <div class="ecosystem__grid">
+                    <article class="glass-card plugin-card">
+                        <span class="plugin-card__type">Productivity</span>
+                        <h3>Todo Peek</h3>
+                        <p>Bring Todoist or Microsoft To Do straight into the expanded notch with quick completion and guided setup.</p>
+                    </article>
+                    <article class="glass-card plugin-card">
+                        <span class="plugin-card__type">System</span>
+                        <h3>Weather</h3>
+                        <p>Keep current conditions beside your calendar with layouts that work in top or vertical docking.</p>
+                    </article>
+                    <article class="glass-card plugin-card">
+                        <span class="plugin-card__type">Flow</span>
+                        <h3>Focus Timer</h3>
+                        <p>Run Pomodoro sessions inside the notch without opening a separate desktop app just to stay on track.</p>
+                    </article>
+                    <article class="glass-card plugin-card">
+                        <span class="plugin-card__type">Play</span>
+                        <h3>Pet Widget</h3>
+                        <p>Because utility is better when it has a little personality attached to it.</p>
+                    </article>
+                </div>
+            </section>
+
+            <section id="download" class="download reveal">
+                <div class="download-card glass-card">
+                    <div class="download-card__copy">
+                        <p class="section-kicker">Ready to install</p>
+                        <h2>Give Windows a notch worth keeping.</h2>
+                        <p>
+                            Download the latest release, browse the plugin ecosystem, and start shaping the top edge
+                            of your desktop into something more useful.
+                        </p>
+                    </div>
+                    <div class="download-card__actions">
+                        <a class="button button--primary" href="https://github.com/N3uralCreativity/WinNotch/releases/latest" target="_blank" rel="noreferrer">Download latest release</a>
+                        <a class="button button--ghost" href="https://github.com/N3uralCreativity/WinNotch-Plugins" target="_blank" rel="noreferrer">Open plugin repository</a>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="site-footer">
+            <span>WinNotch</span>
+            <a href="https://github.com/N3uralCreativity/WinNotch" target="_blank" rel="noreferrer">GitHub</a>
+            <a href="https://github.com/N3uralCreativity/WinNotch/releases" target="_blank" rel="noreferrer">Releases</a>
+            <a href="https://github.com/N3uralCreativity/WinNotch-Plugins" target="_blank" rel="noreferrer">Plugins</a>
+        </footer>
+    </div>
+
+    <script src="./script.js"></script>
+</body>
+</html>
