@@ -410,14 +410,14 @@ main {
     display: inline-block;
     color: transparent;
     background-image:
-        radial-gradient(circle at 20% 50%, rgba(120, 149, 255, 0.6) 0 14%, transparent 14% 28%, rgba(120, 149, 255, 0.18) 28% 30%, transparent 30% 100%),
-        radial-gradient(circle at 70% 35%, rgba(14, 20, 32, 0.22) 0 18%, transparent 18% 100%),
+        radial-gradient(circle, rgba(99, 128, 255, 0.92) 0 1.5px, transparent 1.6px),
+        radial-gradient(circle, rgba(99, 128, 255, 0.32) 0 1.3px, transparent 1.4px),
         linear-gradient(180deg, var(--text-color-top) 0%, var(--text-color-bottom) 100%);
-    background-size: 240px 240px, 180px 180px, 100% 100%;
-    background-position: 0 0, 50% 30%, 0 0;
+    background-size: 18px 18px, 34px 34px, 100% 100%;
+    background-position: 0 0, 10px 10px, 0 0;
     -webkit-background-clip: text;
     background-clip: text;
-    animation: hero-word-drift 8s ease-in-out infinite;
+    animation: hero-word-drift 6.8s ease-in-out infinite;
 }
 
 .hero__aside {
@@ -497,8 +497,8 @@ main {
 
 .story-stage__layout {
     display: grid;
-    grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
-    gap: 2.5rem;
+    grid-template-columns: minmax(16rem, 0.72fr) minmax(0, 1.28fr);
+    gap: 3rem;
     align-items: center;
     min-height: calc(100vh - 6rem);
 }
@@ -512,7 +512,7 @@ main {
 }
 
 .story-copy {
-    max-width: 31rem;
+    max-width: 26rem;
     opacity: var(--story-copy-opacity, 1);
     transform: translate3d(var(--story-copy-shift-x, 0px), var(--story-copy-shift-y, 0px), 0);
     will-change: transform, opacity;
@@ -521,17 +521,19 @@ main {
 .story-copy h2,
 .section-heading h2,
 .download__layout h2 {
-    font-size: clamp(2.4rem, 5vw, 4.4rem);
-    line-height: 0.98;
+    font-size: clamp(2.15rem, 4vw, 3.8rem);
+    line-height: 0.95;
 }
 
 .story-copy p {
     margin-top: 1.2rem;
+    max-width: 25rem;
+    font-size: 0.98rem;
 }
 
 .story-media {
     display: grid;
-    gap: 0.8rem;
+    gap: 1rem;
     will-change: transform, box-shadow, border-radius;
     transform-origin: center center;
 }
@@ -550,7 +552,7 @@ main {
     gap: 0.8rem;
     padding: 0 0.15rem;
     color: var(--text-color-muted);
-    font-size: 0.88rem;
+    font-size: 0.96rem;
 }
 
 .video-shell {
@@ -583,7 +585,7 @@ main {
 }
 
 .video-shell--hud {
-    --shell-ratio: 16 / 6;
+    --shell-ratio: 16 / 5.2;
     display: grid;
     place-items: center;
     background:
@@ -650,10 +652,10 @@ html.dark .video-shell--hud {
 @keyframes hero-word-drift {
     0%,
     100% {
-        background-position: 0 0, 50% 30%, 0 0;
+        background-position: 0 0, 10px 10px, 0 0;
     }
     50% {
-        background-position: 120px 90px, 20% 65%, 0 0;
+        background-position: 22px 16px, -14px 26px, 0 0;
     }
 }
 
@@ -730,7 +732,7 @@ html.dark .video-shell--hud {
 
     .story-stage__layout {
         min-height: auto;
-        gap: 1.5rem;
+        gap: 1.75rem;
     }
 
     .story-scene--reverse .story-copy,
@@ -811,6 +813,7 @@ html.dark .video-shell--hud {
     .story-media__meta {
         flex-direction: column;
         gap: 0.3rem;
+        font-size: 0.88rem;
     }
 }
 
