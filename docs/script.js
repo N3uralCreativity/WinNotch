@@ -111,9 +111,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.querySelectorAll(".demo-video").forEach((video) => {
         const start = Number(video.dataset.start || "0");
+        const shell = video.closest(".video-shell");
+
+        if (video.dataset.position) {
+            video.style.setProperty("--video-position", video.dataset.position);
+        }
 
         const seekToStart = () => {
             try {
+                if (shell && video.videoWidth && video.videoHeight) {
+                    if (video.dataset.shell === "hud") {
+                        shell.classList.add("video-shell--hud");
+                    } else {
+                        shell.style.setProperty("--shell-ratio", `${video.videoWidth} / ${video.videoHeight}`);
+                    }
+                }
+
                 if (video.duration && start < video.duration) {
                     video.currentTime = start;
                 }
