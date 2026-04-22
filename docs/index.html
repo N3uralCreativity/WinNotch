@@ -78,39 +78,40 @@
                 </div>
 
                 <div class="hero__visual">
-                    <div class="hero-panel glass-card">
-                        <div class="hero-panel__header">
-                            <div class="hero-panel__lights">
-                                <span></span>
-                                <span></span>
-                                <span></span>
-                            </div>
-                            <p>Now playing, dragging, glowing, extending.</p>
+                    <div class="hero-showcase glass-card">
+                        <div class="hero-showcase__meta">
+                            <span>Live product preview</span>
+                            <span>Hover, click, expand</span>
                         </div>
 
-                        <div class="hero-panel__stage">
-                            <div class="notch-stage">
-                                <div class="notch-stage__monitor"></div>
-                                <div class="notch-stage__notch">
-                                    <div class="notch-stage__pill">
-                                        <span></span>
-                                        <span></span>
-                                        <span></span>
-                                    </div>
-                                </div>
-                                <div class="float-card float-card--music">
-                                    <strong>Music controls</strong>
-                                    <span>Live visualizer + transport</span>
-                                </div>
-                                <div class="float-card float-card--volume">
-                                    <strong>System HUD</strong>
-                                    <span>Volume and brightness feedback</span>
-                                </div>
-                                <div class="float-card float-card--plugins">
-                                    <strong>Plugin library</strong>
-                                    <span>Weather, pets, tasks, focus</span>
-                                </div>
+                        <div class="hero-showcase__video-shell">
+                            <video class="demo-video hero-video" autoplay muted playsinline preload="metadata" data-start="1.4" data-title="Hero preview">
+                                <source src="./assets/videos/hover-open.mp4" type="video/mp4">
+                            </video>
+
+                            <div class="hero-badge hero-badge--top">
+                                <strong>Feels native immediately</strong>
+                                <span>Approach the notch and it reacts with intent.</span>
                             </div>
+
+                            <div class="hero-badge hero-badge--bottom">
+                                <span>Music, files, calendar, system HUDs, and plugins.</span>
+                            </div>
+                        </div>
+
+                        <div class="hero-showcase__grid">
+                            <article class="hero-glance">
+                                <span class="hero-glance__eyebrow">Drag + dock</span>
+                                <strong>Move it where your setup wants it.</strong>
+                            </article>
+                            <article class="hero-glance">
+                                <span class="hero-glance__eyebrow">Plugin-first</span>
+                                <strong>Extend the notch without breaking the layout.</strong>
+                            </article>
+                            <article class="hero-glance">
+                                <span class="hero-glance__eyebrow">Quiet UI</span>
+                                <strong>System feedback appears fast and leaves just as cleanly.</strong>
+                            </article>
                         </div>
                     </div>
                 </div>
