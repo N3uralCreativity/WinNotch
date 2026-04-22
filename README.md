@@ -6,6 +6,19 @@ Built with **WPF / .NET 8 / C#**.
 
 ![Windows 10/11](https://img.shields.io/badge/Windows-10%2F11-blue) ![.NET 8](https://img.shields.io/badge/.NET-8.0-purple)
 
+## Showcase
+
+<img width="800" height="566" alt="01" src="https://github.com/user-attachments/assets/63ed8f8a-9488-4bfc-a3d3-ef9e098aa9c4" />
+
+
+<img width="800" height="478" alt="02" src="https://github.com/user-attachments/assets/971bb745-7711-4bae-870c-fd852a2ca1de" />
+
+
+<img width="800" height="42" alt="03" src="https://github.com/user-attachments/assets/495c3fa3-b2b6-4a98-a8fc-7810c3dab325" />
+
+
+<img width="800" height="496" alt="04" src="https://github.com/user-attachments/assets/2ff26c30-a5e8-4c65-93cd-dfaac204d90e" />
+
 ## Features
 
 - **Dynamic Notch** — sits at the top-center of your screen with smooth spring animations
