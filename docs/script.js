@@ -7,247 +7,282 @@ const easeInOutCubic = (value) => (
         : 1 - Math.pow(-2 * value + 2, 3) / 2
 );
 
-const revealObserver = new IntersectionObserver((entries) => {
-    for (const entry of entries) {
-        if (entry.isIntersecting) {
-            entry.target.classList.add("is-visible");
+document.addEventListener("DOMContentLoaded", () => {
+    const rootElement = document.documentElement;
+    const themeToggle = document.querySelector("#theme-toggle");
+    const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+    const header = document.querySelector(".site-header");
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const themeColors = {
+        light: "#f6f7fb",
+        dark: "#090b10"
+    };
+
+    const applyThemeState = (isDark, persist = true) => {
+        rootElement.classList.toggle("dark", isDark);
+
+        if (persist) {
+            localStorage.setItem("winnotch-site-theme", isDark ? "dark" : "light");
         }
-    }
-}, {
-    threshold: 0.16,
-    rootMargin: "0px 0px -10% 0px"
-});
 
-document.querySelectorAll(".reveal").forEach((element) => {
-    revealObserver.observe(element);
-});
-
-const root = document.documentElement;
-const themeButtons = document.querySelectorAll("[data-theme-choice]");
-const themeColorMeta = document.querySelector('meta[name="theme-color"]');
-const header = document.querySelector(".site-header");
-const themeColors = {
-    light: "#f5f2ea",
-    dark: "#0b0d12"
-};
-
-const applyTheme = (theme) => {
-    root.dataset.theme = theme;
-    localStorage.setItem("winnotch-site-theme", theme);
-    themeButtons.forEach((button) => {
-        button.classList.toggle("is-active", button.dataset.themeChoice === theme);
-    });
-
-    if (themeColorMeta) {
-        themeColorMeta.setAttribute("content", themeColors[theme] || themeColors.light);
-    }
-};
-
-const currentTheme = root.dataset.theme || "light";
-applyTheme(currentTheme);
-
-themeButtons.forEach((button) => {
-    button.addEventListener("click", () => {
-        applyTheme(button.dataset.themeChoice || "light");
-    });
-});
-
-const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-const videoObserver = new IntersectionObserver((entries) => {
-    for (const entry of entries) {
-        const video = entry.target;
-        const start = Number(video.dataset.start || "0");
-
-        if (entry.isIntersecting) {
-            if (video.dataset.ready === "true" && video.currentTime < start) {
-                video.currentTime = start;
-            }
-
-            if (!prefersReducedMotion) {
-                video.play().catch(() => {});
-            }
-        } else {
-            video.pause();
+        if (themeToggle) {
+            themeToggle.checked = isDark;
         }
-    }
-}, {
-    threshold: 0.45
-});
 
-document.querySelectorAll(".demo-video").forEach((video) => {
-    const start = Number(video.dataset.start || "0");
-
-    const seekToStart = () => {
-        try {
-            if (video.duration && start < video.duration) {
-                video.currentTime = start;
-            }
-            video.dataset.ready = "true";
-
-            if (!prefersReducedMotion) {
-                video.play().catch(() => {});
-            }
-        } catch {
-            video.dataset.ready = "true";
+        if (themeColorMeta) {
+            themeColorMeta.setAttribute("content", isDark ? themeColors.dark : themeColors.light);
         }
     };
 
-    video.addEventListener("loadedmetadata", seekToStart, { once: true });
-    video.addEventListener("ended", () => {
-        video.currentTime = start;
-        if (!prefersReducedMotion) {
-            video.play().catch(() => {});
-        }
-    });
+    const savedTheme = localStorage.getItem("winnotch-site-theme");
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const initialDark = savedTheme ? savedTheme === "dark" : prefersDark;
+    applyThemeState(initialDark, false);
 
-    videoObserver.observe(video);
-});
+    if (themeToggle) {
+        themeToggle.addEventListener("input", () => {
+            const isDark = themeToggle.checked;
+            const toggleRoot = themeToggle.closest(".theme-toggle");
+            let x = window.innerWidth / 2;
+            let y = window.innerHeight / 2;
 
-const storyScenes = [...document.querySelectorAll("[data-story-scene]")].map((section) => ({
-    section,
-    media: section.querySelector(".story-media"),
-    copy: section.querySelector(".story-copy"),
-    copyShiftStart: section.classList.contains("story-section--reverse") ? 72 : -72
-}));
+            if (toggleRoot) {
+                const rect = toggleRoot.getBoundingClientRect();
+                x = rect.left + rect.width / 2;
+                y = rect.top + rect.height / 2;
+            }
 
-let sceneMeasurements = [];
-let storyTicking = false;
+            rootElement.style.setProperty("--x", `${x}px`);
+            rootElement.style.setProperty("--y", `${y}px`);
 
-const canAnimateScenes = () => !prefersReducedMotion && window.innerWidth > 1080;
+            if (!document.startViewTransition || prefersReducedMotion) {
+                applyThemeState(isDark);
+                window.requestAnimationFrame(() => {
+                    updateStoryScenes();
+                });
+                return;
+            }
 
-const resetStoryScene = (scene) => {
-    if (!scene.media || !scene.copy) {
-        return;
-    }
+            const transition = document.startViewTransition(() => {
+                applyThemeState(isDark);
+            });
 
-    scene.media.style.transform = "none";
-    scene.media.style.borderRadius = "";
-    scene.media.style.boxShadow = "";
-    scene.copy.style.setProperty("--story-copy-opacity", "1");
-    scene.copy.style.setProperty("--story-copy-shift-x", "0px");
-    scene.copy.style.setProperty("--story-copy-shift-y", "0px");
-};
-
-const measureStoryScenes = () => {
-    sceneMeasurements = [];
-
-    if (!canAnimateScenes()) {
-        storyScenes.forEach(resetStoryScene);
-        return;
-    }
-
-    for (const scene of storyScenes) {
-        if (!scene.media || !scene.copy) {
-            continue;
-        }
-
-        resetStoryScene(scene);
-
-        const finalRect = scene.media.getBoundingClientRect();
-        if (!finalRect.width || !finalRect.height) {
-            continue;
-        }
-
-        const edgeInset = Math.max(24, window.innerWidth * 0.035);
-        const mediaAspect = finalRect.width / finalRect.height;
-        const maxWidthByHeight = (window.innerHeight - edgeInset * 2) * mediaAspect;
-        const startWidth = Math.min(window.innerWidth - edgeInset * 2, maxWidthByHeight, 1440);
-        const startHeight = startWidth / mediaAspect;
-        const startCenterX = window.innerWidth / 2;
-        const startCenterY = window.innerHeight / 2 + Math.min(18, window.innerHeight * 0.02);
-        const finalCenterX = finalRect.left + finalRect.width / 2;
-        const finalCenterY = finalRect.top + finalRect.height / 2;
-
-        sceneMeasurements.push({
-            ...scene,
-            startTranslateX: startCenterX - finalCenterX,
-            startTranslateY: startCenterY - finalCenterY,
-            startScale: startWidth / finalRect.width
+            transition.finished.finally(() => {
+                measureStoryScenes();
+            });
         });
     }
 
-    updateStoryScenes();
-};
-
-const updateStoryScenes = () => {
-    if (!canAnimateScenes()) {
-        storyScenes.forEach(resetStoryScene);
-        return;
-    }
-
-    for (const scene of sceneMeasurements) {
-        const rect = scene.section.getBoundingClientRect();
-        const rawProgress = clamp(-rect.top / Math.max(1, rect.height - window.innerHeight), 0, 1);
-        const mediaProgress = easeInOutCubic(clamp((rawProgress - 0.03) / 0.67, 0, 1));
-        const copyProgress = easeOutCubic(clamp((rawProgress - 0.18) / 0.36, 0, 1));
-        const translateX = lerp(scene.startTranslateX, 0, mediaProgress);
-        const translateY = lerp(scene.startTranslateY, 0, mediaProgress);
-        const scale = lerp(scene.startScale, 1, mediaProgress);
-        const copyShiftX = lerp(scene.copyShiftStart, 0, copyProgress);
-        const copyShiftY = lerp(28, 0, copyProgress);
-        const shadowY = lerp(64, 36, mediaProgress);
-        const shadowBlur = lerp(160, 100, mediaProgress);
-        const shadowAlpha = lerp(0.22, 0.12, mediaProgress);
-
-        scene.media.style.transform = `translate3d(${translateX.toFixed(2)}px, ${translateY.toFixed(2)}px, 0) scale(${scale.toFixed(4)})`;
-        scene.media.style.borderRadius = `${lerp(30, 18, mediaProgress).toFixed(2)}px`;
-        scene.media.style.boxShadow = `0 ${shadowY.toFixed(2)}px ${shadowBlur.toFixed(2)}px rgba(18, 26, 46, ${shadowAlpha.toFixed(3)})`;
-        scene.copy.style.setProperty("--story-copy-opacity", copyProgress.toFixed(3));
-        scene.copy.style.setProperty("--story-copy-shift-x", `${copyShiftX.toFixed(2)}px`);
-        scene.copy.style.setProperty("--story-copy-shift-y", `${copyShiftY.toFixed(2)}px`);
-    }
-};
-
-const queueStoryUpdate = () => {
-    if (storyTicking) {
-        return;
-    }
-
-    storyTicking = true;
-    window.requestAnimationFrame(() => {
-        updateStoryScenes();
-        storyTicking = false;
+    const revealObserver = new IntersectionObserver((entries) => {
+        for (const entry of entries) {
+            if (entry.isIntersecting) {
+                entry.target.classList.add("is-visible");
+            }
+        }
+    }, {
+        threshold: 0.14,
+        rootMargin: "0px 0px -10% 0px"
     });
-};
 
-window.addEventListener("resize", measureStoryScenes, { passive: true });
-window.addEventListener("scroll", queueStoryUpdate, { passive: true });
-window.addEventListener("load", measureStoryScenes, { once: true });
-
-if (document.fonts?.ready) {
-    document.fonts.ready.then(() => {
-        measureStoryScenes();
+    document.querySelectorAll(".reveal").forEach((element) => {
+        revealObserver.observe(element);
     });
-}
 
-measureStoryScenes();
+    const videoObserver = new IntersectionObserver((entries) => {
+        for (const entry of entries) {
+            const video = entry.target;
+            const start = Number(video.dataset.start || "0");
 
-if (header) {
-    let lastScrollY = window.scrollY;
-    let isTicking = false;
+            if (entry.isIntersecting) {
+                if (video.dataset.ready === "true" && video.currentTime < start) {
+                    video.currentTime = start;
+                }
 
-    const updateHeader = () => {
-        const currentScrollY = window.scrollY;
-        const scrollingDown = currentScrollY > lastScrollY;
+                if (!prefersReducedMotion) {
+                    video.play().catch(() => {});
+                }
+            } else {
+                video.pause();
+            }
+        }
+    }, {
+        threshold: 0.42
+    });
 
-        header.classList.toggle("site-header--scrolled", currentScrollY > 16);
+    document.querySelectorAll(".demo-video").forEach((video) => {
+        const start = Number(video.dataset.start || "0");
 
-        if (!prefersReducedMotion && currentScrollY > 120 && scrollingDown) {
-            header.classList.add("site-header--hidden");
-        } else {
-            header.classList.remove("site-header--hidden");
+        const seekToStart = () => {
+            try {
+                if (video.duration && start < video.duration) {
+                    video.currentTime = start;
+                }
+                video.dataset.ready = "true";
+
+                if (!prefersReducedMotion) {
+                    video.play().catch(() => {});
+                }
+            } catch {
+                video.dataset.ready = "true";
+            }
+        };
+
+        video.addEventListener("loadedmetadata", seekToStart, { once: true });
+        video.addEventListener("ended", () => {
+            video.currentTime = start;
+            if (!prefersReducedMotion) {
+                video.play().catch(() => {});
+            }
+        });
+
+        videoObserver.observe(video);
+    });
+
+    const storyScenes = [...document.querySelectorAll("[data-story-scene]")].map((section) => ({
+        section,
+        media: section.querySelector(".story-media"),
+        copy: section.querySelector(".story-copy"),
+        copyShiftStart: section.classList.contains("story-scene--reverse") ? 78 : -78
+    }));
+
+    let sceneMeasurements = [];
+    let storyTicking = false;
+
+    const canAnimateScenes = () => !prefersReducedMotion && window.innerWidth > 1080;
+
+    const resetStoryScene = (scene) => {
+        if (!scene.media || !scene.copy) {
+            return;
         }
 
-        lastScrollY = currentScrollY;
-        isTicking = false;
+        scene.media.style.transform = "none";
+        scene.media.style.borderRadius = "";
+        scene.media.style.boxShadow = "";
+        scene.copy.style.setProperty("--story-copy-opacity", "1");
+        scene.copy.style.setProperty("--story-copy-shift-x", "0px");
+        scene.copy.style.setProperty("--story-copy-shift-y", "0px");
     };
 
-    window.addEventListener("scroll", () => {
-        if (!isTicking) {
-            window.requestAnimationFrame(updateHeader);
-            isTicking = true;
+    const updateStoryScenes = () => {
+        if (!canAnimateScenes()) {
+            storyScenes.forEach(resetStoryScene);
+            return;
         }
-    }, { passive: true });
 
-    updateHeader();
-}
+        for (const scene of sceneMeasurements) {
+            const rect = scene.section.getBoundingClientRect();
+            const rawProgress = clamp(-rect.top / Math.max(1, rect.height - window.innerHeight), 0, 1);
+            const mediaProgress = easeInOutCubic(clamp((rawProgress - 0.03) / 0.68, 0, 1));
+            const copyProgress = easeOutCubic(clamp((rawProgress - 0.2) / 0.34, 0, 1));
+            const translateX = lerp(scene.startTranslateX, 0, mediaProgress);
+            const translateY = lerp(scene.startTranslateY, 0, mediaProgress);
+            const scale = lerp(scene.startScale, 1, mediaProgress);
+            const copyShiftX = lerp(scene.copyShiftStart, 0, copyProgress);
+            const copyShiftY = lerp(32, 0, copyProgress);
+            const shadowY = lerp(60, 26, mediaProgress);
+            const shadowBlur = lerp(140, 80, mediaProgress);
+            const shadowAlpha = rootElement.classList.contains("dark")
+                ? lerp(0.44, 0.28, mediaProgress)
+                : lerp(0.11, 0.06, mediaProgress);
+
+            scene.media.style.transform = `translate3d(${translateX.toFixed(2)}px, ${translateY.toFixed(2)}px, 0) scale(${scale.toFixed(4)})`;
+            scene.media.style.borderRadius = `${lerp(18, 0, mediaProgress).toFixed(2)}px`;
+            scene.media.style.boxShadow = `0 ${shadowY.toFixed(2)}px ${shadowBlur.toFixed(2)}px rgba(15, 18, 29, ${shadowAlpha.toFixed(3)})`;
+            scene.copy.style.setProperty("--story-copy-opacity", copyProgress.toFixed(3));
+            scene.copy.style.setProperty("--story-copy-shift-x", `${copyShiftX.toFixed(2)}px`);
+            scene.copy.style.setProperty("--story-copy-shift-y", `${copyShiftY.toFixed(2)}px`);
+        }
+    };
+
+    const measureStoryScenes = () => {
+        sceneMeasurements = [];
+
+        if (!canAnimateScenes()) {
+            storyScenes.forEach(resetStoryScene);
+            return;
+        }
+
+        for (const scene of storyScenes) {
+            if (!scene.media || !scene.copy) {
+                continue;
+            }
+
+            resetStoryScene(scene);
+
+            const finalRect = scene.media.getBoundingClientRect();
+            if (!finalRect.width || !finalRect.height) {
+                continue;
+            }
+
+            const edgeInset = Math.max(24, window.innerWidth * 0.03);
+            const mediaAspect = finalRect.width / finalRect.height;
+            const maxWidthByHeight = (window.innerHeight - edgeInset * 2) * mediaAspect;
+            const startWidth = Math.min(window.innerWidth - edgeInset * 2, maxWidthByHeight, 1480);
+            const startCenterX = window.innerWidth / 2;
+            const startCenterY = window.innerHeight / 2;
+            const finalCenterX = finalRect.left + finalRect.width / 2;
+            const finalCenterY = finalRect.top + finalRect.height / 2;
+
+            sceneMeasurements.push({
+                ...scene,
+                startTranslateX: startCenterX - finalCenterX,
+                startTranslateY: startCenterY - finalCenterY,
+                startScale: startWidth / finalRect.width
+            });
+        }
+
+        updateStoryScenes();
+    };
+
+    const queueStoryUpdate = () => {
+        if (storyTicking) {
+            return;
+        }
+
+        storyTicking = true;
+        window.requestAnimationFrame(() => {
+            updateStoryScenes();
+            storyTicking = false;
+        });
+    };
+
+    window.addEventListener("resize", measureStoryScenes, { passive: true });
+    window.addEventListener("scroll", queueStoryUpdate, { passive: true });
+    window.addEventListener("load", measureStoryScenes, { once: true });
+
+    if (document.fonts?.ready) {
+        document.fonts.ready.then(() => {
+            measureStoryScenes();
+        });
+    }
+
+    measureStoryScenes();
+
+    if (header) {
+        let lastScrollY = window.scrollY;
+        let headerTicking = false;
+
+        const updateHeader = () => {
+            const currentScrollY = window.scrollY;
+            const scrollingDown = currentScrollY > lastScrollY;
+
+            if (!prefersReducedMotion && currentScrollY > 110 && scrollingDown) {
+                header.classList.add("site-header--hidden");
+            } else {
+                header.classList.remove("site-header--hidden");
+            }
+
+            lastScrollY = currentScrollY;
+            headerTicking = false;
+        };
+
+        window.addEventListener("scroll", () => {
+            if (!headerTicking) {
+                window.requestAnimationFrame(updateHeader);
+                headerTicking = true;
+            }
+        }, { passive: true });
+
+        updateHeader();
+    }
+});
