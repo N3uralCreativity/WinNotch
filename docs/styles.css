@@ -85,6 +85,50 @@ body::before {
     mask-image: linear-gradient(180deg, transparent 0%, black 20%, black 80%, transparent 100%);
 }
 
+html.theme-transitioning *,
+html.theme-transitioning *::before,
+html.theme-transitioning *::after {
+    transition: none !important;
+}
+
+html.theme-transitioning .hero__word {
+    animation-play-state: paused;
+}
+
+.theme-transition-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 120;
+    pointer-events: none;
+    opacity: 1;
+    clip-path: circle(0px at var(--theme-x, 50%) var(--theme-y, 50%));
+    background:
+        radial-gradient(circle at 50% 0%, rgba(109, 141, 255, 0.08), transparent 24%),
+        #f6f7fb;
+    will-change: clip-path, opacity;
+}
+
+.theme-transition-overlay::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(90deg, transparent calc(50% - 1px), rgba(126, 136, 175, 0.18) calc(50% - 1px), rgba(126, 136, 175, 0.18) calc(50% + 1px), transparent calc(50% + 1px));
+    opacity: 0.34;
+    mask-image: linear-gradient(180deg, transparent 0%, black 20%, black 80%, transparent 100%);
+}
+
+.theme-transition-overlay[data-theme="dark"] {
+    background:
+        radial-gradient(circle at 50% 0%, rgba(109, 141, 255, 0.18), transparent 24%),
+        #090b10;
+}
+
+.theme-transition-overlay[data-theme="dark"]::before {
+    background:
+        linear-gradient(90deg, transparent calc(50% - 1px), rgba(255, 255, 255, 0.08) calc(50% - 1px), rgba(255, 255, 255, 0.08) calc(50% + 1px), transparent calc(50% + 1px));
+}
+
 a,
 button,
 input {
@@ -657,41 +701,6 @@ html.dark .video-shell--hud {
     50% {
         background-position: 22px 16px, -14px 26px, 0 0;
     }
-}
-
-@keyframes reveal-in {
-    from {
-        clip-path: circle(0% at var(--x) var(--y));
-    }
-    to {
-        clip-path: circle(150% at var(--x) var(--y));
-    }
-}
-
-@keyframes reveal-out {
-    from {
-        clip-path: circle(150% at var(--x) var(--y));
-    }
-    to {
-        clip-path: circle(0% at var(--x) var(--y));
-    }
-}
-
-::view-transition-new(root) {
-    animation: reveal-in 0.5s ease-in-out forwards;
-    z-index: 1;
-    mix-blend-mode: normal;
-}
-
-::view-transition-old(root) {
-    animation: reveal-out 0.5s ease-in-out forwards;
-    animation-delay: 0.5s;
-    z-index: 0;
-    mix-blend-mode: normal;
-}
-
-::view-transition-image-pair(root) {
-    isolation: isolate;
 }
 
 @media (max-width: 1080px) {

@@ -13,6 +13,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const themeColorMeta = document.querySelector('meta[name="theme-color"]');
     const header = document.querySelector(".site-header");
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let themeTransitionActive = false;
     const themeColors = {
         light: "#f6f7fb",
         dark: "#090b10"
@@ -39,6 +40,118 @@ document.addEventListener("DOMContentLoaded", () => {
     const initialDark = savedTheme ? savedTheme === "dark" : prefersDark;
     applyThemeState(initialDark, false);
 
+    const pauseThemeVideos = () => {
+        if (prefersReducedMotion) {
+            return [];
+        }
+
+        const activeVideos = [];
+        document.querySelectorAll(".demo-video").forEach((video) => {
+            if (!video.paused) {
+                video.pause();
+                activeVideos.push(video);
+            }
+        });
+
+        return activeVideos;
+    };
+
+    const resumeThemeVideos = (videos) => {
+        if (prefersReducedMotion) {
+            return;
+        }
+
+        videos.forEach((video) => {
+            if (video.dataset.ready === "true") {
+                video.play().catch(() => {});
+            }
+        });
+    };
+
+    const createThemeOverlay = (isDark, x, y) => {
+        const overlay = document.createElement("div");
+        overlay.className = "theme-transition-overlay";
+        overlay.dataset.theme = isDark ? "dark" : "light";
+        overlay.style.setProperty("--theme-x", `${x}px`);
+        overlay.style.setProperty("--theme-y", `${y}px`);
+        document.body.appendChild(overlay);
+        return overlay;
+    };
+
+    const runThemeTransition = async (isDark, x, y) => {
+        if (themeTransitionActive) {
+            return;
+        }
+
+        themeTransitionActive = true;
+
+        if (themeToggle) {
+            themeToggle.disabled = true;
+        }
+
+        const activeVideos = pauseThemeVideos();
+        rootElement.classList.add("theme-transitioning");
+
+        if (prefersReducedMotion) {
+            applyThemeState(isDark);
+            measureStoryScenes();
+            rootElement.classList.remove("theme-transitioning");
+            resumeThemeVideos(activeVideos);
+
+            if (themeToggle) {
+                themeToggle.disabled = false;
+            }
+
+            themeTransitionActive = false;
+            return;
+        }
+
+        const overlay = createThemeOverlay(isDark, x, y);
+        const maxRadius = Math.hypot(
+            Math.max(x, window.innerWidth - x),
+            Math.max(y, window.innerHeight - y)
+        );
+
+        try {
+            await overlay.animate([
+                {
+                    clipPath: `circle(0px at ${x}px ${y}px)`,
+                    opacity: 1
+                },
+                {
+                    clipPath: `circle(${maxRadius}px at ${x}px ${y}px)`,
+                    opacity: 1
+                }
+            ], {
+                duration: 420,
+                easing: "cubic-bezier(0.2, 0.9, 0.18, 1)",
+                fill: "forwards"
+            }).finished;
+
+            applyThemeState(isDark);
+            measureStoryScenes();
+
+            await overlay.animate([
+                { opacity: 1 },
+                { opacity: 0 }
+            ], {
+                duration: 220,
+                easing: "ease-out",
+                fill: "forwards"
+            }).finished;
+        } finally {
+            overlay.remove();
+            rootElement.classList.remove("theme-transitioning");
+            resumeThemeVideos(activeVideos);
+
+            if (themeToggle) {
+                themeToggle.disabled = false;
+            }
+
+            themeTransitionActive = false;
+        }
+    };
+
     if (themeToggle) {
         themeToggle.addEventListener("input", () => {
             const isDark = themeToggle.checked;
@@ -54,22 +167,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             rootElement.style.setProperty("--x", `${x}px`);
             rootElement.style.setProperty("--y", `${y}px`);
-
-            if (!document.startViewTransition || prefersReducedMotion) {
-                applyThemeState(isDark);
-                window.requestAnimationFrame(() => {
-                    updateStoryScenes();
-                });
-                return;
-            }
-
-            const transition = document.startViewTransition(() => {
-                applyThemeState(isDark);
-            });
-
-            transition.finished.finally(() => {
-                measureStoryScenes();
-            });
+            void runThemeTransition(isDark, x, y);
         });
     }
 
