@@ -535,6 +535,23 @@ public class HelloWorldPlugin : PluginBase, IUIPlugin
                     <p>
                         Build the plugin, copy the DLL into <code>%AppData%\WinNotch\Plugins\com.winnotch.helloworld\</code>, then restart WinNotch.
                     </p>
+
+                    <h3 class="doc-subheading">Alternative: consume the Plugin SDK package</h3>
+                    <p>
+                        If you do not want to clone the full WinNotch repository just to compile a plugin, use the GitHub Packages SDK package instead. It exposes the official WinNotch assembly as a compile-time package for plugin authors.
+                    </p>
+
+                    <pre><code class="language-bash">dotnet nuget add source "https://nuget.pkg.github.com/N3uralCreativity/index.json" \
+  --name github-winnotch \
+  --username YOUR_GITHUB_USERNAME \
+  --password YOUR_GITHUB_PAT \
+  --store-password-in-clear-text
+
+dotnet add package WinNotch.PluginSdk --version 0.5.3 --source github-winnotch</code></pre>
+
+                    <p>
+                        Use a personal access token with <code>read:packages</code>, and remember that this package is for developers only. End users should still install the WinNotch app from Releases.
+                    </p>
                 </section>
 
                 <section class="doc-section" id="ui-plugins" data-doc-section>

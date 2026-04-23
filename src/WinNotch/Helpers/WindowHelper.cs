@@ -47,9 +47,6 @@ public static class WindowHelper
     }
 
     /// <summary>
-    /// Enables acrylic blur-behind effect on the window.
-    /// <paramref name="tintColor"/> is AABBGGRR (e.g. 0x40FFFFFF = 25% white tint).
-    /// <summary>
     /// Excludes the window from screen capture APIs (BitBlt, CopyFromScreen, etc.).
     /// The window remains visible on the actual display but invisible to capture.
     /// Requires Windows 10 2004+ (build 19041).

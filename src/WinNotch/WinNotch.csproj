@@ -21,6 +21,9 @@
     <Company>N3uralCreativity</Company>
     <Copyright>Copyright © 2026 N3uralCreativity. Licensed under GPL-3.0.</Copyright>
 
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);1591</NoWarn>
+
     <!-- Publish settings (applied only via: dotnet publish -c Release) -->
     <PublishSingleFile Condition="'$(Configuration)' == 'Release'">true</PublishSingleFile>
     <SelfContained Condition="'$(Configuration)' == 'Release'">true</SelfContained>
