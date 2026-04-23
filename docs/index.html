@@ -77,7 +77,7 @@
 
                         <div class="hero__actions">
                             <a class="header-button" href="https://github.com/N3uralCreativity/WinNotch/releases/latest" target="_blank" rel="noreferrer" data-winnotch-download>Download for Windows</a>
-                            <a class="header-link header-link--inline" href="https://github.com/N3uralCreativity/WinNotch-Plugins" target="_blank" rel="noreferrer">Browse plugins</a>
+                            <button class="header-link header-link--inline plugin-library-trigger" type="button" data-open-plugin-library>Browse plugins</button>
                         </div>
 
                         <ul class="hero__facts" aria-label="WinNotch facts">
@@ -312,6 +312,79 @@
             </div>
         </section>
     </main>
+
+    <div class="plugin-library-modal" data-plugin-library-modal hidden>
+        <div class="plugin-library-modal__backdrop" data-close-plugin-library></div>
+
+        <section class="plugin-library-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="plugin-library-title">
+            <header class="plugin-library-modal__header">
+                <div>
+                    <p class="section-kicker">Plugin library</p>
+                    <h2 id="plugin-library-title">Browse the live WinNotch plugin catalog.</h2>
+                    <p class="plugin-library-modal__lede" data-plugin-library-subtitle>Loading the latest published plugins from the official WinNotch library.</p>
+                </div>
+
+                <div class="plugin-library-modal__actions">
+                    <a class="header-link header-link--inline plugin-library-modal__repo" href="https://github.com/N3uralCreativity/WinNotch-Plugins" target="_blank" rel="noreferrer">Open repository</a>
+                    <button class="plugin-library-modal__close" type="button" aria-label="Close plugin library" data-close-plugin-library>
+                        <span></span>
+                        <span></span>
+                    </button>
+                </div>
+            </header>
+
+            <div class="plugin-library-modal__body">
+                <div class="plugin-library-modal__loading" data-plugin-library-loading>
+                    <div class="plugin-library-modal__spinner" aria-hidden="true"></div>
+                    <div class="plugin-library-modal__loading-copy">
+                        <strong>Loading plugins</strong>
+                        <p>Fetching the latest published entries from the official browser library.</p>
+                    </div>
+
+                    <div class="plugin-library-modal__skeletons" aria-hidden="true">
+                        <article class="plugin-library-skeleton">
+                            <span class="plugin-library-skeleton__line plugin-library-skeleton__line--kicker"></span>
+                            <span class="plugin-library-skeleton__line plugin-library-skeleton__line--title"></span>
+                            <span class="plugin-library-skeleton__line plugin-library-skeleton__line--body"></span>
+                            <span class="plugin-library-skeleton__line plugin-library-skeleton__line--body short"></span>
+                            <div class="plugin-library-skeleton__actions">
+                                <span class="plugin-library-skeleton__pill"></span>
+                                <span class="plugin-library-skeleton__pill"></span>
+                            </div>
+                        </article>
+                        <article class="plugin-library-skeleton">
+                            <span class="plugin-library-skeleton__line plugin-library-skeleton__line--kicker"></span>
+                            <span class="plugin-library-skeleton__line plugin-library-skeleton__line--title"></span>
+                            <span class="plugin-library-skeleton__line plugin-library-skeleton__line--body"></span>
+                            <span class="plugin-library-skeleton__line plugin-library-skeleton__line--body short"></span>
+                            <div class="plugin-library-skeleton__actions">
+                                <span class="plugin-library-skeleton__pill"></span>
+                                <span class="plugin-library-skeleton__pill"></span>
+                            </div>
+                        </article>
+                        <article class="plugin-library-skeleton">
+                            <span class="plugin-library-skeleton__line plugin-library-skeleton__line--kicker"></span>
+                            <span class="plugin-library-skeleton__line plugin-library-skeleton__line--title"></span>
+                            <span class="plugin-library-skeleton__line plugin-library-skeleton__line--body"></span>
+                            <span class="plugin-library-skeleton__line plugin-library-skeleton__line--body short"></span>
+                            <div class="plugin-library-skeleton__actions">
+                                <span class="plugin-library-skeleton__pill"></span>
+                                <span class="plugin-library-skeleton__pill"></span>
+                            </div>
+                        </article>
+                    </div>
+                </div>
+
+                <div class="plugin-library-modal__error" data-plugin-library-error hidden>
+                    <strong>Plugin library unavailable right now.</strong>
+                    <p>The live list could not be loaded from the WinNotch plugin repository. You can still open the repository directly.</p>
+                    <a class="header-button" href="https://github.com/N3uralCreativity/WinNotch-Plugins" target="_blank" rel="noreferrer">Open WinNotch-Plugins</a>
+                </div>
+
+                <div class="plugin-library-modal__grid" data-plugin-library-grid hidden></div>
+            </div>
+        </section>
+    </div>
 
     <footer class="site-footer">
         <span>WinNotch</span>

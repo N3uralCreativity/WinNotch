@@ -13,8 +13,18 @@ document.addEventListener("DOMContentLoaded", () => {
     const themeColorMeta = document.querySelector('meta[name="theme-color"]');
     const header = document.querySelector(".site-header");
     const downloadLinks = [...document.querySelectorAll("[data-winnotch-download]")];
+    const pluginLibraryTriggers = [...document.querySelectorAll("[data-open-plugin-library]")];
+    const pluginLibraryModal = document.querySelector("[data-plugin-library-modal]");
+    const pluginLibraryGrid = pluginLibraryModal?.querySelector("[data-plugin-library-grid]");
+    const pluginLibraryLoading = pluginLibraryModal?.querySelector("[data-plugin-library-loading]");
+    const pluginLibraryError = pluginLibraryModal?.querySelector("[data-plugin-library-error]");
+    const pluginLibrarySubtitle = pluginLibraryModal?.querySelector("[data-plugin-library-subtitle]");
+    const pluginLibraryClosers = [...document.querySelectorAll("[data-close-plugin-library]")];
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let themeTransitionActive = false;
+    let pluginLibraryCache = null;
+    let pluginLibraryFetchPromise = null;
+    let lastPluginLibraryTrigger = null;
     const themeColors = {
         light: "#f6f7fb",
         dark: "#090b10"
@@ -79,6 +89,170 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     void resolveLatestInstaller();
+
+    const escapeHtml = (value) => String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+
+    const formatPluginDate = (value) => {
+        if (!value) {
+            return "";
+        }
+
+        const parsed = new Date(value);
+        if (Number.isNaN(parsed.getTime())) {
+            return "";
+        }
+
+        return new Intl.DateTimeFormat("en", {
+            month: "short",
+            day: "numeric",
+            year: "numeric"
+        }).format(parsed);
+    };
+
+    const renderPluginLibraryCards = (plugins) => {
+        if (!pluginLibraryGrid) {
+            return;
+        }
+
+        pluginLibraryGrid.innerHTML = plugins.map((plugin) => {
+            const permissions = Array.isArray(plugin.permissions) ? plugin.permissions.filter(Boolean) : [];
+            const released = formatPluginDate(plugin.releaseDate);
+            const metaBadges = [
+                `Min WinNotch ${escapeHtml(plugin.minimumWinNotchVersion || "n/a")}`,
+                escapeHtml(plugin.author || "Unknown author"),
+                ...(permissions.length ? [`Permissions: ${escapeHtml(permissions.join(", "))}`] : []),
+                ...(released ? [`Released ${escapeHtml(released)}`] : [])
+            ];
+
+            return `
+                <article class="plugin-library-card">
+                    <div class="plugin-library-card__top">
+                        <div class="plugin-library-card__eyebrow">
+                            <p>${escapeHtml(plugin.category || "Other")}</p>
+                            ${plugin.isVerified ? '<span class="plugin-library-card__verified">Verified</span>' : ""}
+                        </div>
+
+                        <div class="plugin-library-card__title">
+                            <h3>${escapeHtml(plugin.name || "Unnamed plugin")}</h3>
+                            <span class="plugin-library-card__version">v${escapeHtml(plugin.version || "0.0.0")}</span>
+                        </div>
+
+                        <p class="plugin-library-card__description">${escapeHtml(plugin.description || "No description provided.")}</p>
+                    </div>
+
+                    <div class="plugin-library-card__meta">
+                        ${metaBadges.map((badge) => `<span>${badge}</span>`).join("")}
+                    </div>
+
+                    <div class="plugin-library-card__actions">
+                        <a class="plugin-library-card__action" href="${escapeHtml(plugin.downloadUrl || "#")}" target="_blank" rel="noreferrer">Download DLL</a>
+                        <a class="plugin-library-card__action plugin-library-card__action--ghost" href="${escapeHtml(plugin.homepage || "https://github.com/N3uralCreativity/WinNotch-Plugins")}" target="_blank" rel="noreferrer">Open page</a>
+                    </div>
+                </article>
+            `;
+        }).join("");
+    };
+
+    const setPluginLibraryView = (state, plugins = []) => {
+        if (!pluginLibraryLoading || !pluginLibraryError || !pluginLibraryGrid || !pluginLibrarySubtitle) {
+            return;
+        }
+
+        pluginLibraryLoading.hidden = state !== "loading";
+        pluginLibraryError.hidden = state !== "error";
+        pluginLibraryGrid.hidden = state !== "ready";
+
+        if (state === "ready") {
+            renderPluginLibraryCards(plugins);
+            pluginLibrarySubtitle.textContent = `${plugins.length} published plugins currently available in the official WinNotch browser library.`;
+        } else if (state === "error") {
+            pluginLibrarySubtitle.textContent = "The live library could not be loaded right now. You can still open the repository directly.";
+        } else {
+            pluginLibrarySubtitle.textContent = "Loading the latest published plugins from the official WinNotch library.";
+        }
+    };
+
+    const loadPluginLibrary = async () => {
+        if (pluginLibraryCache) {
+            return pluginLibraryCache;
+        }
+
+        if (pluginLibraryFetchPromise) {
+            return pluginLibraryFetchPromise;
+        }
+
+        pluginLibraryFetchPromise = fetch(`https://raw.githubusercontent.com/N3uralCreativity/WinNotch-Plugins/main/library.json?v=${Date.now()}`)
+            .then((response) => {
+                if (!response.ok) {
+                    throw new Error(`Plugin library request failed with ${response.status}`);
+                }
+
+                return response.json();
+            })
+            .then((library) => {
+                const plugins = Array.isArray(library.plugins) ? library.plugins : [];
+                pluginLibraryCache = plugins;
+                return plugins;
+            })
+            .finally(() => {
+                pluginLibraryFetchPromise = null;
+            });
+
+        return pluginLibraryFetchPromise;
+    };
+
+    const openPluginLibrary = async (trigger) => {
+        if (!pluginLibraryModal) {
+            return;
+        }
+
+        lastPluginLibraryTrigger = trigger ?? document.activeElement;
+        pluginLibraryModal.hidden = false;
+        document.body.classList.add("plugin-library-open");
+        setPluginLibraryView("loading");
+
+        try {
+            const plugins = await loadPluginLibrary();
+            setPluginLibraryView("ready", plugins);
+        } catch (error) {
+            console.warn("WinNotch plugin library modal fallback in use.", error);
+            setPluginLibraryView("error");
+        }
+    };
+
+    const closePluginLibrary = () => {
+        if (!pluginLibraryModal || pluginLibraryModal.hidden) {
+            return;
+        }
+
+        pluginLibraryModal.hidden = true;
+        document.body.classList.remove("plugin-library-open");
+
+        if (lastPluginLibraryTrigger instanceof HTMLElement) {
+            lastPluginLibraryTrigger.focus({ preventScroll: true });
+        }
+    };
+
+    pluginLibraryTriggers.forEach((trigger) => {
+        trigger.addEventListener("click", () => {
+            void openPluginLibrary(trigger);
+        });
+    });
+
+    pluginLibraryClosers.forEach((closer) => {
+        closer.addEventListener("click", closePluginLibrary);
+    });
+
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+            closePluginLibrary();
+        }
+    });
 
     const pauseThemeVideos = () => {
         if (prefersReducedMotion) {
