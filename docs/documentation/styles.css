@@ -654,8 +654,12 @@ pre[class*="language-"] {
 
 html.dark pre[class*="language-"] {
     background: #0d1117;
-    color: #d6e2f2;
+    color: #e6edf3 !important;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+html.dark code[class*="language-"] {
+    color: #e6edf3 !important;
 }
 
 pre[class*="language-"],
@@ -683,7 +687,7 @@ html.dark .token.comment,
 html.dark .token.prolog,
 html.dark .token.doctype,
 html.dark .token.cdata {
-    color: #7f8ca1;
+    color: #7f8ca1 !important;
 }
 
 .token.punctuation {
@@ -691,7 +695,7 @@ html.dark .token.cdata {
 }
 
 html.dark .token.punctuation {
-    color: #a2aec2;
+    color: #a2aec2 !important;
 }
 
 .token.property,
@@ -707,7 +711,7 @@ html.dark .token.tag,
 html.dark .token.constant,
 html.dark .token.symbol,
 html.dark .token.deleted {
-    color: #ff7aa2;
+    color: #ff7aa2 !important;
 }
 
 .token.boolean,
@@ -717,7 +721,7 @@ html.dark .token.deleted {
 
 html.dark .token.boolean,
 html.dark .token.number {
-    color: #b98dff;
+    color: #b98dff !important;
 }
 
 .token.selector,
@@ -735,7 +739,7 @@ html.dark .token.string,
 html.dark .token.char,
 html.dark .token.builtin,
 html.dark .token.inserted {
-    color: #7ee787;
+    color: #7ee787 !important;
 }
 
 .token.operator,
@@ -751,7 +755,7 @@ html.dark .token.entity,
 html.dark .token.url,
 html.dark .language-css .token.string,
 html.dark .style .token.string {
-    color: #79c0ff;
+    color: #79c0ff !important;
 }
 
 .token.atrule,
@@ -763,7 +767,7 @@ html.dark .style .token.string {
 html.dark .token.atrule,
 html.dark .token.attr-value,
 html.dark .token.keyword {
-    color: #79c0ff;
+    color: #79c0ff !important;
 }
 
 .token.function,
@@ -773,7 +777,7 @@ html.dark .token.keyword {
 
 html.dark .token.function,
 html.dark .token.class-name {
-    color: #f2cc60;
+    color: #f2cc60 !important;
 }
 
 .token.regex,
@@ -785,7 +789,19 @@ html.dark .token.class-name {
 html.dark .token.regex,
 html.dark .token.important,
 html.dark .token.variable {
-    color: #ffa657;
+    color: #ffa657 !important;
+}
+
+html.dark .token.namespace,
+html.dark .token.parameter,
+html.dark .token.parameter-type,
+html.dark .token.interpolation,
+html.dark .token.interpolation-punctuation,
+html.dark .token.maybe-class-name,
+html.dark .token.console,
+html.dark .token.module,
+html.dark .token.plain-text {
+    color: #e6edf3 !important;
 }
 
 .token.bold {
