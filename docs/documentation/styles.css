@@ -660,6 +660,9 @@ html.dark pre[class*="language-"] {
 
 pre[class*="language-"],
 code[class*="language-"] {
+    font-family: Consolas, "JetBrains Mono", monospace;
+    font-weight: 500;
+    letter-spacing: 0;
     text-shadow: none;
     white-space: pre;
     word-spacing: normal;
