@@ -826,6 +826,12 @@ html.dark .plugin-library-modal__dialog {
     gap: 1.5rem;
 }
 
+.plugin-library-modal__loading[hidden],
+.plugin-library-modal__error[hidden],
+.plugin-library-modal__grid[hidden] {
+    display: none !important;
+}
+
 .plugin-library-modal__spinner {
     width: 4.8rem;
     height: 4.8rem;
