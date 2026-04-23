@@ -11,6 +11,23 @@ document.addEventListener("DOMContentLoaded", () => {
         dark: "#0f1116"
     };
 
+    document.querySelectorAll("pre > code[class*='language-']").forEach((codeBlock) => {
+        const pre = codeBlock.parentElement;
+        if (!pre) {
+            return;
+        }
+
+        codeBlock.className.split(/\s+/).forEach((className) => {
+            if (className.startsWith("language-")) {
+                pre.classList.add(className);
+            }
+        });
+    });
+
+    if (window.Prism?.highlightAll) {
+        window.Prism.highlightAll();
+    }
+
     const applyThemeState = (isDark, persist = true) => {
         rootElement.classList.toggle("dark", isDark);
 

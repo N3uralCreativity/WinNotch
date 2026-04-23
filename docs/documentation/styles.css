@@ -122,17 +122,20 @@ code {
 }
 
 pre {
-    margin: 1.25rem 0 0;
+    margin: 0;
     overflow-x: auto;
-    padding: 1.2rem 1.25rem;
-    border: 1px solid var(--line);
-    background: var(--surface-strong);
-    color: var(--text-soft);
     line-height: 1.65;
 }
 
 pre code {
     font-size: 0.9rem;
+}
+
+:not(pre) > code {
+    padding: 0.14rem 0.38rem;
+    border: 1px solid var(--line);
+    background: var(--surface-strong);
+    color: var(--text);
 }
 
 table {
@@ -499,8 +502,11 @@ html.dark .docs-theme-toggle__moon {
 .doc-section p + p,
 .doc-section p + ul,
 .doc-section p + ol,
+.doc-section p + .code-toolbar,
 .doc-section ul + p,
 .doc-section ol + p,
+.doc-section ul + .code-toolbar,
+.doc-section ol + .code-toolbar,
 .doc-grid,
 .doc-table-wrap,
 .doc-callout,
@@ -589,6 +595,202 @@ html.dark .docs-theme-toggle__moon {
 
 .doc-table tbody tr:last-child td {
     border-bottom: 0;
+}
+
+div.code-toolbar {
+    position: relative;
+}
+
+div.code-toolbar > .toolbar {
+    position: absolute;
+    top: 0.82rem;
+    right: 0.82rem;
+    z-index: 2;
+    opacity: 0;
+    transition: opacity 140ms ease;
+}
+
+div.code-toolbar:hover > .toolbar,
+div.code-toolbar:focus-within > .toolbar {
+    opacity: 1;
+}
+
+div.code-toolbar > .toolbar > .toolbar-item {
+    display: inline-flex;
+}
+
+div.code-toolbar > .toolbar > .toolbar-item > button {
+    min-height: 2rem;
+    padding: 0.34rem 0.65rem;
+    border: 1px solid var(--line-strong);
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    color: var(--text-soft);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    transition: border-color 140ms ease, color 140ms ease, background-color 140ms ease;
+}
+
+div.code-toolbar > .toolbar > .toolbar-item > button:hover,
+div.code-toolbar > .toolbar > .toolbar-item > button:focus-visible {
+    border-color: var(--accent);
+    color: var(--text);
+    outline: none;
+}
+
+div.code-toolbar > .toolbar > .toolbar-item > button[data-copy-state="copy-success"] {
+    border-color: color-mix(in srgb, var(--accent) 65%, var(--line-strong));
+    color: var(--accent);
+}
+
+pre[class*="language-"] {
+    padding: 1.2rem 1.25rem;
+    border: 1px solid var(--line);
+    background: #f4f7fb;
+    color: #1f2733;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+html.dark pre[class*="language-"] {
+    background: #0d1117;
+    color: #d6e2f2;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+pre[class*="language-"],
+code[class*="language-"] {
+    text-shadow: none;
+    white-space: pre;
+    word-spacing: normal;
+    word-break: normal;
+    word-wrap: normal;
+    tab-size: 4;
+    hyphens: none;
+}
+
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+    color: #6e7b8f;
+}
+
+html.dark .token.comment,
+html.dark .token.prolog,
+html.dark .token.doctype,
+html.dark .token.cdata {
+    color: #7f8ca1;
+}
+
+.token.punctuation {
+    color: #556274;
+}
+
+html.dark .token.punctuation {
+    color: #a2aec2;
+}
+
+.token.property,
+.token.tag,
+.token.constant,
+.token.symbol,
+.token.deleted {
+    color: #bf2458;
+}
+
+html.dark .token.property,
+html.dark .token.tag,
+html.dark .token.constant,
+html.dark .token.symbol,
+html.dark .token.deleted {
+    color: #ff7aa2;
+}
+
+.token.boolean,
+.token.number {
+    color: #8250df;
+}
+
+html.dark .token.boolean,
+html.dark .token.number {
+    color: #b98dff;
+}
+
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin,
+.token.inserted {
+    color: #0f7b43;
+}
+
+html.dark .token.selector,
+html.dark .token.attr-name,
+html.dark .token.string,
+html.dark .token.char,
+html.dark .token.builtin,
+html.dark .token.inserted {
+    color: #7ee787;
+}
+
+.token.operator,
+.token.entity,
+.token.url,
+.language-css .token.string,
+.style .token.string {
+    color: #0b6bc6;
+}
+
+html.dark .token.operator,
+html.dark .token.entity,
+html.dark .token.url,
+html.dark .language-css .token.string,
+html.dark .style .token.string {
+    color: #79c0ff;
+}
+
+.token.atrule,
+.token.attr-value,
+.token.keyword {
+    color: #0b57d0;
+}
+
+html.dark .token.atrule,
+html.dark .token.attr-value,
+html.dark .token.keyword {
+    color: #79c0ff;
+}
+
+.token.function,
+.token.class-name {
+    color: #c26b12;
+}
+
+html.dark .token.function,
+html.dark .token.class-name {
+    color: #f2cc60;
+}
+
+.token.regex,
+.token.important,
+.token.variable {
+    color: #d06116;
+}
+
+html.dark .token.regex,
+html.dark .token.important,
+html.dark .token.variable {
+    color: #ffa657;
+}
+
+.token.bold {
+    font-weight: 700;
+}
+
+.token.italic {
+    font-style: italic;
 }
 
 .docs-toc {
