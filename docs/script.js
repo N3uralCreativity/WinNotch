@@ -25,6 +25,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let pluginLibraryCache = null;
     let pluginLibraryFetchPromise = null;
     let lastPluginLibraryTrigger = null;
+    let pluginLibraryOpenSequence = 0;
     const themeColors = {
         light: "#f6f7fb",
         dark: "#090b10"
@@ -113,6 +114,12 @@ document.addEventListener("DOMContentLoaded", () => {
             year: "numeric"
         }).format(parsed);
     };
+
+    const wait = (ms) => new Promise((resolve) => {
+        window.setTimeout(resolve, ms);
+    });
+
+    const getPluginLibraryFakeDelayMs = () => 2000 + Math.floor(Math.random() * 3001);
 
     const renderPluginLibraryCards = (plugins) => {
         if (!pluginLibraryGrid) {
@@ -215,15 +222,31 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
+        const openSequence = ++pluginLibraryOpenSequence;
         lastPluginLibraryTrigger = trigger ?? document.activeElement;
         pluginLibraryModal.hidden = false;
         document.body.classList.add("plugin-library-open");
         setPluginLibraryView("loading");
 
+        const delayPromise = wait(getPluginLibraryFakeDelayMs());
+
         try {
             const plugins = await loadPluginLibrary();
+
+            await delayPromise;
+
+            if (openSequence !== pluginLibraryOpenSequence || pluginLibraryModal.hidden) {
+                return;
+            }
+
             setPluginLibraryView("ready", plugins);
         } catch (error) {
+            await delayPromise;
+
+            if (openSequence !== pluginLibraryOpenSequence || pluginLibraryModal.hidden) {
+                return;
+            }
+
             console.warn("WinNotch plugin library modal fallback in use.", error);
             setPluginLibraryView("error");
         }
