@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const themeToggle = document.querySelector("#theme-toggle");
     const themeColorMeta = document.querySelector('meta[name="theme-color"]');
     const header = document.querySelector(".site-header");
+    const downloadLinks = [...document.querySelectorAll("[data-winnotch-download]")];
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let themeTransitionActive = false;
     const themeColors = {
@@ -39,6 +40,45 @@ document.addEventListener("DOMContentLoaded", () => {
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     const initialDark = savedTheme ? savedTheme === "dark" : prefersDark;
     applyThemeState(initialDark, false);
+
+    const resolveLatestInstaller = async () => {
+        if (!downloadLinks.length) {
+            return;
+        }
+
+        try {
+            const response = await fetch("https://api.github.com/repos/N3uralCreativity/WinNotch/releases/latest", {
+                headers: {
+                    Accept: "application/vnd.github+json"
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`GitHub API returned ${response.status}`);
+            }
+
+            const release = await response.json();
+            const assets = Array.isArray(release.assets) ? release.assets : [];
+            const installerAsset = assets.find((asset) => /setup\.exe$/i.test(asset.name));
+
+            if (!installerAsset?.browser_download_url) {
+                throw new Error("No setup installer found in the latest release.");
+            }
+
+            downloadLinks.forEach((link) => {
+                link.href = installerAsset.browser_download_url;
+                link.removeAttribute("target");
+                link.removeAttribute("rel");
+                link.setAttribute("download", installerAsset.name);
+                link.setAttribute("aria-label", `Download ${installerAsset.name}`);
+                link.dataset.releaseVersion = release.tag_name || "";
+            });
+        } catch (error) {
+            console.warn("WinNotch download link fallback in use.", error);
+        }
+    };
+
+    void resolveLatestInstaller();
 
     const pauseThemeVideos = () => {
         if (prefersReducedMotion) {
