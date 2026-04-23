@@ -68,16 +68,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     };
 
-    const createThemeOverlay = (isDark, x, y) => {
-        const overlay = document.createElement("div");
-        overlay.className = "theme-transition-overlay";
-        overlay.dataset.theme = isDark ? "dark" : "light";
-        overlay.style.setProperty("--theme-x", `${x}px`);
-        overlay.style.setProperty("--theme-y", `${y}px`);
-        document.body.appendChild(overlay);
-        return overlay;
-    };
-
     const runThemeTransition = async (isDark, x, y) => {
         if (themeTransitionActive) {
             return;
@@ -91,8 +81,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const activeVideos = pauseThemeVideos();
         rootElement.classList.add("theme-transitioning");
+        rootElement.style.setProperty("--x", `${x}px`);
+        rootElement.style.setProperty("--y", `${y}px`);
 
-        if (prefersReducedMotion) {
+        if (prefersReducedMotion || !document.startViewTransition) {
             applyThemeState(isDark);
             measureStoryScenes();
             rootElement.classList.remove("theme-transitioning");
@@ -106,41 +98,17 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        const overlay = createThemeOverlay(isDark, x, y);
-        const maxRadius = Math.hypot(
-            Math.max(x, window.innerWidth - x),
-            Math.max(y, window.innerHeight - y)
-        );
-
         try {
-            await overlay.animate([
-                {
-                    clipPath: `circle(0px at ${x}px ${y}px)`,
-                    opacity: 1
-                },
-                {
-                    clipPath: `circle(${maxRadius}px at ${x}px ${y}px)`,
-                    opacity: 1
-                }
-            ], {
-                duration: 420,
-                easing: "cubic-bezier(0.2, 0.9, 0.18, 1)",
-                fill: "forwards"
-            }).finished;
+            const transition = document.startViewTransition(() => {
+                applyThemeState(isDark);
+                measureStoryScenes();
+            });
 
-            applyThemeState(isDark);
-            measureStoryScenes();
-
-            await overlay.animate([
-                { opacity: 1 },
-                { opacity: 0 }
-            ], {
-                duration: 220,
-                easing: "ease-out",
-                fill: "forwards"
-            }).finished;
+            await transition.ready;
+            rootElement.style.setProperty("--x", `${x}px`);
+            rootElement.style.setProperty("--y", `${y}px`);
+            await transition.finished;
         } finally {
-            overlay.remove();
             rootElement.classList.remove("theme-transitioning");
             resumeThemeVideos(activeVideos);
 
