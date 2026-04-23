@@ -74,6 +74,7 @@ The in-app browser only shows plugins listed in the `WinNotch-Plugins` repositor
 If you want to build plugins:
 
 - start with [PLUGIN_DEVELOPMENT.md](PLUGIN_DEVELOPMENT.md)
+- use the ready-to-send [AI plugin prompt](AI_PLUGIN_PROMPT.md) if you want another AI to build a plugin from zero context
 - browse the live examples in `Examples/Plugins`
 - use the `WinNotch.PluginSdk` package from GitHub Packages if you do not want to clone the full repo
 
