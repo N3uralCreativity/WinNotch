@@ -826,6 +826,24 @@ html.dark .plugin-library-modal__dialog {
     gap: 1.5rem;
 }
 
+.plugin-library-modal [data-plugin-library-loading],
+.plugin-library-modal [data-plugin-library-error],
+.plugin-library-modal [data-plugin-library-grid] {
+    display: none;
+}
+
+.plugin-library-modal[data-library-state="loading"] [data-plugin-library-loading] {
+    display: grid !important;
+}
+
+.plugin-library-modal[data-library-state="error"] [data-plugin-library-error] {
+    display: grid !important;
+}
+
+.plugin-library-modal[data-library-state="ready"] [data-plugin-library-grid] {
+    display: grid !important;
+}
+
 .plugin-library-modal__loading[hidden],
 .plugin-library-modal__error[hidden],
 .plugin-library-modal__grid[hidden] {

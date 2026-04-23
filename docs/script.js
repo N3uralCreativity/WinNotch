@@ -159,13 +159,17 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     const setPluginLibraryView = (state, plugins = []) => {
-        if (!pluginLibraryLoading || !pluginLibraryError || !pluginLibraryGrid || !pluginLibrarySubtitle) {
+        if (!pluginLibraryModal || !pluginLibraryLoading || !pluginLibraryError || !pluginLibraryGrid || !pluginLibrarySubtitle) {
             return;
         }
 
+        pluginLibraryModal.dataset.libraryState = state;
         pluginLibraryLoading.hidden = state !== "loading";
         pluginLibraryError.hidden = state !== "error";
         pluginLibraryGrid.hidden = state !== "ready";
+        pluginLibraryLoading.style.display = state === "loading" ? "grid" : "none";
+        pluginLibraryError.style.display = state === "error" ? "grid" : "none";
+        pluginLibraryGrid.style.display = state === "ready" ? "grid" : "none";
 
         if (state === "ready") {
             renderPluginLibraryCards(plugins);
@@ -231,6 +235,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         pluginLibraryModal.hidden = true;
+        delete pluginLibraryModal.dataset.libraryState;
         document.body.classList.remove("plugin-library-open");
 
         if (lastPluginLibraryTrigger instanceof HTMLElement) {
