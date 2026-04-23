@@ -1,52 +1,45 @@
 # WinNotch
 
-A Dynamic Island–inspired notch overlay for Windows, replicating the look and feel of [boring.notch](https://github.com/TheBoredTeam/boring.notch) on macOS.
+WinNotch is a Dynamic Island-inspired notch overlay for Windows. It brings media controls, calendar, battery, webcam, volume and brightness HUDs, file staging, and installable plugins into a compact surface that can live at the top or side of the screen.
 
-Built with **WPF / .NET 8 / C#**.
+Built with `WPF`, `.NET 8`, and `C#`.
 
-![Windows 10/11](https://img.shields.io/badge/Windows-10%2F11-blue) ![.NET 8](https://img.shields.io/badge/.NET-8.0-purple)
+![Windows 10/11](https://img.shields.io/badge/Windows-10%2F11-blue)
+![.NET 8](https://img.shields.io/badge/.NET-8.0-purple)
 
-## Showcase
+## Links
 
-<img width="800" height="566" alt="01" src="https://github.com/user-attachments/assets/63ed8f8a-9488-4bfc-a3d3-ef9e098aa9c4" />
-
-
-<img width="800" height="478" alt="02" src="https://github.com/user-attachments/assets/971bb745-7711-4bae-870c-fd852a2ca1de" />
-
-
-<img width="800" height="42" alt="03" src="https://github.com/user-attachments/assets/495c3fa3-b2b6-4a98-a8fc-7810c3dab325" />
-
-
-<img width="800" height="496" alt="04" src="https://github.com/user-attachments/assets/2ff26c30-a5e8-4c65-93cd-dfaac204d90e" />
+- Home page: `https://n3uralcreativity.github.io/WinNotch/`
+- Documentation: `https://n3uralcreativity.github.io/WinNotch/documentation/`
+- Releases: `https://github.com/N3uralCreativity/WinNotch/releases`
+- Plugin library repo: `https://github.com/N3uralCreativity/WinNotch-Plugins`
+- Plugin development guide: [PLUGIN_DEVELOPMENT.md](PLUGIN_DEVELOPMENT.md)
 
 ## Features
 
-- **Dynamic Notch** — sits at the top-center of your screen with smooth spring animations
-- **Music Controls** — album art, title/artist, transport controls with live audio visualizer
-- **Audio Visualizer** — real-time spectrum bars in the compact notch (auto-gain, center-grow pills)
-- **Calendar** — today's events via Outlook integration
-- **File Shelf** — drag & drop files onto the notch for quick staging, drag them out later
-- **Volume & Brightness HUD** — scroll wheel on the notch to adjust, visual feedback
-- **Battery Indicator** — shows charge level and status
-- **Webcam Mirror** — optional circular webcam preview in the expanded notch
-- **Fullscreen Detection** — automatically hides when apps go fullscreen
-- **System Tray** — lives in your notification area, right-click to quit
-- **Themes** — Dark, Light, and Auto (follows Windows) with smooth crossfade transitions
-- **Settings** — inline settings panel with toggles for every feature
-- **Global Hotkey** — Ctrl+Alt+N to toggle the notch open/closed
-- **Plugin System** — extremely modular architecture with support for UI, service, and animation plugins
-- **Plugin Library** — discover and install community plugins from the online library
+- Dynamic notch with hover, click, drag, and scroll interactions
+- Built-in media controls and audio visualizer
+- Volume and brightness HUDs
+- Calendar, battery, file shelf, and webcam mirror
+- Light, dark, and auto theme support
+- Position-aware layouts, including vertical plugin surfaces
+- Plugin Manager and Plugin Browser with online library support
+- Configurable plugins with built-in setup UI
 
-## Installation
+## Install
 
-### Pre-built Release
-1. Download `WinNotch.exe` from the [Releases](https://github.com/N3uralCreativity/WinNotch/releases) page
-2. Run it / Install it (recommanded)
-3. That's it !
+### Release build
 
-### Build from Source
+1. Download the latest installer from [Releases](https://github.com/N3uralCreativity/WinNotch/releases/latest).
+2. Run `WinNotch-Setup.exe`.
+3. Launch WinNotch.
 
-Requirements: [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0), Windows 10 (1903+) or Windows 11
+### Build from source
+
+Requirements:
+
+- Windows 10 or Windows 11
+- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
 
 ```bash
 git clone https://github.com/N3uralCreativity/WinNotch.git
@@ -54,66 +47,47 @@ cd WinNotch
 dotnet run --project src/WinNotch/WinNotch.csproj
 ```
 
-To build a release executable:
+To create a publish folder:
+
 ```bash
 dotnet publish src/WinNotch/WinNotch.csproj -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -o publish
 ```
 
-## Usage
+## Plugins
 
-- **Hover** over the notch to peek, **click** to open
-- **Scroll wheel** on the closed notch to adjust volume
-- **Drag files** onto the notch to shelve them
-- **Right-click** items in the shelf for options
-- **Double-click** shelf items to open them
-- **Ctrl+Alt+N** to toggle from anywhere
-- **Right-click** the system tray icon to quit
+WinNotch supports several plugin types:
 
-## Plugin System
+- `IUIPlugin`
+- `IServicePlugin`
+- `IAnimationPlugin`
+- `IConfigurablePlugin`
 
-WinNotch features a powerful plugin architecture that allows you to extend functionality with custom features:
+Plugins can be installed in two ways:
 
-- **UI Plugins** — Add custom controls, widgets, or entire tabs to the notch
-- **Service Plugins** — Run background services for integrations (ChatGPT, Discord, etc.)
-- **Animation Plugins** — Replace or enhance notch animations with custom effects
-- **Plugin Library** — Browse and install plugins from the online repository
+1. From the in-app Plugin Browser.
+2. Manually by placing a plugin DLL in `%AppData%\WinNotch\Plugins\<plugin-id>\`.
 
-### Creating Plugins
+The in-app browser only shows plugins listed in the `WinNotch-Plugins` repository's `library.json`. If a plugin is not listed there, it will not appear in the browser even if the DLL exists elsewhere.
 
-See the [Plugin Development Guide](PLUGIN_DEVELOPMENT.md) for detailed instructions on creating your own plugins.
+## Create plugins
 
-### Example Plugins
+If you want to build plugins:
 
-Check out the `Examples/Plugins` directory for working examples:
-- **BetterAnimation** — Enhanced animations with elastic easing and fade effects
-- **ChatGPT Add-on** — Voice and text ChatGPT integration in the notch
+- start with [PLUGIN_DEVELOPMENT.md](PLUGIN_DEVELOPMENT.md)
+- browse the live examples in `Examples/Plugins`
+- use the `WinNotch.PluginSdk` package from GitHub Packages if you do not want to clone the full repo
 
-### Installing Plugins
-
-1. Browse plugins from Settings → Plugin Manager
-2. Or manually place `.dll` files in `%AppData%\WinNotch\Plugins\<plugin-id>\`
-3. Restart WinNotch to load new plugins
-
-## Tech Stack
-
-- WPF (.NET 8) with custom spring animations
-- NAudio for audio capture & volume control
-- Windows SMTC for media session integration
-- WinRT MediaCapture for webcam
-- Win32 interop for overlay behavior
-- Dynamic plugin loading via reflection
+The package is intended for plugin authors, not end users. Runtime installation still happens through the WinNotch app or manual DLL deployment.
 
 ## Contributing
 
-Contributions are welcome! Whether it's bug fixes, features, or plugins:
+Contributions are welcome for both the app and the plugin ecosystem.
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
+- app changes and plugin API changes belong in this repository
+- community plugin browser listings belong in [WinNotch-Plugins](https://github.com/N3uralCreativity/WinNotch-Plugins)
 
-For plugin contributions, see the [WinNotch-Plugins](https://github.com/N3uralCreativity/WinNotch-Plugins) repository.
+If you want your plugin to appear in the browser, publish the DLL publicly, then add its manifest entry to `WinNotch-Plugins/library.json`.
 
 ## License
 
-GPL-3.0
+`GPL-3.0`

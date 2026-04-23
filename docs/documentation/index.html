@@ -368,6 +368,11 @@ dotnet run --project src/WinNotch/WinNotch.csproj</code></pre>
                     <p>
                         Library installs also write a local <code>manifest.json</code> next to the DLL. That matters because the app uses that manifest to show installed metadata and compare versions when updates become available.
                     </p>
+
+                    <div class="doc-callout doc-callout--note">
+                        <strong>What powers the browser</strong>
+                        <p>The browser reads plugin metadata from the <code>WinNotch-Plugins</code> repository's <code>library.json</code>. A plugin only appears in the browser after its manifest entry is added there.</p>
+                    </div>
                 </section>
 
                 <section class="doc-section" id="manual-plugin-install" data-doc-section>
@@ -730,6 +735,14 @@ dotnet add package WinNotch.PluginSdk --version 0.5.3 --source github-winnotch</
                     <p>
                         Supported categories include <code>Animation</code>, <code>Integration</code>, <code>Productivity</code>, <code>Media</code>, <code>SystemUtility</code>, <code>Theme</code>, <code>Widget</code>, <code>Fun</code>, and <code>Other</code>.
                     </p>
+
+                    <p>
+                        The browser source of truth lives in <code>WinNotch-Plugins/library.json</code>. That repository also includes a contribution guide, a JSON schema, and a validation workflow so new entries can be checked before they ship.
+                    </p>
+
+                    <pre><code class="language-bash">git clone https://github.com/N3uralCreativity/WinNotch-Plugins.git
+cd WinNotch-Plugins
+powershell -ExecutionPolicy Bypass -File scripts\validate-library.ps1</code></pre>
 
                     <div class="doc-callout doc-callout--warning">
                         <strong>Compatibility matters</strong>

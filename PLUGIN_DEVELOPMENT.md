@@ -1,180 +1,200 @@
 # WinNotch Plugin Development Guide
 
-Welcome to the WinNotch Plugin Development Guide! This comprehensive guide will teach you how to create powerful plugins for WinNotch.
+This guide covers the current WinNotch plugin workflow: how to reference the plugin API, build a plugin, test it locally, and get it listed in the in-app browser.
 
-## Table of Contents
+If you want the broader user and developer walkthrough, see the live documentation site:
 
-1. [Introduction](#introduction)
-2. [Plugin Types](#plugin-types)
-3. [Getting Started](#getting-started)
-4. [Creating Your First Plugin](#creating-your-first-plugin)
-5. [Plugin Interfaces](#plugin-interfaces)
-6. [The Plugin Context](#the-plugin-context)
-7. [Advanced Topics](#advanced-topics)
-8. [Publishing Your Plugin](#publishing-your-plugin)
-9. [Best Practices](#best-practices)
-10. [Example Plugins](#example-plugins)
+- `https://n3uralcreativity.github.io/WinNotch/documentation/`
 
----
+## What a WinNotch plugin can do
 
-## Introduction
+WinNotch plugins can extend the app in several ways:
 
-WinNotch's plugin system allows you to extend the notch with custom features, animations, integrations, and UI components. Plugins are loaded dynamically from DLL files and have full access to WinNotch's services and APIs.
+- add visible UI to the closed or expanded notch
+- add accessory content beside built-in expanded content
+- provide a different vertical layout when the notch is docked on the side
+- run background services or integrations
+- replace or extend notch animations
+- expose a configuration form inside Plugin Manager
 
-### What Can Plugins Do?
+Most plugins inherit from `PluginBase` and then implement one or more specialized interfaces.
 
-- **Add UI Components**: Inject custom controls into the notch (closed or expanded state)
-- **Background Services**: Run background tasks, integrations, or monitoring
-- **Custom Animations**: Replace or enhance notch animations with custom effects
-- **System Integration**: Connect to external APIs, databases, or services
-- **Theme Modifications**: Customize appearance and behavior
-- **New Features**: Add entirely new capabilities to WinNotch
+## Plugin interfaces
 
----
+These are the main extension points in the current app:
 
-## Plugin Types
+- `IPlugin`
+- `IUIPlugin`
+- `IServicePlugin`
+- `IAnimationPlugin`
+- `IConfigurablePlugin`
 
-WinNotch supports several plugin types:
+UI plugins can return elements for these locations:
 
-### 1. **Basic Plugin** (`IPlugin`)
-The foundation for all plugins. Provides lifecycle hooks.
+- `ClosedContent`
+- `OpenContent`
+- `OpenAccessory`
+- `VerticalOpenContent`
+- `CustomTab`
+- `Settings`
+- `Overlay`
 
-### 2. **UI Plugin** (`IUIPlugin`)
-Plugins that provide visual components. Can inject UI into:
-- Closed notch content
-- Expanded notch content
-- Custom tabs
-- Settings panel
-- Overlay layer
+The live contracts are in `src/WinNotch/Plugins/`.
 
-### 3. **Service Plugin** (`IServicePlugin`)
-Background plugins that run services without UI (e.g., API integrations, system monitoring).
+## Choose a development setup
 
-### 4. **Animation Plugin** (`IAnimationPlugin`)
-Plugins that customize or replace WinNotch animations.
+There are two good ways to reference WinNotch when building plugins.
 
----
+### Option 1: Use the GitHub Packages SDK
 
-## Getting Started
+This is the easiest setup if you are building a plugin outside this repository.
 
-### Prerequisites
+Add the GitHub Packages source:
 
-- Visual Studio 2022 or VS Code
-- .NET 8 SDK
-- Basic C# and WPF knowledge
+```bash
+dotnet nuget add source "https://nuget.pkg.github.com/N3uralCreativity/index.json" \
+  --name github-winnotch \
+  --username YOUR_GITHUB_USERNAME \
+  --password YOUR_GITHUB_PAT \
+  --store-password-in-clear-text
+```
 
-### Setup Your Development Environment
+Then install the SDK package:
 
-1. Create a new **Class Library** project:
-   ```bash
-   dotnet new classlib -n MyAwesomePlugin -f net8.0-windows
-   ```
+```bash
+dotnet add package WinNotch.PluginSdk --version 0.5.3 --source github-winnotch
+```
 
-2. Add WinNotch as a reference:
-   ```xml
-   <ItemGroup>
-     <Reference Include="WinNotch">
-       <HintPath>path\to\WinNotch.exe</HintPath>
-     </Reference>
-   </ItemGroup>
-   ```
+Your personal access token needs `read:packages`.
 
-3. Add required NuGet packages:
-   ```xml
-   <ItemGroup>
-     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.*" />
-   </ItemGroup>
-   ```
+### Option 2: Reference the WinNotch project directly
 
-4. Enable WPF support:
-   ```xml
-   <PropertyGroup>
-     <UseWPF>true</UseWPF>
-     <TargetFramework>net8.0-windows</TargetFramework>
-   </PropertyGroup>
-   ```
+This is the best setup when you are already working inside the WinNotch repository and want easy access to the example plugins.
 
----
+```xml
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows10.0.22621.0</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
 
-## Creating Your First Plugin
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\WinNotch\WinNotch.csproj">
+      <Private>false</Private>
+      <ExcludeAssets>runtime</ExcludeAssets>
+    </ProjectReference>
+  </ItemGroup>
+</Project>
+```
 
-Let's create a simple "Hello World" plugin that displays a message in the notch.
+## Minimal plugin project
 
-### Step 1: Create the Plugin Class
+Whether you use the package or a direct project reference, your plugin project should look roughly like this:
+
+```xml
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows10.0.22621.0</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="WinNotch.PluginSdk" Version="0.5.3" />
+  </ItemGroup>
+</Project>
+```
+
+## Minimal plugin class
 
 ```csharp
-using System;
-using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using WinNotch.Models;
 using WinNotch.Plugins;
 
-namespace MyAwesomePlugin;
+namespace HelloWorldPlugin;
 
 [WinNotchPlugin("com.example.helloworld", "Hello World", "1.0.0", "Your Name")]
-public class HelloWorldPlugin : PluginBase
+public sealed class HelloWorldPlugin : PluginBase, IUIPlugin
 {
     public override string Id => "com.example.helloworld";
     public override string Name => "Hello World";
     public override string Version => "1.0.0";
     public override string Author => "Your Name";
-    public override string Description => "A simple example plugin";
+    public override string Description => "A simple test plugin.";
+    public override string MinimumWinNotchVersion => "0.5.3";
 
-    public override async Task InitializeAsync(IPluginContext context)
+    public UIElement? GetUIElement(UIPluginLocation location)
     {
-        await base.InitializeAsync(context);
-        Context?.Log("Hello World plugin initialized!");
+        return location switch
+        {
+            UIPluginLocation.ClosedContent => new TextBlock { Text = "Hi" },
+            UIPluginLocation.OpenContent => new TextBlock { Text = "Hello from WinNotch" },
+            _ => null
+        };
     }
 
-    public override Task OnEnableAsync()
+    public void OnNotchStateChanged(NotchState newState)
     {
-        Context?.Log("Hello World plugin enabled!");
-        return Task.CompletedTask;
     }
 }
 ```
 
-### Step 2: Build and Deploy
+Build it with:
 
 ```bash
 dotnet build -c Release
 ```
 
-Copy the generated `MyAwesomePlugin.dll` to:
+## Test a plugin locally
+
+For a manual local install, place the DLL under:
+
+```text
+%AppData%\WinNotch\Plugins\com.example.helloworld\HelloWorldPlugin.dll
 ```
-%AppData%\WinNotch\Plugins\com.example.helloworld\
-```
 
-### Step 3: Restart WinNotch
+Restart WinNotch after copying the file.
 
-Your plugin will be automatically discovered and loaded!
+If you also include a `manifest.json` beside the DLL, WinNotch can show better installed metadata and compare versions for updates.
 
----
+## Plugin context
 
-## Plugin Interfaces
-
-### IPlugin
-
-All plugins must implement `IPlugin`:
+Every plugin receives an `IPluginContext` during initialization. It gives access to WinNotch services and plugin storage.
 
 ```csharp
-public interface IPlugin : IDisposable
+public interface IPluginContext
 {
-    string Id { get; }                  // Unique identifier
-    string Name { get; }                // Display name
-    string Version { get; }             // Semantic version
-    string Author { get; }              // Author name
-    string Description { get; }         // Brief description
-    string MinimumWinNotchVersion { get; } // Required WinNotch version
+    Window MainWindow { get; }
+    NotchViewModel NotchViewModel { get; }
+    MediaService MediaService { get; }
+    ThemeService ThemeService { get; }
+    VolumeService VolumeService { get; }
+    BrightnessService BrightnessService { get; }
+    BatteryService BatteryService { get; }
+    CalendarService CalendarService { get; }
+    AudioCaptureService AudioCaptureService { get; }
+    ShelfService ShelfService { get; }
+    WebcamService WebcamService { get; }
+    FullscreenService FullscreenService { get; }
+    AppSettings Settings { get; }
 
-    Task InitializeAsync(IPluginContext context);
-    Task OnEnableAsync();
-    Task OnDisableAsync();
-    Task ShutdownAsync();
+    string GetPluginDataPath(string pluginId);
+    void RegisterService<T>(T service) where T : class;
+    T? GetService<T>() where T : class;
+    void Log(string message, PluginLogLevel level = PluginLogLevel.Info);
 }
 ```
 
-### IUIPlugin
+Use `GetPluginDataPath(Id)` for plugin-owned files such as `settings.json`, caches, or tokens.
 
-For plugins that provide UI:
+## UI plugin guidance
+
+`IUIPlugin` is the most common interface:
 
 ```csharp
 public interface IUIPlugin : IPlugin
@@ -184,53 +204,16 @@ public interface IUIPlugin : IPlugin
 }
 ```
 
-**Example UI Plugin:**
+Layout advice:
 
-```csharp
-using System.Windows;
-using System.Windows.Controls;
-using WinNotch.Plugins;
+- use `OpenAccessory` for small inline content beside built-in expanded content
+- use `VerticalOpenContent` when a side-docked notch needs a different composition
+- avoid assuming a fixed horizontal canvas unless your plugin is explicitly top-only
+- react to `Context.ThemeService.ThemeChanged` so your UI stays readable in both themes
 
-[WinNotchPlugin("com.example.customwidget", "Custom Widget", "1.0.0", "You")]
-public class CustomWidgetPlugin : PluginBase, IUIPlugin
-{
-    private TextBlock? _textBlock;
+## Service and animation plugins
 
-    public override string Id => "com.example.customwidget";
-    public override string Name => "Custom Widget";
-    public override string Version => "1.0.0";
-    public override string Author => "You";
-    public override string Description => "Displays custom text in the notch";
-
-    public UIElement? GetUIElement(UIPluginLocation location)
-    {
-        if (location == UIPluginLocation.ClosedContent)
-        {
-            _textBlock = new TextBlock
-            {
-                Text = "Custom!",
-                Foreground = Brushes.White,
-                FontSize = 12,
-                VerticalAlignment = VerticalAlignment.Center
-            };
-            return _textBlock;
-        }
-        return null;
-    }
-
-    public void OnNotchStateChanged(NotchState newState)
-    {
-        if (_textBlock != null)
-        {
-            _textBlock.Text = $"State: {newState}";
-        }
-    }
-}
-```
-
-### IServicePlugin
-
-For background services:
+Use `IServicePlugin` for background work:
 
 ```csharp
 public interface IServicePlugin : IPlugin
@@ -240,52 +223,13 @@ public interface IServicePlugin : IPlugin
 }
 ```
 
-**Example Service Plugin:**
-
-```csharp
-[WinNotchPlugin("com.example.weatherservice", "Weather Service", "1.0.0", "You")]
-public class WeatherServicePlugin : PluginBase, IServicePlugin
-{
-    private System.Threading.Timer? _timer;
-
-    public override string Id => "com.example.weatherservice";
-    public override string Name => "Weather Service";
-    public override string Version => "1.0.0";
-    public override string Author => "You";
-    public override string Description => "Fetches weather data every hour";
-
-    public Task StartServiceAsync()
-    {
-        _timer = new System.Threading.Timer(async _ => await FetchWeather(),
-            null, TimeSpan.Zero, TimeSpan.FromHours(1));
-        return Task.CompletedTask;
-    }
-
-    public Task StopServiceAsync()
-    {
-        _timer?.Dispose();
-        return Task.CompletedTask;
-    }
-
-    private async Task FetchWeather()
-    {
-        // Fetch weather from API
-        Context?.Log("Fetching weather data...");
-    }
-}
-```
-
-### IAnimationPlugin
-
-For custom animations:
+Use `IAnimationPlugin` when your plugin primarily controls notch motion:
 
 ```csharp
 public interface IAnimationPlugin : IPlugin
 {
-    Storyboard? CreateExpandAnimation(FrameworkElement target,
-        double fromWidth, double toWidth, double fromHeight, double toHeight);
-    Storyboard? CreateCollapseAnimation(FrameworkElement target,
-        double fromWidth, double toWidth, double fromHeight, double toHeight);
+    Storyboard? CreateExpandAnimation(FrameworkElement target, double fromWidth, double toWidth, double fromHeight, double toHeight);
+    Storyboard? CreateCollapseAnimation(FrameworkElement target, double fromWidth, double toWidth, double fromHeight, double toHeight);
     Storyboard? CreatePeekAnimation(FrameworkElement target);
     IEasingFunction? GetCustomEasingFunction();
     double AnimationDurationMs { get; }
@@ -293,248 +237,136 @@ public interface IAnimationPlugin : IPlugin
 }
 ```
 
----
+## Configurable plugins
 
-## The Plugin Context
-
-Every plugin receives an `IPluginContext` that provides access to WinNotch's services:
+If your plugin needs user input, implement `IConfigurablePlugin`.
 
 ```csharp
-public interface IPluginContext
+public interface IConfigurablePlugin : IPlugin
 {
-    Window MainWindow { get; }                    // Main notch window
-    NotchViewModel NotchViewModel { get; }        // Notch state
-    MediaService MediaService { get; }            // Music controls
-    ThemeService ThemeService { get; }            // Theme management
-    VolumeService VolumeService { get; }          // Volume control
-    BrightnessService BrightnessService { get; }  // Brightness control
-    BatteryService BatteryService { get; }        // Battery info
-    CalendarService CalendarService { get; }      // Calendar events
-    AudioCaptureService AudioCaptureService { get; } // Audio visualizer
-    ShelfService ShelfService { get; }            // File shelf
-    WebcamService WebcamService { get; }          // Webcam
-    FullscreenService FullscreenService { get; }  // Fullscreen detection
-    AppSettings Settings { get; }                 // User settings
-
-    string GetPluginDataPath(string pluginId);    // Get plugin data directory
-    void RegisterService<T>(T service);           // Register custom service
-    T? GetService<T>();                           // Get registered service
-    void Log(string message, PluginLogLevel level); // Log messages
+    PluginConfigurationDefinition GetConfigurationDefinition();
+    Task<PluginConfigurationResult> ApplyConfigurationAsync(IReadOnlyDictionary<string, string?> values);
 }
 ```
 
-### Accessing Services
+The Plugin Manager will render a built-in configuration panel using the fields you describe. Each field can include:
 
-```csharp
-public override async Task InitializeAsync(IPluginContext context)
-{
-    await base.InitializeAsync(context);
+- label
+- placeholder
+- help text
+- required state
+- choice options
 
-    // Access media service
-    context.MediaService.SessionChanged += () =>
-    {
-        var media = context.MediaService.MediaInfo;
-        context.Log($"Now playing: {media.Title}");
-    };
+Typical use cases:
 
-    // Access theme service
-    context.ThemeService.ThemeChanged += () =>
-    {
-        bool isDark = !context.ThemeService.IsLight;
-        context.Log($"Theme changed to: {(isDark ? "Dark" : "Light")}");
-    };
+- API keys
+- account or workspace identifiers
+- provider selection
+- timer values
+- prompt templates
 
-    // Get plugin data path
-    var dataPath = context.GetPluginDataPath(Id);
-    var configFile = Path.Combine(dataPath, "config.json");
-}
-```
+## Packaging and publishing
 
----
+The normal plugin release flow is:
 
-## Advanced Topics
+1. Build your plugin DLL in `Release`.
+2. Upload that DLL to a public release URL, usually a GitHub Release.
+3. Compute its SHA-256 hash.
+4. Create or update a plugin manifest entry.
+5. Add that entry to `WinNotch-Plugins/library.json` if you want it to appear in the in-app browser.
 
-### Plugin Settings
-
-Store plugin-specific settings:
-
-```csharp
-public class MyPluginSettings
-{
-    public bool EnableFeature { get; set; } = true;
-    public int RefreshInterval { get; set; } = 60;
-}
-
-public class MyPlugin : PluginBase
-{
-    private MyPluginSettings? _settings;
-
-    public override async Task InitializeAsync(IPluginContext context)
-    {
-        await base.InitializeAsync(context);
-        _settings = LoadSettings();
-    }
-
-    private MyPluginSettings LoadSettings()
-    {
-        var dataPath = Context!.GetPluginDataPath(Id);
-        var settingsFile = Path.Combine(dataPath, "settings.json");
-
-        if (File.Exists(settingsFile))
-        {
-            var json = File.ReadAllText(settingsFile);
-            return JsonSerializer.Deserialize<MyPluginSettings>(json)
-                   ?? new MyPluginSettings();
-        }
-        return new MyPluginSettings();
-    }
-
-    private void SaveSettings()
-    {
-        var dataPath = Context!.GetPluginDataPath(Id);
-        var settingsFile = Path.Combine(dataPath, "settings.json");
-        var json = JsonSerializer.Serialize(_settings,
-            new JsonSerializerOptions { WriteIndented = true });
-        File.WriteAllText(settingsFile, json);
-    }
-}
-```
-
-### Custom Services
-
-Register services that other plugins can use:
-
-```csharp
-public interface IWeatherService
-{
-    Task<WeatherData> GetCurrentWeatherAsync();
-}
-
-public class WeatherPlugin : PluginBase, IServicePlugin
-{
-    private WeatherService? _weatherService;
-
-    public override async Task InitializeAsync(IPluginContext context)
-    {
-        await base.InitializeAsync(context);
-
-        _weatherService = new WeatherService();
-        context.RegisterService<IWeatherService>(_weatherService);
-    }
-
-    // Other plugins can now access:
-    // var weatherService = context.GetService<IWeatherService>();
-}
-```
-
-### Dependencies
-
-Declare plugin dependencies:
-
-```csharp
-[WinNotchPlugin("com.example.myplugin", "My Plugin", "1.0.0", "You")]
-[PluginDependency("com.example.weatherservice", "1.0.0")]
-public class MyPlugin : PluginBase
-{
-    // This plugin requires WeatherService plugin
-}
-```
-
-### Permissions
-
-Declare required permissions:
-
-```csharp
-[WinNotchPlugin("com.example.myplugin", "My Plugin", "1.0.0", "You")]
-[PluginPermission("network", "Access weather APIs")]
-[PluginPermission("filesystem", "Store cached data")]
-public class MyPlugin : PluginBase
-{
-}
-```
-
----
-
-## Publishing Your Plugin
-
-### 1. Create a Plugin Manifest
-
-Create a `manifest.json` file:
+Example manifest:
 
 ```json
 {
   "id": "com.example.myplugin",
-  "name": "My Awesome Plugin",
+  "name": "My Plugin",
   "version": "1.0.0",
   "author": "Your Name",
-  "description": "Does amazing things",
-  "minimumWinNotchVersion": "0.2.3",
+  "description": "Does something useful in the notch.",
+  "minimumWinNotchVersion": "0.5.3",
   "downloadUrl": "https://github.com/you/myplugin/releases/download/v1.0.0/MyPlugin.dll",
   "homepage": "https://github.com/you/myplugin",
-  "category": "Integration",
+  "iconUrl": "",
+  "category": "Productivity",
   "permissions": ["network"],
   "dependencies": [],
-  "sha256": "abc123...",
-  "releaseDate": "2026-04-19T00:00:00Z",
+  "sha256": "0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF",
+  "releaseDate": "2026-04-23T00:00:00Z",
   "isVerified": false
 }
 ```
 
-### 2. Host Your Plugin
+## How a plugin gets into the browser
 
-Upload your DLL to a public location (GitHub Releases recommended).
+The WinNotch app does not search GitHub releases directly. The in-app browser reads plugin metadata from the `WinNotch-Plugins` repository's `library.json`.
 
-### 3. Submit to Plugin Library
+That means a plugin appears in the browser only when:
 
-Create a pull request to the [WinNotch-Plugins](https://github.com/N3uralCreativity/WinNotch-Plugins) repository adding your manifest to `library.json`.
+- the DLL is publicly downloadable
+- the manifest entry is present in `WinNotch-Plugins/library.json`
+- the entry passes the library validation checks in that repository
 
----
+The plugin library repo now includes:
 
-## Best Practices
+- `library.schema.json`
+- `CONTRIBUTING.md`
+- a validation script at `scripts/validate-library.ps1`
+- a GitHub Actions workflow that validates `library.json` on push and pull request
 
-### ✅ DO
+## Release checklist
 
-- Use semantic versioning (1.0.0, 1.1.0, 2.0.0)
-- Provide clear descriptions and documentation
-- Handle errors gracefully with try-catch
-- Clean up resources in `Dispose()` and `ShutdownAsync()`
-- Test your plugin thoroughly before publishing
-- Use the logging API for diagnostics
-- Follow C# naming conventions
-- Respect user settings and preferences
+Before opening a PR to `WinNotch-Plugins`, confirm:
 
-### ❌ DON'T
+- your plugin ID is unique
+- your version is updated
+- `minimumWinNotchVersion` matches the APIs you actually use
+- `downloadUrl` points directly to the DLL
+- `homepage` points to the repo or project page
+- the SHA-256 hash matches the released DLL
+- your category is one of the supported values
+- the plugin has been tested in WinNotch
 
-- Don't block the UI thread with long-running operations
-- Don't access files outside your plugin data directory without permission
-- Don't throw unhandled exceptions
-- Don't leak memory or resources
-- Don't make breaking changes in minor versions
-- Don't collect user data without explicit consent
-- Don't interfere with other plugins
+Supported categories:
 
----
+- `Animation`
+- `Integration`
+- `Productivity`
+- `Media`
+- `SystemUtility`
+- `Theme`
+- `Widget`
+- `Fun`
+- `Other`
 
-## Example Plugins
+## Examples in this repository
 
-See the `/Examples` directory for complete plugin implementations:
+Working examples live under `Examples/Plugins/`, including:
 
-1. **BetterAnimation Plugin** - Custom fade and slide animations
-2. **ChatGPT Add-on Plugin** - Voice and text ChatGPT integration
-3. **Weather Widget Plugin** - Displays current weather in the notch
-4. **Spotify Lyrics Plugin** - Shows synchronized lyrics for Spotify
+- `BetterAnimationPlugin`
+- `ChatGPTAddonPlugin`
+- `PetWidgetPlugin`
+- `WeatherWidgetPlugin`
+- `TodoPeekPlugin`
+- `ClipboardStackPlugin`
+- `FocusTimerPlugin`
+- `DownloadsWatcherPlugin`
 
----
+There is also a sample browser manifest file at:
 
-## API Reference
+- `Examples/Plugins/example-library.json`
 
-Full API documentation available at: [API Docs](https://github.com/N3uralCreativity/WinNotch/wiki/Plugin-API)
+## Best practices
 
-## Support
+- use semantic versioning for your plugin versions
+- keep plugin-specific files inside the folder returned by `GetPluginDataPath`
+- avoid blocking the UI thread
+- clean up timers, subscriptions, and unmanaged resources in `ShutdownAsync` and `Dispose`
+- handle theme changes and layout changes explicitly
+- document any required setup clearly if your plugin is configurable
+- raise `MinimumWinNotchVersion` when you depend on newer WinNotch APIs
 
-- GitHub Issues: https://github.com/N3uralCreativity/WinNotch/issues
-- Discussions: https://github.com/N3uralCreativity/WinNotch/discussions
+## Help
 
----
-
-Happy plugin development! 🎉
+- Main repo issues: `https://github.com/N3uralCreativity/WinNotch/issues`
+- Plugin browser listings: `https://github.com/N3uralCreativity/WinNotch-Plugins`
