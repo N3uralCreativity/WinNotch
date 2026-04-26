@@ -93,6 +93,32 @@
                     <!-- APPEARANCE -->
                     <TextBlock Text="Appearance" Style="{StaticResource SectionHeader}"/>
 
+                    <TextBlock Text="Theme" Foreground="{DynamicResource SettingLabelBrush}" FontSize="12" Margin="0,8,0,4"/>
+                    <Border Background="{DynamicResource SegmentedBgBrush}" CornerRadius="10" Padding="2" Height="34">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <RadioButton x:Name="ThemeDarkRadio" Content="Dark"
+                                         Grid.Column="0" Style="{StaticResource SegmentedRadio}"
+                                         Checked="OnThemeChanged"/>
+                            <RadioButton x:Name="ThemeLightRadio" Content="Light"
+                                         Grid.Column="1" Style="{StaticResource SegmentedRadio}"
+                                         Checked="OnThemeChanged"/>
+                        </Grid>
+                    </Border>
+
+                    <Grid Style="{StaticResource SettingRow}">
+                        <TextBlock Text="Adapt to Windows theme" Style="{StaticResource SettingLabel}"/>
+                        <CheckBox x:Name="AdaptToWindowsThemeCheck" Style="{StaticResource ToggleSwitch}"
+                                  HorizontalAlignment="Right" VerticalAlignment="Center"
+                                  Checked="OnAdaptThemeChanged" Unchecked="OnAdaptThemeChanged"/>
+                    </Grid>
+                    <TextBlock Text="Uses Windows light or dark mode, accent color, and contrast-safe accessibility colors live."
+                               Foreground="{DynamicResource TextSubtleBrush}" FontSize="11" Margin="0,0,0,4"
+                               TextWrapping="Wrap"/>
+
                     <Grid Style="{StaticResource SettingRow}">
                         <TextBlock Text="Show shadow" Style="{StaticResource SettingLabel}"/>
                         <CheckBox x:Name="ShowShadowCheck" Style="{StaticResource ToggleSwitch}"
@@ -168,7 +194,7 @@
                     <TextBlock Text="About" Style="{StaticResource SectionHeader}"/>
 
                     <TextBlock x:Name="VersionText" Foreground="{DynamicResource TextSubtleBrush}" FontSize="12"
-                               Text="WinNotch v0.2.0"
+                               Text="WinNotch v0.6.0"
                                Margin="0,0,0,2"/>
                     <TextBlock Foreground="{DynamicResource TextFaintestBrush}" FontSize="11"
                                Text="Inspired by boring.notch for macOS"

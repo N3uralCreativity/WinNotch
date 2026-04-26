@@ -39,6 +39,7 @@ public class AppSettings
 
     // Appearance
     public AppTheme Theme { get; set; } = AppTheme.Auto;
+    public bool AdaptToWindowsTheme { get; set; } = true;
     public double CornerRadiusScale { get; set; } = 1.0;
     public bool ShowShadow { get; set; } = true;
 
@@ -80,7 +81,18 @@ public class AppSettings
             if (File.Exists(SettingsPath))
             {
                 var json = File.ReadAllText(SettingsPath);
-                return JsonSerializer.Deserialize<AppSettings>(json, JsonOptions) ?? new AppSettings();
+                var settings = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions) ?? new AppSettings();
+
+                using var document = JsonDocument.Parse(json);
+                bool hasAdaptSetting = document.RootElement.TryGetProperty(nameof(AdaptToWindowsTheme), out _);
+
+                if (!hasAdaptSetting)
+                    settings.AdaptToWindowsTheme = settings.Theme == AppTheme.Auto;
+
+                if (settings.Theme == AppTheme.Auto)
+                    settings.Theme = AppTheme.Dark;
+
+                return settings;
             }
         }
         catch { }
@@ -96,6 +108,16 @@ public class AppSettings
             File.WriteAllText(SettingsPath, json);
         }
         catch { }
+    }
+
+    public AppTheme GetManualTheme()
+    {
+        return Theme == AppTheme.Light ? AppTheme.Light : AppTheme.Dark;
+    }
+
+    public AppTheme GetRequestedTheme()
+    {
+        return AdaptToWindowsTheme ? AppTheme.Auto : GetManualTheme();
     }
 
     /// <summary>Register or unregister the app from Windows startup.</summary>

@@ -17,6 +17,7 @@ public partial class App : Application
     private static bool _ownsMutex;
     private NotchWindow? _notchWindow;
     private Forms.NotifyIcon? _trayIcon;
+    private Forms.ContextMenuStrip? _trayMenu;
     private AppSettings _settings = null!;
     private ThemeService _themeService = null!;
 
@@ -49,8 +50,9 @@ public partial class App : Application
 
         // Initialize theme
         _themeService = new ThemeService();
-        _themeService.Apply(_settings.Theme, _settings.UseLiquidGlassTheme);
+        _themeService.Apply(_settings);
         _themeService.StartWatchingSystemTheme();
+        _themeService.ThemeChanged += ApplyTrayTheme;
 
         // System tray icon
         SetupTrayIcon();
@@ -69,11 +71,9 @@ public partial class App : Application
             Visible = true
         };
 
-        var menu = new Forms.ContextMenuStrip
+        _trayMenu = new Forms.ContextMenuStrip
         {
-            Renderer = new DarkMenuRenderer(),
-            BackColor = DrawColor.FromArgb(28, 28, 30),
-            ForeColor = DrawColor.FromArgb(224, 224, 224),
+            Renderer = new ThemedMenuRenderer(() => _themeService.CurrentPalette),
             ShowImageMargin = false,
             ShowCheckMargin = false,
             Padding = new Forms.Padding(4, 6, 4, 6),
@@ -82,8 +82,6 @@ public partial class App : Application
 
         var settingsItem = new Forms.ToolStripMenuItem("Settings")
         {
-            BackColor = DrawColor.FromArgb(28, 28, 30),
-            ForeColor = DrawColor.FromArgb(224, 224, 224),
             Padding = new Forms.Padding(12, 6, 20, 6)
         };
         settingsItem.Click += (_, _) => OpenSettings();
@@ -92,18 +90,17 @@ public partial class App : Application
 
         var quitItem = new Forms.ToolStripMenuItem("Quit")
         {
-            BackColor = DrawColor.FromArgb(28, 28, 30),
-            ForeColor = DrawColor.FromArgb(224, 224, 224),
             Padding = new Forms.Padding(12, 6, 20, 6)
         };
         quitItem.Click += (_, _) => QuitApp();
 
-        menu.Items.Add(settingsItem);
-        menu.Items.Add(separator);
-        menu.Items.Add(quitItem);
+        _trayMenu.Items.Add(settingsItem);
+        _trayMenu.Items.Add(separator);
+        _trayMenu.Items.Add(quitItem);
 
-        _trayIcon.ContextMenuStrip = menu;
+        _trayIcon.ContextMenuStrip = _trayMenu;
         _trayIcon.DoubleClick += (_, _) => OpenSettings();
+        ApplyTrayTheme();
     }
 
     private static Icon CreateDefaultIcon()
@@ -122,6 +119,7 @@ public partial class App : Application
 
     private void QuitApp()
     {
+        _themeService.ThemeChanged -= ApplyTrayTheme;
         _themeService?.StopWatchingSystemTheme();
         _trayIcon?.Dispose();
         _notchWindow?.Close();
@@ -130,6 +128,8 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        if (_themeService != null)
+            _themeService.ThemeChanged -= ApplyTrayTheme;
         _trayIcon?.Dispose();
         if (_ownsMutex && _mutex != null)
         {
@@ -148,29 +148,51 @@ public partial class App : Application
         _ownsMutex = false;
         base.OnExit(e);
     }
+
+    private void ApplyTrayTheme()
+    {
+        if (_trayMenu == null) return;
+
+        var palette = _themeService.CurrentPalette;
+        var backColor = ToDrawingColor(palette.SurfaceRaised);
+        var foreground = ToDrawingColor(palette.TextPrimary);
+
+        _trayMenu.BackColor = backColor;
+        _trayMenu.ForeColor = foreground;
+        foreach (Forms.ToolStripItem item in _trayMenu.Items)
+        {
+            item.BackColor = backColor;
+            item.ForeColor = foreground;
+        }
+    }
+
+    private static DrawColor ToDrawingColor(System.Windows.Media.Color color)
+    {
+        return DrawColor.FromArgb(color.A, color.R, color.G, color.B);
+    }
 }
 
 /// <summary>
 /// Custom renderer for dark-themed ContextMenuStrip.
 /// </summary>
-internal class DarkMenuRenderer : Forms.ToolStripProfessionalRenderer
+internal class ThemedMenuRenderer : Forms.ToolStripProfessionalRenderer
 {
-    private static readonly DrawColor BgColor = DrawColor.FromArgb(28, 28, 30);
-    private static readonly DrawColor HoverColor = DrawColor.FromArgb(50, 50, 54);
-    private static readonly DrawColor SepColor = DrawColor.FromArgb(50, 50, 54);
-    private static readonly DrawColor BorderColor = DrawColor.FromArgb(58, 58, 60);
+    private readonly Func<ThemePalette> _getPalette;
 
-    public DarkMenuRenderer() : base(new DarkColorTable()) { }
+    public ThemedMenuRenderer(Func<ThemePalette> getPalette) : base(new ThemedColorTable(getPalette))
+    {
+        _getPalette = getPalette;
+    }
 
     protected override void OnRenderToolStripBackground(Forms.ToolStripRenderEventArgs e)
     {
-        using var brush = new SolidBrush(BgColor);
+        using var brush = new SolidBrush(ToDrawingColor(_getPalette().SurfaceRaised));
         e.Graphics.FillRectangle(brush, e.AffectedBounds);
     }
 
     protected override void OnRenderToolStripBorder(Forms.ToolStripRenderEventArgs e)
     {
-        using var pen = new Pen(BorderColor);
+        using var pen = new Pen(ToDrawingColor(_getPalette().Border));
         var r = e.AffectedBounds;
         e.Graphics.DrawRectangle(pen, r.X, r.Y, r.Width - 1, r.Height - 1);
     }
@@ -180,14 +202,14 @@ internal class DarkMenuRenderer : Forms.ToolStripProfessionalRenderer
         var rc = new Rectangle(2, 0, e.Item.Width - 4, e.Item.Height);
         if (e.Item.Selected)
         {
-            using var brush = new SolidBrush(HoverColor);
+            using var brush = new SolidBrush(ToDrawingColor(_getPalette().HoverOverlay));
             using var gp = RoundedRect(rc, 4);
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
             e.Graphics.FillPath(brush, gp);
         }
         else
         {
-            using var brush = new SolidBrush(BgColor);
+            using var brush = new SolidBrush(ToDrawingColor(_getPalette().SurfaceRaised));
             e.Graphics.FillRectangle(brush, rc);
         }
     }
@@ -195,13 +217,16 @@ internal class DarkMenuRenderer : Forms.ToolStripProfessionalRenderer
     protected override void OnRenderSeparator(Forms.ToolStripSeparatorRenderEventArgs e)
     {
         int y = e.Item.Height / 2;
-        using var pen = new Pen(SepColor);
+        using var pen = new Pen(ToDrawingColor(_getPalette().Border));
         e.Graphics.DrawLine(pen, 12, y, e.Item.Width - 12, y);
     }
 
     protected override void OnRenderItemText(Forms.ToolStripItemTextRenderEventArgs e)
     {
-        e.TextColor = e.Item.Selected ? DrawColor.White : DrawColor.FromArgb(224, 224, 224);
+        var palette = _getPalette();
+        e.TextColor = e.Item.Selected
+            ? ToDrawingColor(palette.TextPrimary)
+            : ToDrawingColor(palette.TextSecondary);
         base.OnRenderItemText(e);
     }
 
@@ -216,24 +241,40 @@ internal class DarkMenuRenderer : Forms.ToolStripProfessionalRenderer
         path.CloseFigure();
         return path;
     }
+
+    private static DrawColor ToDrawingColor(System.Windows.Media.Color color)
+    {
+        return DrawColor.FromArgb(color.A, color.R, color.G, color.B);
+    }
 }
 
-internal class DarkColorTable : Forms.ProfessionalColorTable
+internal class ThemedColorTable : Forms.ProfessionalColorTable
 {
-    private static readonly DrawColor Bg = DrawColor.FromArgb(28, 28, 30);
-    public override DrawColor MenuBorder => DrawColor.FromArgb(58, 58, 60);
+    private readonly Func<ThemePalette> _getPalette;
+
+    public ThemedColorTable(Func<ThemePalette> getPalette)
+    {
+        _getPalette = getPalette;
+    }
+
+    public override DrawColor MenuBorder => ToDrawingColor(_getPalette().Border);
     public override DrawColor MenuItemBorder => DrawColor.Transparent;
-    public override DrawColor MenuItemSelected => DrawColor.FromArgb(50, 50, 54);
-    public override DrawColor MenuStripGradientBegin => Bg;
-    public override DrawColor MenuStripGradientEnd => Bg;
-    public override DrawColor MenuItemSelectedGradientBegin => DrawColor.FromArgb(50, 50, 54);
-    public override DrawColor MenuItemSelectedGradientEnd => DrawColor.FromArgb(50, 50, 54);
-    public override DrawColor MenuItemPressedGradientBegin => DrawColor.FromArgb(60, 60, 64);
-    public override DrawColor MenuItemPressedGradientEnd => DrawColor.FromArgb(60, 60, 64);
-    public override DrawColor ImageMarginGradientBegin => Bg;
-    public override DrawColor ImageMarginGradientMiddle => Bg;
-    public override DrawColor ImageMarginGradientEnd => Bg;
-    public override DrawColor ToolStripDropDownBackground => Bg;
-    public override DrawColor SeparatorDark => DrawColor.FromArgb(50, 50, 54);
+    public override DrawColor MenuItemSelected => ToDrawingColor(_getPalette().HoverOverlay);
+    public override DrawColor MenuStripGradientBegin => ToDrawingColor(_getPalette().SurfaceRaised);
+    public override DrawColor MenuStripGradientEnd => ToDrawingColor(_getPalette().SurfaceRaised);
+    public override DrawColor MenuItemSelectedGradientBegin => ToDrawingColor(_getPalette().HoverOverlay);
+    public override DrawColor MenuItemSelectedGradientEnd => ToDrawingColor(_getPalette().HoverOverlay);
+    public override DrawColor MenuItemPressedGradientBegin => ToDrawingColor(_getPalette().PressedOverlay);
+    public override DrawColor MenuItemPressedGradientEnd => ToDrawingColor(_getPalette().PressedOverlay);
+    public override DrawColor ImageMarginGradientBegin => ToDrawingColor(_getPalette().SurfaceRaised);
+    public override DrawColor ImageMarginGradientMiddle => ToDrawingColor(_getPalette().SurfaceRaised);
+    public override DrawColor ImageMarginGradientEnd => ToDrawingColor(_getPalette().SurfaceRaised);
+    public override DrawColor ToolStripDropDownBackground => ToDrawingColor(_getPalette().SurfaceRaised);
+    public override DrawColor SeparatorDark => ToDrawingColor(_getPalette().Border);
     public override DrawColor SeparatorLight => DrawColor.Transparent;
+
+    private static DrawColor ToDrawingColor(System.Windows.Media.Color color)
+    {
+        return DrawColor.FromArgb(color.A, color.R, color.G, color.B);
+    }
 }

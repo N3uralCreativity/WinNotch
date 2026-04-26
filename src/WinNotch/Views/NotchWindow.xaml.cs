@@ -198,17 +198,19 @@ public partial class NotchWindow : Window
         // Inline settings
         InlineSettings.SettingsChanged += s => ApplySettings(s);
         InlineSettings.BackRequested += CollapseSettings;
-        InlineSettings.ThemeChangeRequested += async theme =>
+        InlineSettings.ThemeChangeRequested += async themeSettings =>
         {
-            await _themeService.ApplyWithTransition(theme, NotchCanvas, _settings.UseLiquidGlassTheme);
+            _settings = themeSettings;
+            await _themeService.ApplyWithTransition(themeSettings, NotchCanvas);
         };
 
         // Vertical inline settings (separate instance for side dock)
         VerticalInlineSettings.SettingsChanged += s => ApplySettings(s);
         VerticalInlineSettings.BackRequested += CollapseSettings;
-        VerticalInlineSettings.ThemeChangeRequested += async theme =>
+        VerticalInlineSettings.ThemeChangeRequested += async themeSettings =>
         {
-            await _themeService.ApplyWithTransition(theme, NotchCanvas, _settings.UseLiquidGlassTheme);
+            _settings = themeSettings;
+            await _themeService.ApplyWithTransition(themeSettings, NotchCanvas);
         };
 
         // Toggle clock/live-activity visibility based on music state
@@ -1578,7 +1580,7 @@ public partial class NotchWindow : Window
         _settings = settings;
 
         // Apply liquid glass theme if toggled
-        _themeService.Apply(settings.Theme, settings.UseLiquidGlassTheme);
+        _themeService.Apply(settings);
         ApplyLiquidGlassEffect(settings.UseLiquidGlassTheme);
 
         // Toggle visibility of components based on settings

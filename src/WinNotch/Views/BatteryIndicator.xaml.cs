@@ -53,26 +53,31 @@ public partial class BatteryIndicator : UserControl
         // Color based on level
         Color fillColor;
         if (charging)
-            fillColor = Color.FromRgb(0x4C, 0xAF, 0x50); // Green
+            fillColor = GetThemeColor("SuccessBrush", Color.FromRgb(0x4C, 0xAF, 0x50));
         else if (percent <= 10)
-            fillColor = Color.FromRgb(0xF4, 0x43, 0x36); // Red
+            fillColor = GetThemeColor("DangerBrush", Color.FromRgb(0xF4, 0x43, 0x36));
         else if (percent <= 20)
-            fillColor = Color.FromRgb(0xFF, 0x98, 0x00); // Orange
+            fillColor = GetThemeColor("WarningBrush", Color.FromRgb(0xFF, 0x98, 0x00));
         else if (TryFindResource("BatteryNormalFillBrush") is SolidColorBrush normalBrush)
             fillColor = normalBrush.Color;
         else
-            fillColor = Color.FromRgb(0xFF, 0xFF, 0xFF);
+            fillColor = Colors.White;
 
         BatteryFill.Background = new SolidColorBrush(fillColor);
 
         // Percent text color
         if (percent <= 10)
-            PercentText.Foreground = new SolidColorBrush(Color.FromRgb(0xF4, 0x43, 0x36));
+            PercentText.Foreground = new SolidColorBrush(GetThemeColor("DangerBrush", Color.FromRgb(0xF4, 0x43, 0x36)));
         else if (percent <= 20)
-            PercentText.Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0x98, 0x00));
+            PercentText.Foreground = new SolidColorBrush(GetThemeColor("WarningBrush", Color.FromRgb(0xFF, 0x98, 0x00)));
         else if (TryFindResource("BatteryTextBrush") is SolidColorBrush textBrush)
             PercentText.Foreground = textBrush;
         else
             PercentText.Foreground = new SolidColorBrush(Color.FromRgb(0x99, 0x99, 0x99));
+    }
+
+    private Color GetThemeColor(string resourceKey, Color fallback)
+    {
+        return TryFindResource(resourceKey) is SolidColorBrush brush ? brush.Color : fallback;
     }
 }

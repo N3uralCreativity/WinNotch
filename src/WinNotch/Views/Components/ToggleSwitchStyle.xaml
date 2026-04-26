@@ -32,11 +32,7 @@
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsChecked" Value="True">
-                            <Setter TargetName="Track" Property="Background">
-                                <Setter.Value>
-                                    <SolidColorBrush Color="#34C759"/>
-                                </Setter.Value>
-                            </Setter>
+                            <Setter TargetName="Track" Property="Background" Value="{DynamicResource AccentBrush}"/>
                             <Trigger.EnterActions>
                                 <BeginStoryboard>
                                     <Storyboard>

@@ -82,7 +82,8 @@ public partial class CalendarView : UserControl
             }
             catch
             {
-                dot.Fill = new SolidColorBrush(Color.FromRgb(0x4A, 0x90, 0xD9));
+                dot.Fill = TryFindResource("AccentBrush") as SolidColorBrush
+                    ?? new SolidColorBrush(Color.FromRgb(0x4A, 0x90, 0xD9));
             }
             item.Children.Add(dot);
 

@@ -37,12 +37,20 @@ public partial class SettingsWindow : Window
         ShowBatteryCheck.IsChecked = _settings.ShowBattery;
         ShowCalendarCheck.IsChecked = _settings.ShowCalendar;
         LiquidGlassCheck.IsChecked = _settings.UseLiquidGlassTheme;
+        AdaptToWindowsThemeCheck.IsChecked = _settings.AdaptToWindowsTheme;
 
         // Hover mode radio buttons
         if (_settings.HoverMode == HoverMode.LongHoverOpen)
             LongHoverRadio.IsChecked = true;
         else
             HoverPeekRadio.IsChecked = true;
+
+        if (_settings.GetManualTheme() == AppTheme.Light)
+            ThemeLightRadio.IsChecked = true;
+        else
+            ThemeDarkRadio.IsChecked = true;
+
+        ApplyThemeSelectionState(_settings.AdaptToWindowsTheme);
     }
 
     private void OnSettingChanged(object sender, RoutedEventArgs e)
@@ -78,6 +86,25 @@ public partial class SettingsWindow : Window
     private void OnCloseClick(object sender, RoutedEventArgs e)
     {
         Close();
+    }
+
+    private void OnThemeChanged(object sender, RoutedEventArgs e)
+    {
+        if (_isLoading) return;
+
+        _settings.Theme = ThemeLightRadio.IsChecked == true ? AppTheme.Light : AppTheme.Dark;
+        _settings.Save();
+        SettingsChanged?.Invoke(_settings);
+    }
+
+    private void OnAdaptThemeChanged(object sender, RoutedEventArgs e)
+    {
+        if (_isLoading) return;
+
+        _settings.AdaptToWindowsTheme = AdaptToWindowsThemeCheck.IsChecked == true;
+        ApplyThemeSelectionState(_settings.AdaptToWindowsTheme);
+        _settings.Save();
+        SettingsChanged?.Invoke(_settings);
     }
 
     private void OnLiquidGlassChanged(object sender, RoutedEventArgs e)
@@ -127,5 +154,10 @@ public partial class SettingsWindow : Window
             UpdateButtonText.Text = "Download failed — retry";
             UpdateButton.IsEnabled = true;
         }
+    }
+    private void ApplyThemeSelectionState(bool adaptToWindowsTheme)
+    {
+        ThemeDarkRadio.IsEnabled = !adaptToWindowsTheme;
+        ThemeLightRadio.IsEnabled = !adaptToWindowsTheme;
     }
 }

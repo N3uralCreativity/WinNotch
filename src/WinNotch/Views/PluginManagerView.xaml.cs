@@ -789,7 +789,7 @@ public partial class PluginManagerView : UserControl
     private Brush GetAccentBrush() => GetBrush("PluginAccentBrush", Color.FromRgb(10, 132, 255));
     private Brush GetAccentSoftBrush() => GetBrush("PluginAccentSoftBrush", Color.FromArgb(31, 10, 132, 255));
     private Brush GetPositiveBrush() => GetBrush("PluginPositiveBrush", Color.FromRgb(52, 199, 89));
-    private Brush GetErrorBrush() => new SolidColorBrush(Color.FromRgb(255, 107, 107));
+    private Brush GetErrorBrush() => GetBrush("PluginNegativeBrush", Color.FromRgb(255, 107, 107));
 
     private Brush GetBrush(string resourceKey, Color fallback)
     {

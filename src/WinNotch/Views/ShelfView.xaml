@@ -96,7 +96,7 @@
         <Border x:Name="DropZoneOverlay"
                 Grid.RowSpan="2"
                 CornerRadius="8"
-                Background="#22FFFFFF"
+                Background="{DynamicResource DropZoneBrush}"
                 BorderBrush="{DynamicResource TextSubtleBrush}"
                 BorderThickness="1.5"
                 Visibility="Collapsed">

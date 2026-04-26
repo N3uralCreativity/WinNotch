@@ -90,7 +90,6 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <RadioButton x:Name="ThemeDarkRadio" Content="Dark"
                                      Grid.Column="0" Style="{StaticResource SegmentedRadio}"
@@ -98,11 +97,18 @@
                         <RadioButton x:Name="ThemeLightRadio" Content="Light"
                                      Grid.Column="1" Style="{StaticResource SegmentedRadio}"
                                      Checked="OnThemeChanged"/>
-                        <RadioButton x:Name="ThemeAutoRadio" Content="Auto"
-                                     Grid.Column="2" Style="{StaticResource SegmentedRadio}"
-                                     Checked="OnThemeChanged"/>
                     </Grid>
                 </Border>
+
+                <Grid Height="28" Margin="0,2">
+                    <TextBlock Text="Adapt to Windows theme" Style="{StaticResource SettingLabel}"/>
+                    <CheckBox x:Name="AdaptToWindowsThemeCheck" Style="{StaticResource ToggleSwitch}"
+                              HorizontalAlignment="Right" VerticalAlignment="Center"
+                              Checked="OnAdaptThemeChanged" Unchecked="OnAdaptThemeChanged"/>
+                </Grid>
+                <TextBlock Text="Follows Windows light or dark mode, accent color, and accessibility-friendly contrast live."
+                           Foreground="{DynamicResource TextFaintBrush}" FontSize="9" Margin="0,0,0,4"
+                           TextWrapping="Wrap"/>
 
                 <Grid Height="28" Margin="0,2">
                     <TextBlock Text="Show shadow" Style="{StaticResource SettingLabel}"/>
@@ -212,7 +218,7 @@
 
                 <!-- About -->
                 <TextBlock Text="ABOUT" Style="{StaticResource SectionHeader}"/>
-                <TextBlock x:Name="VersionText" Foreground="{DynamicResource TextFaintBrush}" FontSize="10" Text="WinNotch v0.5.3" Margin="0,0,0,2"/>
+                <TextBlock x:Name="VersionText" Foreground="{DynamicResource TextFaintBrush}" FontSize="10" Text="WinNotch v0.6.0" Margin="0,0,0,2"/>
                 <TextBlock Foreground="{DynamicResource TextFaintestBrush}" FontSize="9" Text="Inspired by boring.notch for macOS"
                            Margin="0,0,0,4"/>
 

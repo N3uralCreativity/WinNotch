@@ -12,7 +12,7 @@
             <Border BorderBrush="{DynamicResource BatteryBorderBrush}" BorderThickness="1" CornerRadius="1.5"
                     Margin="0,0,2,0">
                 <Border x:Name="BatteryFill"
-                        Background="#4CAF50"
+                        Background="{DynamicResource SuccessBrush}"
                         CornerRadius="0.5"
                         Margin="1"
                         HorizontalAlignment="Left"/>

@@ -17,8 +17,8 @@ public partial class InlineSettingsView : System.Windows.Controls.UserControl
     /// <summary>Fired when the user clicks the back arrow.</summary>
     public event Action? BackRequested;
 
-    /// <summary>Fired when theme changes (passes new AppTheme).</summary>
-    public event Action<AppTheme>? ThemeChangeRequested;
+    /// <summary>Fired when theme-related appearance changes.</summary>
+    public event Action<AppSettings>? ThemeChangeRequested;
 
     /// <summary>Fired when the user wants to manage plugins.</summary>
     public event Action? ManagePluginsRequested;
@@ -45,19 +45,19 @@ public partial class InlineSettingsView : System.Windows.Controls.UserControl
         WebcamFpsSlider.Value = settings.WebcamFps;
         WebcamFpsLabel.Text = $"{settings.WebcamFps}";
         LiquidGlassCheck.IsChecked = settings.UseLiquidGlassTheme;
+        AdaptToWindowsThemeCheck.IsChecked = settings.AdaptToWindowsTheme;
 
         if (settings.HoverMode == HoverMode.LongHoverOpen)
             LongHoverRadio.IsChecked = true;
         else
             HoverPeekRadio.IsChecked = true;
 
-        // Theme
-        switch (settings.Theme)
-        {
-            case AppTheme.Light: ThemeLightRadio.IsChecked = true; break;
-            case AppTheme.Auto: ThemeAutoRadio.IsChecked = true; break;
-            default: ThemeDarkRadio.IsChecked = true; break;
-        }
+        if (settings.GetManualTheme() == AppTheme.Light)
+            ThemeLightRadio.IsChecked = true;
+        else
+            ThemeDarkRadio.IsChecked = true;
+
+        ApplyThemeSelectionState(settings.AdaptToWindowsTheme);
 
         _isLoading = false;
     }
@@ -117,12 +117,20 @@ public partial class InlineSettingsView : System.Windows.Controls.UserControl
     {
         if (_isLoading || _settings == null) return;
 
-        _settings.Theme = ThemeAutoRadio.IsChecked == true ? AppTheme.Auto
-            : ThemeLightRadio.IsChecked == true ? AppTheme.Light
-            : AppTheme.Dark;
+        _settings.Theme = ThemeLightRadio.IsChecked == true ? AppTheme.Light : AppTheme.Dark;
 
         _settings.Save();
-        ThemeChangeRequested?.Invoke(_settings.Theme);
+        ThemeChangeRequested?.Invoke(_settings);
+    }
+
+    private void OnAdaptThemeChanged(object sender, RoutedEventArgs e)
+    {
+        if (_isLoading || _settings == null) return;
+
+        _settings.AdaptToWindowsTheme = AdaptToWindowsThemeCheck.IsChecked == true;
+        ApplyThemeSelectionState(_settings.AdaptToWindowsTheme);
+        _settings.Save();
+        ThemeChangeRequested?.Invoke(_settings);
     }
 
     private void OnLiquidGlassChanged(object sender, RoutedEventArgs e)
@@ -137,6 +145,12 @@ public partial class InlineSettingsView : System.Windows.Controls.UserControl
     private void OnManagePluginsClick(object sender, RoutedEventArgs e)
     {
         ManagePluginsRequested?.Invoke();
+    }
+
+    private void ApplyThemeSelectionState(bool adaptToWindowsTheme)
+    {
+        ThemeDarkRadio.IsEnabled = !adaptToWindowsTheme;
+        ThemeLightRadio.IsEnabled = !adaptToWindowsTheme;
     }
 
     private async void OnCheckUpdateClick(object sender, RoutedEventArgs e)

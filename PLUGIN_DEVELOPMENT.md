@@ -62,7 +62,7 @@ dotnet nuget add source "https://nuget.pkg.github.com/N3uralCreativity/index.jso
 Then install the SDK package:
 
 ```bash
-dotnet add package WinNotch.PluginSdk --version 0.5.3 --source github-winnotch
+dotnet add package WinNotch.PluginSdk --version 0.6.0 --source github-winnotch
 ```
 
 Your personal access token needs `read:packages`.
@@ -103,7 +103,7 @@ Whether you use the package or a direct project reference, your plugin project s
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="WinNotch.PluginSdk" Version="0.5.3" />
+    <PackageReference Include="WinNotch.PluginSdk" Version="0.6.0" />
   </ItemGroup>
 </Project>
 ```
@@ -126,7 +126,7 @@ public sealed class HelloWorldPlugin : PluginBase, IUIPlugin
     public override string Version => "1.0.0";
     public override string Author => "Your Name";
     public override string Description => "A simple test plugin.";
-    public override string MinimumWinNotchVersion => "0.5.3";
+    public override string MinimumWinNotchVersion => "0.6.0";
 
     public UIElement? GetUIElement(UIPluginLocation location)
     {
@@ -284,7 +284,7 @@ Example manifest:
   "version": "1.0.0",
   "author": "Your Name",
   "description": "Does something useful in the notch.",
-  "minimumWinNotchVersion": "0.5.3",
+  "minimumWinNotchVersion": "0.6.0",
   "downloadUrl": "https://github.com/you/myplugin/releases/download/v1.0.0/MyPlugin.dll",
   "homepage": "https://github.com/you/myplugin",
   "iconUrl": "",
