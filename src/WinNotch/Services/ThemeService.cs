@@ -207,7 +207,7 @@ public class ThemeService
     private void UpdateBrush(string key, Color color)
     {
         var brush = FindBrushResource(key);
-        if (brush != null)
+        if (brush != null && !brush.IsFrozen)
         {
             brush.Color = color;
             return;

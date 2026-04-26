@@ -28,7 +28,7 @@ Plugin request:
 - Configuration requirements: [NONE or LIST OF REQUIRED TOKENS / URLS / SETTINGS]
 - External services or APIs: [NONE or LIST]
 - Permissions needed: [clipboard / network / filesystem / location / etc.]
-- Minimum WinNotch version target: [for example 0.6.0]
+- Minimum WinNotch version target: [for example 0.6.1]
 - Should it be browser-listable: [yes / no]
 
 Important WinNotch context:
@@ -184,7 +184,7 @@ Theme behavior: adapt brushes for both dark and light theme through ThemeService
 Configuration requirements: allow user to choose refresh interval and whether trend history is saved
 External services or APIs: none
 Permissions needed: []
-Minimum WinNotch version target: 0.6.0
+Minimum WinNotch version target: 0.6.1
 Should it be browser-listable: yes
 ```
 

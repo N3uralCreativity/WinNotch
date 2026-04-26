@@ -10,7 +10,7 @@
     <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
     <PackageId>WinNotch.PluginSdk</PackageId>
     <PackageTitle>WinNotch Plugin SDK</PackageTitle>
-    <Version>0.6.0</Version>
+    <Version>0.6.1</Version>
     <Authors>N3uralCreativity</Authors>
     <Company>N3uralCreativity</Company>
     <Description>Compile-time SDK for building WinNotch plugins against the official WinNotch plugin interfaces and runtime assembly.</Description>
