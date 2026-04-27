@@ -57,8 +57,6 @@ public partial class InlineSettingsView : System.Windows.Controls.UserControl
         else
             ThemeDarkRadio.IsChecked = true;
 
-        ApplyThemeSelectionState(settings.AdaptToWindowsTheme);
-
         _isLoading = false;
     }
 
@@ -117,6 +115,9 @@ public partial class InlineSettingsView : System.Windows.Controls.UserControl
     {
         if (_isLoading || _settings == null) return;
 
+        // Picking a manual theme should immediately opt out of Windows-follow mode.
+        _settings.AdaptToWindowsTheme = false;
+        AdaptToWindowsThemeCheck.IsChecked = false;
         _settings.Theme = ThemeLightRadio.IsChecked == true ? AppTheme.Light : AppTheme.Dark;
 
         _settings.Save();
@@ -128,7 +129,6 @@ public partial class InlineSettingsView : System.Windows.Controls.UserControl
         if (_isLoading || _settings == null) return;
 
         _settings.AdaptToWindowsTheme = AdaptToWindowsThemeCheck.IsChecked == true;
-        ApplyThemeSelectionState(_settings.AdaptToWindowsTheme);
         _settings.Save();
         ThemeChangeRequested?.Invoke(_settings);
     }
@@ -145,12 +145,6 @@ public partial class InlineSettingsView : System.Windows.Controls.UserControl
     private void OnManagePluginsClick(object sender, RoutedEventArgs e)
     {
         ManagePluginsRequested?.Invoke();
-    }
-
-    private void ApplyThemeSelectionState(bool adaptToWindowsTheme)
-    {
-        ThemeDarkRadio.IsEnabled = !adaptToWindowsTheme;
-        ThemeLightRadio.IsEnabled = !adaptToWindowsTheme;
     }
 
     private async void OnCheckUpdateClick(object sender, RoutedEventArgs e)

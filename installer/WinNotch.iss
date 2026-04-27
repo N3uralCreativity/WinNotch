@@ -2,7 +2,7 @@
 ; Requires Inno Setup 6.x (https://jrsoftware.org/isinfo.php)
 
 #define MyAppName "WinNotch"
-#define MyAppVersion "0.6.1"
+#define MyAppVersion "0.6.2"
 #define MyAppPublisher "N3uralCreativity"
 #define MyAppURL "https://github.com/N3uralCreativity/WinNotch"
 #define MyAppExeName "WinNotch.exe"

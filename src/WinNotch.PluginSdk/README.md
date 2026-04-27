@@ -32,7 +32,7 @@ Your personal access token needs `read:packages`.
 Then add the package:
 
 ```bash
-dotnet add package WinNotch.PluginSdk --version 0.6.1 --source github-winnotch
+dotnet add package WinNotch.PluginSdk --version 0.6.2 --source github-winnotch
 ```
 
 ## Important note

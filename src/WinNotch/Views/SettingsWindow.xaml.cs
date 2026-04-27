@@ -49,8 +49,6 @@ public partial class SettingsWindow : Window
             ThemeLightRadio.IsChecked = true;
         else
             ThemeDarkRadio.IsChecked = true;
-
-        ApplyThemeSelectionState(_settings.AdaptToWindowsTheme);
     }
 
     private void OnSettingChanged(object sender, RoutedEventArgs e)
@@ -92,6 +90,9 @@ public partial class SettingsWindow : Window
     {
         if (_isLoading) return;
 
+        // Picking a manual theme should immediately opt out of Windows-follow mode.
+        _settings.AdaptToWindowsTheme = false;
+        AdaptToWindowsThemeCheck.IsChecked = false;
         _settings.Theme = ThemeLightRadio.IsChecked == true ? AppTheme.Light : AppTheme.Dark;
         _settings.Save();
         SettingsChanged?.Invoke(_settings);
@@ -102,7 +103,6 @@ public partial class SettingsWindow : Window
         if (_isLoading) return;
 
         _settings.AdaptToWindowsTheme = AdaptToWindowsThemeCheck.IsChecked == true;
-        ApplyThemeSelectionState(_settings.AdaptToWindowsTheme);
         _settings.Save();
         SettingsChanged?.Invoke(_settings);
     }
@@ -154,10 +154,5 @@ public partial class SettingsWindow : Window
             UpdateButtonText.Text = "Download failed — retry";
             UpdateButton.IsEnabled = true;
         }
-    }
-    private void ApplyThemeSelectionState(bool adaptToWindowsTheme)
-    {
-        ThemeDarkRadio.IsEnabled = !adaptToWindowsTheme;
-        ThemeLightRadio.IsEnabled = !adaptToWindowsTheme;
     }
 }
