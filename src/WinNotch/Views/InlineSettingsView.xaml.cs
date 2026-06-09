@@ -1,5 +1,6 @@
 using System;
 using System.Windows;
+using WinNotch.Helpers;
 using WinNotch.Models;
 using WinNotch.Services;
 
@@ -26,6 +27,7 @@ public partial class InlineSettingsView : System.Windows.Controls.UserControl
     public InlineSettingsView()
     {
         InitializeComponent();
+        VersionText.Text = AppInfo.NameWithVersion;
     }
 
     public void LoadSettings(AppSettings settings)

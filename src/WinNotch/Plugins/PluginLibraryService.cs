@@ -7,6 +7,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using WinNotch.Helpers;
 
 namespace WinNotch.Plugins;
 
@@ -31,7 +32,7 @@ public class PluginLibraryService
         {
             Timeout = TimeSpan.FromSeconds(30)
         };
-        _httpClient.DefaultRequestHeaders.Add("User-Agent", "WinNotch/0.6.2");
+        _httpClient.DefaultRequestHeaders.Add("User-Agent", $"WinNotch/{AppInfo.Version}");
     }
 
     public PluginManifest? GetAvailablePlugin(string pluginId)

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
+using WinNotch.Helpers;
 using WinNotch.Models;
 
 namespace WinNotch.Plugins;
@@ -270,7 +271,7 @@ public class PluginManager : IDisposable
     {
         try
         {
-            var currentVersion = new Version("0.6.2"); // WinNotch version
+            var currentVersion = new Version(AppInfo.Version); // WinNotch version
             var required = new Version(requiredVersion);
             return currentVersion >= required;
         }

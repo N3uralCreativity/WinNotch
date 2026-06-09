@@ -1,6 +1,7 @@
 using System;
 using System.Windows;
 using System.Windows.Input;
+using WinNotch.Helpers;
 using WinNotch.Models;
 using WinNotch.Services;
 
@@ -18,6 +19,7 @@ public partial class SettingsWindow : Window
     public SettingsWindow(AppSettings settings)
     {
         InitializeComponent();
+        VersionText.Text = AppInfo.NameWithVersion;
         _settings = settings;
         LoadSettings();
         _isLoading = false;

@@ -4,10 +4,10 @@ using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Json;
-using System.Reflection;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using WinNotch.Helpers;
 
 namespace WinNotch.Services;
 
@@ -74,9 +74,7 @@ public sealed class UpdateService
 
     public UpdateService()
     {
-        var asm = Assembly.GetExecutingAssembly();
-        var ver = asm.GetName().Version;
-        CurrentVersion = ver != null ? $"{ver.Major}.{ver.Minor}.{ver.Build}" : "0.0.0";
+        CurrentVersion = AppInfo.Version;
     }
 
     /// <summary>
