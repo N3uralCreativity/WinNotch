@@ -152,17 +152,21 @@ public partial class InlineSettingsView : System.Windows.Controls.UserControl
         CheckUpdateText.Text = "Checking...";
         CheckUpdateButton.IsEnabled = false;
 
-        var hasUpdate = await _updateService.CheckForUpdateAsync();
+        var result = await _updateService.CheckForUpdateAsync();
 
-        if (hasUpdate)
+        switch (result)
         {
-            CheckUpdateButton.Visibility = Visibility.Collapsed;
-            UpdateButton.Visibility = Visibility.Visible;
-            UpdateButtonText.Text = $"⬇ Update to v{_updateService.LatestVersion}";
-        }
-        else
-        {
-            CheckUpdateText.Text = "You're up to date ✓";
+            case UpdateCheckResult.UpdateAvailable:
+                CheckUpdateButton.Visibility = Visibility.Collapsed;
+                UpdateButton.Visibility = Visibility.Visible;
+                UpdateButtonText.Text = $"⬇ Update to v{_updateService.LatestVersion}";
+                break;
+            case UpdateCheckResult.CheckFailed:
+                CheckUpdateText.Text = "Couldn't check — see log";
+                break;
+            default:
+                CheckUpdateText.Text = "You're up to date ✓";
+                break;
         }
 
         CheckUpdateButton.IsEnabled = true;
@@ -179,10 +183,10 @@ public partial class InlineSettingsView : System.Windows.Controls.UserControl
             UpdateButtonText.Text = $"Downloading... {pct}%";
         });
 
-        var ok = await _updateService.DownloadAndLaunchInstallerAsync(progress);
+        var (ok, error) = await _updateService.DownloadAndLaunchInstallerAsync(progress);
         if (!ok)
         {
-            UpdateButtonText.Text = "Download failed — retry";
+            UpdateButtonText.Text = error ?? "Update failed — retry";
             UpdateButton.IsEnabled = true;
         }
     }

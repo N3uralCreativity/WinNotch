@@ -40,7 +40,7 @@ if exist "%ProgramFiles%\Inno Setup 6\ISCC.exe" set "ISCC=%ProgramFiles%\Inno Se
 
 if defined ISCC (
     echo [2/2] Building installer with Inno Setup...
-    "%ISCC%" installer\WinNotch.iss
+    "%ISCC%" "/DMyAppVersion=%APP_VERSION%" installer\WinNotch.iss
     if %ERRORLEVEL% NEQ 0 (
         echo.
         echo INSTALLER BUILD FAILED!

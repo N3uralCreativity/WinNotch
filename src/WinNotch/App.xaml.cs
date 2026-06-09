@@ -39,10 +39,34 @@ public partial class App : Application
         _ownsMutex = createdNew;
         if (!createdNew)
         {
-            _mutex.Dispose();
-            _mutex = null;
-            Shutdown();
-            return;
+            // The named mutex already exists. Normally that means another instance is
+            // running — but it can also be a stale mutex left behind by a previous
+            // instance that was force-killed during a self-update. Briefly try to
+            // acquire it: if we succeed (including via an abandoned mutex, which
+            // happens when the old owner died without releasing), we are the rightful
+            // owner and continue. Otherwise a live instance holds it, so we exit.
+            bool acquired;
+            try
+            {
+                acquired = _mutex.WaitOne(TimeSpan.FromSeconds(2));
+            }
+            catch (AbandonedMutexException)
+            {
+                // Previous owner terminated without releasing — ownership is now ours.
+                acquired = true;
+            }
+
+            if (acquired)
+            {
+                _ownsMutex = true;
+            }
+            else
+            {
+                _mutex.Dispose();
+                _mutex = null;
+                Shutdown();
+                return;
+            }
         }
 
         // Load settings
