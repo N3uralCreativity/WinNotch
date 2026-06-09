@@ -75,6 +75,14 @@ Type: dirifempty; Name: "{localappdata}\WinNotch"
 
 [Code]
 
+const
+  // Inno's per-app uninstall registry key. The GUID is the [Setup] AppId, written
+  // here as a literal with single braces so it matches the key Inno actually
+  // creates. Deriving it from the AppId setting via the preprocessor emits a
+  // doubled opening brace, so the registry lookup silently misses and an existing
+  // install is never detected (the original bug this fixes).
+  AppUninstallKey = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{B8F3A2D1-7E4C-4F5A-9D6B-1C2E3F4A5B6C}_is1';
+
 var
   MaintPage: TInputOptionWizardPage;
 
@@ -134,27 +142,23 @@ end;
 
 function GetUninstallString(): String;
 var
-  sUnInstPath: String;
   sUnInstallString: String;
 begin
-  sUnInstPath := 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{#SetupSetting("AppId")}_is1';
   sUnInstallString := '';
-  RegQueryStringValue(HKCU, sUnInstPath, 'UninstallString', sUnInstallString);
+  RegQueryStringValue(HKCU, AppUninstallKey, 'UninstallString', sUnInstallString);
   if sUnInstallString = '' then
-    RegQueryStringValue(HKLM, sUnInstPath, 'UninstallString', sUnInstallString);
+    RegQueryStringValue(HKLM, AppUninstallKey, 'UninstallString', sUnInstallString);
   Result := sUnInstallString;
 end;
 
 function GetInstalledVersion(): String;
 var
-  sUnInstPath: String;
   sVersion: String;
 begin
-  sUnInstPath := 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{#SetupSetting("AppId")}_is1';
   sVersion := '';
-  RegQueryStringValue(HKCU, sUnInstPath, 'DisplayVersion', sVersion);
+  RegQueryStringValue(HKCU, AppUninstallKey, 'DisplayVersion', sVersion);
   if sVersion = '' then
-    RegQueryStringValue(HKLM, sUnInstPath, 'DisplayVersion', sVersion);
+    RegQueryStringValue(HKLM, AppUninstallKey, 'DisplayVersion', sVersion);
   Result := sVersion;
 end;
 
