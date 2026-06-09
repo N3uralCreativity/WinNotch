@@ -50,7 +50,16 @@ jobs:
           "RELEASE_TAG=$tag"     | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Publish application (self-contained single file)
-        run: dotnet publish src/WinNotch/WinNotch.csproj -c Release -o publish
+        # Stamp the version from the tag so the built exe reports the released
+        # version. This makes the git tag the single source of truth: the assembly
+        # version (read by the in-app updater), the file version, and the installer
+        # filename all come from the tag, with no manual csproj edits needed.
+        run: >
+          dotnet publish src/WinNotch/WinNotch.csproj -c Release -o publish
+          -p:Version=${{ env.APP_VERSION }}
+          -p:AssemblyVersion=${{ env.APP_VERSION }}.0
+          -p:FileVersion=${{ env.APP_VERSION }}.0
+          -p:InformationalVersion=${{ env.APP_VERSION }}
 
       - name: Install Inno Setup
         run: choco install innosetup --no-progress -y
