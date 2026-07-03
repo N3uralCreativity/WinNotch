@@ -53,6 +53,12 @@ public class AppSettings
     /// <summary>When multiple islands are shown, open/close them together.</summary>
     public bool SyncIslandsOpenState { get; set; } = true;
 
+    /// <summary>
+    /// Reserve a dedicated strip at the top of the screen (shell AppBar, like the
+    /// taskbar) so maximized windows start below the notch. Opt-in.
+    /// </summary>
+    public bool ReserveSpaceAtTop { get; set; }
+
     // Appearance
     public AppTheme Theme { get; set; } = AppTheme.Auto;
     public bool AdaptToWindowsTheme { get; set; } = true;

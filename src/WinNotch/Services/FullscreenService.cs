@@ -33,14 +33,31 @@ public class FullscreenService : IDisposable
         _timer?.Stop();
     }
 
+    // Consecutive non-fullscreen checks required before showing the notch again.
+    // Overlays, toasts, and alt-tab previews briefly steal the foreground while a
+    // game runs fullscreen; without this debounce the notch flashes into view.
+    private const int ClearStreakRequired = 3;
+    private int _clearStreak;
+
     private void Check()
     {
         bool fullscreen = IsFullscreenAppRunning(out var monitor);
-        if (fullscreen != IsFullscreen || monitor != FullscreenMonitor)
+
+        if (fullscreen)
         {
-            IsFullscreen = fullscreen;
-            FullscreenMonitor = monitor;
-            FullscreenChanged?.Invoke(fullscreen);
+            _clearStreak = 0;
+            if (!IsFullscreen || monitor != FullscreenMonitor)
+            {
+                IsFullscreen = true;
+                FullscreenMonitor = monitor;
+                FullscreenChanged?.Invoke(true);
+            }
+        }
+        else if (IsFullscreen && ++_clearStreak >= ClearStreakRequired)
+        {
+            IsFullscreen = false;
+            FullscreenMonitor = IntPtr.Zero;
+            FullscreenChanged?.Invoke(false);
         }
     }
 

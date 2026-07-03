@@ -60,6 +60,9 @@ public partial class NotchWindow : Window
     private string? _screenDevice;
     private Rect _screenBounds;
 
+    // Opt-in reserved screen strip (shell AppBar, like the taskbar)
+    private readonly AppBarHelper _appBar = new();
+
     // Island role & cross-island sync
     private readonly bool _isPrimary;
     private bool _applyingSyncedState;
@@ -159,12 +162,32 @@ public partial class NotchWindow : Window
     private void OnSourceInitialized(object? sender, EventArgs e)
     {
         WindowHelper.MakeOverlayWindow(this);
+        _appBar.Attach(this);
 
         // Register global hotkey (Ctrl+Alt+N) — primary island only
         if (_globalHotkey != null)
         {
             _globalHotkey.Register(this);
             _globalHotkey.HotkeyPressed += OnGlobalHotkeyPressed;
+        }
+    }
+
+    /// <summary>
+    /// Claims or releases the dedicated top strip for this island's screen.
+    /// Only meaningful while top-docked; side docks and drags release it.
+    /// </summary>
+    private void UpdateSpaceReservation()
+    {
+        if (_settings.ReserveSpaceAtTop && _dock == NotchDock.Top && !_isDragging)
+        {
+            var screen = ScreenHelper.FindScreenByDevice(_screenDevice);
+            var dpi = ScreenHelper.GetDpiScale(this);
+            int strip = (int)Math.Ceiling((NotchConstants.ClosedHeight + 2) * dpi);
+            _appBar.ReserveTop(screen.Bounds, strip);
+        }
+        else
+        {
+            _appBar.Release();
         }
     }
 
@@ -732,6 +755,7 @@ public partial class NotchWindow : Window
         if (_isDragging) return;
         RefreshScreenBounds();
         RepositionForDock();
+        UpdateSpaceReservation();
     }
 
     private void UpdateFixedWindowBounds()
@@ -1303,6 +1327,9 @@ public partial class NotchWindow : Window
         _isDragging = true;
         _isMouseDownOnNotch = false;
 
+        // A floating island shouldn't hold reserved screen space
+        _appBar.Release();
+
         // Target drag pill size
         double pillW = NotchConstants.ClosedWidth * 0.8;
         double pillH = NotchConstants.ClosedHeight * 0.8;
@@ -1405,6 +1432,9 @@ public partial class NotchWindow : Window
             _settings.Save();
             SettingsUpdatedByUser?.Invoke(_settings);
         }
+
+        // Move (or drop) the reserved strip to the new screen/edge
+        UpdateSpaceReservation();
 
         // Update HUD overlay active state based on dock
         HudOverlay.IsActive = (dock == NotchDock.Top);
@@ -1683,6 +1713,7 @@ public partial class NotchWindow : Window
         CompositionTarget.Rendering -= OnRendering;
         _hoverOpenTimer?.Stop();
         _hoverCloseTimer?.Stop();
+        _appBar.Dispose();
         _pluginManager?.Dispose();
         _globalHotkey?.Dispose();
         base.OnClosed(e);
@@ -1743,6 +1774,8 @@ public partial class NotchWindow : Window
             }
             // Side docks: don't re-animate width/height — settings panel has fixed size
         }
+
+        UpdateSpaceReservation();
     }
 
     private double GetOpenWidth()

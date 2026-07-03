@@ -199,6 +199,16 @@
                 <TextBlock Text="SCREENS" Style="{StaticResource SectionHeader}"/>
 
                 <Grid Height="28" Margin="0,2">
+                    <TextBlock Text="Reserve space at top" Style="{StaticResource SettingLabel}"/>
+                    <CheckBox x:Name="ReserveSpaceCheck" Style="{StaticResource ToggleSwitch}"
+                              HorizontalAlignment="Right" VerticalAlignment="Center"
+                              Checked="OnSettingChanged" Unchecked="OnSettingChanged"/>
+                </Grid>
+                <TextBlock Text="Claims a dedicated strip at the top of the screen (like the taskbar) so maximized windows start below the notch. Fullscreen apps still cover it."
+                           Foreground="{DynamicResource TextFaintBrush}" FontSize="9" Margin="0,0,0,4"
+                           TextWrapping="Wrap"/>
+
+                <Grid Height="28" Margin="0,2">
                     <TextBlock Text="Island on every screen" Style="{StaticResource SettingLabel}"/>
                     <CheckBox x:Name="ShowOnAllScreensCheck" Style="{StaticResource ToggleSwitch}"
                               HorizontalAlignment="Right" VerticalAlignment="Center"

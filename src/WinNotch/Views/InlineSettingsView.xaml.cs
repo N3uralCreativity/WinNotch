@@ -50,6 +50,7 @@ public partial class InlineSettingsView : System.Windows.Controls.UserControl
         AdaptToWindowsThemeCheck.IsChecked = settings.AdaptToWindowsTheme;
         ShowOnAllScreensCheck.IsChecked = settings.ShowOnAllScreens;
         SyncIslandsCheck.IsChecked = settings.SyncIslandsOpenState;
+        ReserveSpaceCheck.IsChecked = settings.ReserveSpaceAtTop;
 
         if (settings.HoverMode == HoverMode.LongHoverOpen)
             LongHoverRadio.IsChecked = true;
@@ -79,6 +80,7 @@ public partial class InlineSettingsView : System.Windows.Controls.UserControl
         _settings.ShowWebcam = ShowWebcamCheck.IsChecked == true;
         _settings.ShowOnAllScreens = ShowOnAllScreensCheck.IsChecked == true;
         _settings.SyncIslandsOpenState = SyncIslandsCheck.IsChecked == true;
+        _settings.ReserveSpaceAtTop = ReserveSpaceCheck.IsChecked == true;
 
         _settings.ApplyStartOnBoot();
         _settings.Save();
