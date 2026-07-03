@@ -56,6 +56,23 @@ public partial class NotchWindow : Window
     private double _dragVelocityX;
     private double _dragVelocityY;
 
+    // Multi-screen: which monitor this island lives on (WinForms device name)
+    private string? _screenDevice;
+    private Rect _screenBounds;
+
+    // Island role & cross-island sync
+    private readonly bool _isPrimary;
+    private bool _applyingSyncedState;
+
+    /// <summary>Raised when the user opens/closes this island (not for synced changes).</summary>
+    public event Action<NotchState>? UserStateChanged;
+
+    /// <summary>Raised after the user changed settings from this island's inline panel.</summary>
+    public event Action<AppSettings>? SettingsUpdatedByUser;
+
+    /// <summary>Device name of the screen currently hosting this island.</summary>
+    public string? ScreenDevice => _screenDevice;
+
     // Liquid Glass backdrop
     private bool _isLiquidGlassActive;
     private ImageBrush? _backdropBrush;
@@ -64,7 +81,8 @@ public partial class NotchWindow : Window
     private double _cachedDpiX = 1, _cachedDpiY = 1;
     private bool _dpiCached;
 
-    // Services
+    // Services (shared across all islands; owned by App via NotchServices)
+    private readonly NotchServices _services;
     private readonly MediaService _mediaService;
     private readonly AudioCaptureService _audioCaptureService;
     private readonly VolumeService _volumeService;
@@ -75,7 +93,7 @@ public partial class NotchWindow : Window
     private readonly ShelfService _shelfService;
     private readonly FullscreenService _fullscreenService;
     private readonly WebcamService _webcamService;
-    private readonly GlobalHotkey _globalHotkey;
+    private readonly GlobalHotkey? _globalHotkey;
 
     // Settings
     private AppSettings _settings;
@@ -85,11 +103,20 @@ public partial class NotchWindow : Window
     private PluginLibraryService? _pluginLibraryService;
     private PluginContext? _pluginContext;
 
-    public NotchWindow(AppSettings settings, ThemeService themeService)
+    /// <summary>
+    /// The primary island hosts the plugin system, the global hotkey, and persists
+    /// its dock position. Secondary islands (one per extra screen) share every
+    /// service but skip those responsibilities. <paramref name="screenDevice"/> is
+    /// the WinForms device name of the screen to appear on (null = primary screen).
+    /// </summary>
+    public NotchWindow(AppSettings settings, ThemeService themeService, NotchServices services,
+        bool isPrimary = true, string? screenDevice = null)
     {
         InitializeComponent();
 
         _settings = settings;
+        _isPrimary = isPrimary;
+        _screenDevice = screenDevice;
         _vm = new NotchViewModel();
         DataContext = _vm;
 
@@ -112,17 +139,18 @@ public partial class NotchWindow : Window
         _currentShadowOpacity = 0.0;
         _currentContentOpacity = 0.0;
 
-        // Services
-        _mediaService = new MediaService();
-        _audioCaptureService = new AudioCaptureService(bandCount: 12);
-        _volumeService = new VolumeService();
-        _brightnessService = new BrightnessService();
-        _batteryService = new BatteryService();
-        _calendarService = new CalendarService();
-        _shelfService = new ShelfService();
-        _fullscreenService = new FullscreenService();
-        _webcamService = new WebcamService();
-        _globalHotkey = new GlobalHotkey();
+        // Shared services
+        _services = services;
+        _mediaService = services.Media;
+        _audioCaptureService = services.AudioCapture;
+        _volumeService = services.Volume;
+        _brightnessService = services.Brightness;
+        _batteryService = services.Battery;
+        _calendarService = services.Calendar;
+        _shelfService = services.Shelf;
+        _fullscreenService = services.Fullscreen;
+        _webcamService = services.Webcam;
+        _globalHotkey = isPrimary ? new GlobalHotkey() : null;
 
         SourceInitialized += OnSourceInitialized;
         Loaded += OnLoaded;
@@ -132,9 +160,12 @@ public partial class NotchWindow : Window
     {
         WindowHelper.MakeOverlayWindow(this);
 
-        // Register global hotkey (Ctrl+Alt+N)
-        _globalHotkey.Register(this);
-        _globalHotkey.HotkeyPressed += OnGlobalHotkeyPressed;
+        // Register global hotkey (Ctrl+Alt+N) — primary island only
+        if (_globalHotkey != null)
+        {
+            _globalHotkey.Register(this);
+            _globalHotkey.HotkeyPressed += OnGlobalHotkeyPressed;
+        }
     }
 
     private void OnLoaded(object? sender, RoutedEventArgs e)
@@ -179,38 +210,54 @@ public partial class NotchWindow : Window
         DragLeave += OnDragLeave;
         Drop += OnDrop;
 
-        // Initialize media services
+        // Initialize/bind shared services
         _ = InitializeServicesAsync();
 
-        // Initialize plugin system
-        _ = InitializePluginsAsync();
+        // Initialize plugin system (primary island only — a plugin's UIElement
+        // can live in exactly one visual tree)
+        if (_isPrimary)
+            _ = InitializePluginsAsync();
+
+        // Restore the persisted dock position (primary island only)
+        if (_isPrimary && _settings.NotchDockPosition != NotchDock.Top)
+            DockTo(_settings.NotchDockPosition);
     }
 
     private async System.Threading.Tasks.Task InitializeServicesAsync()
     {
-        await _mediaService.InitializeAsync();
-        _audioCaptureService.Start();
+        // Global one-time init happens once app-wide; every island awaits it
+        await _services.EnsureInitializedAsync(_settings);
 
         // Bind views to services
         MusicPlayer.Bind(_mediaService);
         LiveActivity.Bind(_mediaService, _audioCaptureService);
 
         // Inline settings
-        InlineSettings.SettingsChanged += s => ApplySettings(s);
+        InlineSettings.SettingsChanged += s =>
+        {
+            ApplySettings(s);
+            SettingsUpdatedByUser?.Invoke(s);
+        };
         InlineSettings.BackRequested += CollapseSettings;
         InlineSettings.ThemeChangeRequested += async themeSettings =>
         {
             _settings = themeSettings;
             await _themeService.ApplyWithTransition(themeSettings, NotchCanvas);
+            SettingsUpdatedByUser?.Invoke(themeSettings);
         };
 
         // Vertical inline settings (separate instance for side dock)
-        VerticalInlineSettings.SettingsChanged += s => ApplySettings(s);
+        VerticalInlineSettings.SettingsChanged += s =>
+        {
+            ApplySettings(s);
+            SettingsUpdatedByUser?.Invoke(s);
+        };
         VerticalInlineSettings.BackRequested += CollapseSettings;
         VerticalInlineSettings.ThemeChangeRequested += async themeSettings =>
         {
             _settings = themeSettings;
             await _themeService.ApplyWithTransition(themeSettings, NotchCanvas);
+            SettingsUpdatedByUser?.Invoke(themeSettings);
         };
 
         // Toggle clock/live-activity visibility based on music state
@@ -223,18 +270,14 @@ public partial class NotchWindow : Window
         UpdateClosedContentVisibility();
 
         // Volume & Brightness
-        _volumeService.Initialize();
-        _brightnessService.Initialize();
         HudOverlay.Bind(_volumeService, _brightnessService);
         VerticalHudOverlay.IsActive = false;
         VerticalHudOverlay.Bind(_volumeService, _brightnessService);
 
         // Battery
-        _batteryService.Initialize();
         BatteryIndicator.Bind(_batteryService);
 
         // Calendar
-        _calendarService.Initialize();
         CalendarPanel_View.Bind(_calendarService);
         CalendarPanel.Visibility = _settings.ShowCalendar ? Visibility.Visible : Visibility.Collapsed;
 
@@ -243,7 +286,6 @@ public partial class NotchWindow : Window
         _shelfService.ShelfChanged += () => Dispatcher.Invoke(UpdateShelfVisibility);
 
         // Webcam mirror
-        _webcamService.SetTargetFps(_settings.WebcamFps);
         if (_settings.ShowWebcam)
         {
             WebcamPanel.Visibility = Visibility.Visible;
@@ -276,25 +318,19 @@ public partial class NotchWindow : Window
         UpdateSideClock();
         UpdateSideMediaContent(_mediaService.MediaInfo, null);
 
-        // Fullscreen detection — hide notch when another app is fullscreen
+        // Fullscreen detection — hide this island only when the fullscreen app
+        // is on the SAME monitor (a game on screen 1 shouldn't hide screen 2's island)
         _fullscreenService.FullscreenChanged += isFs =>
         {
             Dispatcher.Invoke(() =>
             {
-                if (isFs)
-                {
-                    // Hide the notch
-                    NotchCanvas.Opacity = 0;
-                    IsHitTestVisible = false;
-                }
-                else
-                {
-                    NotchCanvas.Opacity = 1;
-                    IsHitTestVisible = true;
-                }
+                bool hideThisIsland = isFs &&
+                    _fullscreenService.FullscreenMonitor == ScreenHelper.GetMonitorHandle(this);
+
+                NotchCanvas.Opacity = hideThisIsland ? 0 : 1;
+                IsHitTestVisible = !hideThisIsland;
             });
         };
-        _fullscreenService.Start();
 
         // When HUD shows, expand notch and hide other content
         // Top dock HUD: expand width only (v0.1.0 behavior)
@@ -668,13 +704,34 @@ public partial class NotchWindow : Window
     private void PositionFixedWindow()
     {
         UpdateFixedWindowBounds();
-
-        var screenBounds = ScreenHelper.GetPrimaryScreenBounds(this);
+        RefreshScreenBounds();
 
         Width = _fixedWindowWidth;
         Height = _fixedWindowHeight;
-        Left = screenBounds.Left + (screenBounds.Width - _fixedWindowWidth) / 2;
-        Top = screenBounds.Top - 2;
+        Left = _screenBounds.Left + (_screenBounds.Width - _fixedWindowWidth) / 2;
+        Top = _screenBounds.Top - 2;
+    }
+
+    /// <summary>
+    /// Resolves this island's screen device to DIP bounds. Falls back to the
+    /// primary screen when the device is missing (monitor unplugged).
+    /// </summary>
+    private void RefreshScreenBounds()
+    {
+        var screen = ScreenHelper.FindScreenByDevice(_screenDevice);
+        _screenDevice = screen.DeviceName;
+        _screenBounds = ScreenHelper.GetScreenBounds(screen, this);
+    }
+
+    /// <summary>
+    /// Re-validates the screen and repositions after a display-topology change
+    /// (monitor plugged/unplugged, resolution change).
+    /// </summary>
+    public void HandleDisplayChange()
+    {
+        if (_isDragging) return;
+        RefreshScreenBounds();
+        RepositionForDock();
     }
 
     private void UpdateFixedWindowBounds()
@@ -956,11 +1013,35 @@ public partial class NotchWindow : Window
 
     #region State Transitions
 
+    /// <summary>
+    /// Applies an open/close originating from another island (sync mode)
+    /// without re-broadcasting it.
+    /// </summary>
+    public void ApplySyncedState(NotchState state)
+    {
+        if (_isDragging || _vm.NotchState == state) return;
+
+        _applyingSyncedState = true;
+        try
+        {
+            if (state == NotchState.Open)
+                TransitionToOpen();
+            else if (state == NotchState.Closed)
+                TransitionToClose();
+        }
+        finally
+        {
+            _applyingSyncedState = false;
+        }
+    }
+
     private void TransitionToOpen()
     {
         if (_vm.NotchState == NotchState.Open) return;
         _vm.Open();
         NotifyPluginsStateChanged(NotchState.Open);
+        if (!_applyingSyncedState)
+            UserStateChanged?.Invoke(NotchState.Open);
 
         _widthSpring.Response = 0.42;
         _widthSpring.DampingFraction = 0.80;
@@ -1018,6 +1099,8 @@ public partial class NotchWindow : Window
     {
         if (_vm.NotchState == NotchState.Closed) return;
         NotifyPluginsStateChanged(NotchState.Closed);
+        if (!_applyingSyncedState)
+            UserStateChanged?.Invoke(NotchState.Closed);
 
         // Collapse settings if open
         if (_isSettingsExpanded)
@@ -1269,7 +1352,12 @@ public partial class NotchWindow : Window
     {
         _isDragging = false;
 
-        var screenBounds = ScreenHelper.GetPrimaryScreenBounds(this);
+        // Dock on whichever screen the cursor was released on
+        var dropScreen = ScreenHelper.ScreenFromPhysicalPoint(
+            new System.Drawing.Point((int)_dragLastScreen.X, (int)_dragLastScreen.Y));
+        _screenDevice = dropScreen.DeviceName;
+        var screenBounds = ScreenHelper.GetScreenBounds(dropScreen, this);
+
         var dpi = ScreenHelper.GetDpiScale(this);
         double cursorX = _dragLastScreen.X / dpi;
         double cursorY = _dragLastScreen.Y / dpi;
@@ -1279,8 +1367,15 @@ public partial class NotchWindow : Window
         double edgeDist = NotchConstants.EdgeSnapDistance;
         double throwV = NotchConstants.ThrowVelocityThreshold;
 
-        bool nearLeft = cursorX - screenBounds.Left < edgeDist || _dragVelocityX < -throwV;
-        bool nearRight = screenBounds.Right - cursorX < edgeDist || _dragVelocityX > throwV;
+        // Edges bordering another monitor are seams, not screen edges — a drop
+        // (or throw) there means "toward the next screen", never "dock here".
+        bool leftIsRealEdge = !ScreenHelper.IsEdgeSharedWithAnotherScreen(dropScreen, NotchDock.Left);
+        bool rightIsRealEdge = !ScreenHelper.IsEdgeSharedWithAnotherScreen(dropScreen, NotchDock.Right);
+
+        bool nearLeft = leftIsRealEdge &&
+            (cursorX - screenBounds.Left < edgeDist || _dragVelocityX < -throwV);
+        bool nearRight = rightIsRealEdge &&
+            (screenBounds.Right - cursorX < edgeDist || _dragVelocityX > throwV);
         bool nearTop = cursorY - screenBounds.Top < edgeDist * 1.5;
 
         if (nearLeft && !nearTop)
@@ -1301,6 +1396,15 @@ public partial class NotchWindow : Window
         _vm.Close();
 
         RepositionForDock();
+
+        // Persist where the main island lives so it survives restarts
+        if (_isPrimary)
+        {
+            _settings.NotchDockPosition = dock;
+            _settings.NotchScreenDevice = _screenDevice;
+            _settings.Save();
+            SettingsUpdatedByUser?.Invoke(_settings);
+        }
 
         // Update HUD overlay active state based on dock
         HudOverlay.IsActive = (dock == NotchDock.Top);
@@ -1350,7 +1454,8 @@ public partial class NotchWindow : Window
 
     private void RepositionForDock()
     {
-        var screenBounds = ScreenHelper.GetPrimaryScreenBounds(this);
+        RefreshScreenBounds();
+        var screenBounds = _screenBounds;
 
         switch (_dock)
         {
@@ -1572,20 +1677,14 @@ public partial class NotchWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
+        // Shared services are owned and disposed by App — a secondary island
+        // closing (e.g. multi-screen toggled off) must not tear them down.
         CompositionTarget.Rendering -= OnRenderBackdrop;
         CompositionTarget.Rendering -= OnRendering;
         _hoverOpenTimer?.Stop();
         _hoverCloseTimer?.Stop();
-        _calendarService.Dispose();
         _pluginManager?.Dispose();
-        _audioCaptureService.Dispose();
-        _mediaService.Dispose();
-        _volumeService.Dispose();
-        _brightnessService.Dispose();
-        _batteryService.Dispose();
-        _fullscreenService.Dispose();
-        _webcamService.Dispose();
-        _globalHotkey.Dispose();
+        _globalHotkey?.Dispose();
         base.OnClosed(e);
     }
 

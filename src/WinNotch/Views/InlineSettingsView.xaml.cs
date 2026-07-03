@@ -48,6 +48,8 @@ public partial class InlineSettingsView : System.Windows.Controls.UserControl
         WebcamFpsLabel.Text = $"{settings.WebcamFps}";
         LiquidGlassCheck.IsChecked = settings.UseLiquidGlassTheme;
         AdaptToWindowsThemeCheck.IsChecked = settings.AdaptToWindowsTheme;
+        ShowOnAllScreensCheck.IsChecked = settings.ShowOnAllScreens;
+        SyncIslandsCheck.IsChecked = settings.SyncIslandsOpenState;
 
         if (settings.HoverMode == HoverMode.LongHoverOpen)
             LongHoverRadio.IsChecked = true;
@@ -75,6 +77,8 @@ public partial class InlineSettingsView : System.Windows.Controls.UserControl
         _settings.ShowBattery = ShowBatteryCheck.IsChecked == true;
         _settings.ShowCalendar = ShowCalendarCheck.IsChecked == true;
         _settings.ShowWebcam = ShowWebcamCheck.IsChecked == true;
+        _settings.ShowOnAllScreens = ShowOnAllScreensCheck.IsChecked == true;
+        _settings.SyncIslandsOpenState = SyncIslandsCheck.IsChecked == true;
 
         _settings.ApplyStartOnBoot();
         _settings.Save();

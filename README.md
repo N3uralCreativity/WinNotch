@@ -18,6 +18,7 @@ Built with `WPF`, `.NET 8`, and `C#`.
 ## Features
 
 - Dynamic notch with hover, click, drag, and scroll interactions
+- Multi-monitor support: drag the island to any screen and dock it there; optional island on every screen with synchronized (or independent) open state
 - Built-in media controls and audio visualizer
 - Volume and brightness HUDs
 - Calendar, battery, file shelf, and webcam mirror

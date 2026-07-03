@@ -16,10 +16,12 @@ public partial class App : Application
     private static Mutex? _mutex;
     private static bool _ownsMutex;
     private NotchWindow? _notchWindow;
+    private readonly Dictionary<string, NotchWindow> _secondaryWindows = new();
     private Forms.NotifyIcon? _trayIcon;
     private Forms.ContextMenuStrip? _trayMenu;
     private AppSettings _settings = null!;
     private ThemeService _themeService = null!;
+    private NotchServices _services = null!;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -82,13 +84,110 @@ public partial class App : Application
         // System tray icon
         SetupTrayIcon();
 
-        // Launch the notch window
-        _notchWindow = new NotchWindow(_settings, _themeService);
+        // Shared system services — one set for every island window
+        _services = new NotchServices();
+
+        // Launch the primary island (on its remembered screen)
+        _notchWindow = new NotchWindow(_settings, _themeService, _services,
+            isPrimary: true, screenDevice: _settings.NotchScreenDevice);
+        WireIslandEvents(_notchWindow);
         _notchWindow.Show();
+
+        // Optional islands on every other screen
+        RebuildSecondaryWindows();
+
+        // React to monitors being plugged/unplugged or rearranged
+        Microsoft.Win32.SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
 
         // Silent update check shortly after startup (network failures are ignored)
         if (_settings.AutoCheckForUpdates)
             _ = CheckForUpdatesSilentlyAsync();
+    }
+
+    private void OnDisplaySettingsChanged(object? sender, EventArgs e)
+    {
+        Dispatcher.BeginInvoke(() =>
+        {
+            _notchWindow?.HandleDisplayChange();
+            RebuildSecondaryWindows();
+        });
+    }
+
+    private void WireIslandEvents(NotchWindow window)
+    {
+        // Settings changed on one island → apply everywhere + re-evaluate islands
+        window.SettingsUpdatedByUser += settings =>
+        {
+            _settings = settings;
+            foreach (var other in AllIslands())
+            {
+                if (!ReferenceEquals(other, window))
+                    other.ApplySettings(settings);
+            }
+            RebuildSecondaryWindows();
+        };
+
+        // Open/close sync across islands (when enabled)
+        window.UserStateChanged += state =>
+        {
+            if (!_settings.SyncIslandsOpenState) return;
+            if (state != NotchState.Open && state != NotchState.Closed) return;
+
+            foreach (var other in AllIslands())
+            {
+                if (!ReferenceEquals(other, window))
+                    other.ApplySyncedState(state);
+            }
+        };
+    }
+
+    private IEnumerable<NotchWindow> AllIslands()
+    {
+        if (_notchWindow != null)
+            yield return _notchWindow;
+        foreach (var window in _secondaryWindows.Values)
+            yield return window;
+    }
+
+    /// <summary>
+    /// Creates/removes secondary islands so that — when ShowOnAllScreens is on —
+    /// every screen except the primary island's has exactly one island.
+    /// </summary>
+    private void RebuildSecondaryWindows()
+    {
+        var wanted = new HashSet<string>();
+        if (_settings.ShowOnAllScreens && _notchWindow != null)
+        {
+            foreach (var screen in Forms.Screen.AllScreens)
+            {
+                if (screen.DeviceName != _notchWindow.ScreenDevice)
+                    wanted.Add(screen.DeviceName);
+            }
+        }
+
+        // Close islands whose screen disappeared, moved under the primary,
+        // or that the setting no longer wants
+        foreach (var device in _secondaryWindows.Keys.ToList())
+        {
+            if (!wanted.Contains(device))
+            {
+                _secondaryWindows[device].Close();
+                _secondaryWindows.Remove(device);
+            }
+        }
+
+        // Spawn islands for newly wanted screens
+        foreach (var device in wanted)
+        {
+            if (_secondaryWindows.ContainsKey(device))
+                continue;
+
+            var island = new NotchWindow(_settings, _themeService, _services,
+                isPrimary: false, screenDevice: device);
+            WireIslandEvents(island);
+            _secondaryWindows[device] = island;
+            island.Show();
+        }
     }
 
     private async System.Threading.Tasks.Task CheckForUpdatesSilentlyAsync()
@@ -193,15 +292,20 @@ public partial class App : Application
         _themeService.ThemeChanged -= ApplyTrayTheme;
         _themeService?.StopWatchingSystemTheme();
         _trayIcon?.Dispose();
+        foreach (var window in _secondaryWindows.Values.ToList())
+            window.Close();
+        _secondaryWindows.Clear();
         _notchWindow?.Close();
         Shutdown();
     }
 
     protected override void OnExit(ExitEventArgs e)
     {
+        Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
         if (_themeService != null)
             _themeService.ThemeChanged -= ApplyTrayTheme;
         _trayIcon?.Dispose();
+        _services?.Dispose();
         if (_ownsMutex && _mutex != null)
         {
             try

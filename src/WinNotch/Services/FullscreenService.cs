@@ -15,6 +15,9 @@ public class FullscreenService : IDisposable
     /// <summary>Whether a fullscreen application is currently detected.</summary>
     public bool IsFullscreen { get; private set; }
 
+    /// <summary>Monitor handle hosting the fullscreen app (IntPtr.Zero when none).</summary>
+    public IntPtr FullscreenMonitor { get; private set; }
+
     /// <summary>Fired when fullscreen state changes. Args: isFullscreen</summary>
     public event Action<bool>? FullscreenChanged;
 
@@ -32,16 +35,18 @@ public class FullscreenService : IDisposable
 
     private void Check()
     {
-        bool fullscreen = IsFullscreenAppRunning();
-        if (fullscreen != IsFullscreen)
+        bool fullscreen = IsFullscreenAppRunning(out var monitor);
+        if (fullscreen != IsFullscreen || monitor != FullscreenMonitor)
         {
             IsFullscreen = fullscreen;
+            FullscreenMonitor = monitor;
             FullscreenChanged?.Invoke(fullscreen);
         }
     }
 
-    private static bool IsFullscreenAppRunning()
+    private static bool IsFullscreenAppRunning(out IntPtr fullscreenMonitor)
     {
+        fullscreenMonitor = IntPtr.Zero;
         IntPtr foreground = GetForegroundWindow();
         if (foreground == IntPtr.Zero) return false;
 
@@ -67,10 +72,15 @@ public class FullscreenService : IDisposable
             if (GetMonitorInfo(monitor, ref monitorInfo))
             {
                 var screen = monitorInfo.rcMonitor;
-                return windowRect.Left <= screen.Left &&
-                       windowRect.Top <= screen.Top &&
-                       windowRect.Right >= screen.Right &&
-                       windowRect.Bottom >= screen.Bottom;
+                bool covers = windowRect.Left <= screen.Left &&
+                              windowRect.Top <= screen.Top &&
+                              windowRect.Right >= screen.Right &&
+                              windowRect.Bottom >= screen.Bottom;
+                if (covers)
+                {
+                    fullscreenMonitor = monitor;
+                    return true;
+                }
             }
         }
 

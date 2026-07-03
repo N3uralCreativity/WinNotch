@@ -40,6 +40,19 @@ public class AppSettings
     // Updates
     public bool AutoCheckForUpdates { get; set; } = true;
 
+    // Screens & position
+    /// <summary>Where the main island was last docked (persisted across restarts).</summary>
+    public NotchDock NotchDockPosition { get; set; } = NotchDock.Top;
+
+    /// <summary>Device name of the screen hosting the main island (null = primary).</summary>
+    public string? NotchScreenDevice { get; set; }
+
+    /// <summary>Show an island on every connected screen.</summary>
+    public bool ShowOnAllScreens { get; set; }
+
+    /// <summary>When multiple islands are shown, open/close them together.</summary>
+    public bool SyncIslandsOpenState { get; set; } = true;
+
     // Appearance
     public AppTheme Theme { get; set; } = AppTheme.Auto;
     public bool AdaptToWindowsTheme { get; set; } = true;

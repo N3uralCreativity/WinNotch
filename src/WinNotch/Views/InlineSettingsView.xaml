@@ -195,6 +195,29 @@
                     </Border>
                 </Grid>
 
+                <!-- Screens -->
+                <TextBlock Text="SCREENS" Style="{StaticResource SectionHeader}"/>
+
+                <Grid Height="28" Margin="0,2">
+                    <TextBlock Text="Island on every screen" Style="{StaticResource SettingLabel}"/>
+                    <CheckBox x:Name="ShowOnAllScreensCheck" Style="{StaticResource ToggleSwitch}"
+                              HorizontalAlignment="Right" VerticalAlignment="Center"
+                              Checked="OnSettingChanged" Unchecked="OnSettingChanged"/>
+                </Grid>
+                <TextBlock Text="Shows an island on each connected display. Drag any island to move it between screens."
+                           Foreground="{DynamicResource TextFaintBrush}" FontSize="9" Margin="0,0,0,4"
+                           TextWrapping="Wrap"/>
+
+                <Grid Height="28" Margin="0,2">
+                    <TextBlock Text="Synchronize islands" Style="{StaticResource SettingLabel}"/>
+                    <CheckBox x:Name="SyncIslandsCheck" Style="{StaticResource ToggleSwitch}"
+                              HorizontalAlignment="Right" VerticalAlignment="Center"
+                              Checked="OnSettingChanged" Unchecked="OnSettingChanged"/>
+                </Grid>
+                <TextBlock Text="Opening or closing one island does the same on all screens. Off = each island acts independently."
+                           Foreground="{DynamicResource TextFaintBrush}" FontSize="9" Margin="0,0,0,4"
+                           TextWrapping="Wrap"/>
+
                 <!-- Beta Features -->
                 <TextBlock Text="BETA FEATURES" Style="{StaticResource SectionHeader}"/>
 
