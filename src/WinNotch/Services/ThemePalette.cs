@@ -62,12 +62,16 @@ public sealed class ThemePalette
             ? Color.FromRgb(0xF6, 0xF8, 0xFB)
             : Color.FromRgb(0x0B, 0x10, 0x16);
 
+        // Liquid glass: a thin tint (~35-40%) over the blurred backdrop — iOS-style
+        // glass is mostly the refracted background, not a solid fill. Non-glass
+        // light is deliberately off-white so the island still reads on white
+        // wallpapers (paired with the always-on soft shadow).
         var background = useLiquidGlass
             ? (isLight
-                ? Mix(Color.FromArgb(0xCC, 0xFF, 0xFF, 0xFF), accentSeed, 0.03)
-                : Mix(Color.FromArgb(0xCC, 0x08, 0x0D, 0x13), accentSeed, 0.08))
+                ? Mix(Color.FromArgb(0x59, 0xEC, 0xEE, 0xF2), accentSeed, 0.03)
+                : Mix(Color.FromArgb(0x66, 0x10, 0x15, 0x1D), accentSeed, 0.08))
             : (isLight
-                ? Mix(Color.FromRgb(0xFF, 0xFF, 0xFF), accentSeed, 0.035)
+                ? Mix(Color.FromRgb(0xF3, 0xF5, 0xF8), accentSeed, 0.05)
                 : Mix(readabilityBackground, accentSeed, 0.08));
 
         var surface = useLiquidGlass
@@ -113,7 +117,7 @@ public sealed class ThemePalette
         var scrollThumb = WithAlpha(textPrimary, (byte)(isLight ? 0x45 : 0x55));
         var scrollThumbHover = WithAlpha(textPrimary, (byte)(isLight ? 0x66 : 0x72));
         var scrollThumbDrag = WithAlpha(textPrimary, (byte)(isLight ? 0x88 : 0x92));
-        var shadow = WithAlpha(Colors.Black, (byte)(useLiquidGlass ? 0x28 : (isLight ? 0x26 : 0x44)));
+        var shadow = WithAlpha(Colors.Black, (byte)(useLiquidGlass ? 0x38 : (isLight ? 0x40 : 0x44)));
 
         return new ThemePalette
         {

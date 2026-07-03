@@ -544,6 +544,12 @@ public partial class NotchWindow : Window
         window.Topmost = false;
     }
 
+    // A resting shadow keeps the island visible on same-color wallpapers
+    // (e.g. a white notch on a white background). ShowShadow disables all of it.
+    private double ClosedShadowOpacity => _settings.ShowShadow ? 0.5 : 0.0;
+    private double OpenShadowOpacity => _settings.ShowShadow ? 0.85 : 0.0;
+    private double DragShadowOpacity => _settings.ShowShadow ? 0.6 : 0.0;
+
     private void UpdateClosedContentVisibility()
     {
         var info = _mediaService.MediaInfo;
@@ -1092,7 +1098,7 @@ public partial class NotchWindow : Window
 
         _topRadiusSpring.AnimateTo(NotchConstants.OpenTopRadius, _currentTopRadius);
         _bottomRadiusSpring.AnimateTo(NotchConstants.OpenBottomRadius, _currentBottomRadius);
-        _shadowOpacitySpring.AnimateTo(0.7, _currentShadowOpacity);
+        _shadowOpacitySpring.AnimateTo(OpenShadowOpacity, _currentShadowOpacity);
         _contentOpacitySpring.AnimateTo(1.0, _currentContentOpacity);
     }
 
@@ -1155,7 +1161,7 @@ public partial class NotchWindow : Window
 
         _topRadiusSpring.AnimateTo(NotchConstants.ClosedTopRadius, _currentTopRadius);
         _bottomRadiusSpring.AnimateTo(NotchConstants.ClosedBottomRadius, _currentBottomRadius);
-        _shadowOpacitySpring.AnimateTo(0.0, _currentShadowOpacity);
+        _shadowOpacitySpring.AnimateTo(ClosedShadowOpacity, _currentShadowOpacity);
         _contentOpacitySpring.AnimateTo(0.0, _currentContentOpacity);
     }
 
@@ -1371,7 +1377,7 @@ public partial class NotchWindow : Window
         _heightSpring.DampingFraction = 0.90;
         _widthSpring.AnimateTo(pillW, _currentWidth);
         _heightSpring.AnimateTo(pillH, _currentHeight);
-        _shadowOpacitySpring.AnimateTo(0.5, _currentShadowOpacity);
+        _shadowOpacitySpring.AnimateTo(DragShadowOpacity, _currentShadowOpacity);
         _contentOpacitySpring.AnimateTo(0.0, _currentContentOpacity);
     }
 
@@ -1394,15 +1400,10 @@ public partial class NotchWindow : Window
         double edgeDist = NotchConstants.EdgeSnapDistance;
         double throwV = NotchConstants.ThrowVelocityThreshold;
 
-        // Edges bordering another monitor are seams, not screen edges — a drop
-        // (or throw) there means "toward the next screen", never "dock here".
-        bool leftIsRealEdge = !ScreenHelper.IsEdgeSharedWithAnotherScreen(dropScreen, NotchDock.Left);
-        bool rightIsRealEdge = !ScreenHelper.IsEdgeSharedWithAnotherScreen(dropScreen, NotchDock.Right);
-
-        bool nearLeft = leftIsRealEdge &&
-            (cursorX - screenBounds.Left < edgeDist || _dragVelocityX < -throwV);
-        bool nearRight = rightIsRealEdge &&
-            (screenBounds.Right - cursorX < edgeDist || _dragVelocityX > throwV);
+        // Any edge of the cursor's screen is a valid dock target — including edges
+        // facing another monitor (drag past the seam to dock on the far screen).
+        bool nearLeft = cursorX - screenBounds.Left < edgeDist || _dragVelocityX < -throwV;
+        bool nearRight = screenBounds.Right - cursorX < edgeDist || _dragVelocityX > throwV;
         bool nearTop = cursorY - screenBounds.Top < edgeDist * 1.5;
 
         if (nearLeft && !nearTop)
@@ -1478,7 +1479,7 @@ public partial class NotchWindow : Window
 
         _topRadiusSpring.AnimateTo(NotchConstants.ClosedTopRadius, _currentTopRadius);
         _bottomRadiusSpring.AnimateTo(NotchConstants.ClosedBottomRadius, _currentBottomRadius);
-        _shadowOpacitySpring.AnimateTo(0.0, _currentShadowOpacity);
+        _shadowOpacitySpring.AnimateTo(ClosedShadowOpacity, _currentShadowOpacity);
         _contentOpacitySpring.AnimateTo(0.0, _currentContentOpacity);
     }
 
@@ -1776,6 +1777,14 @@ public partial class NotchWindow : Window
         }
 
         UpdateSpaceReservation();
+
+        // Re-target the shadow for the current state (ShowShadow may have toggled)
+        if (!_isDragging)
+        {
+            _shadowOpacitySpring.AnimateTo(
+                _vm.NotchState == NotchState.Open ? OpenShadowOpacity : ClosedShadowOpacity,
+                _currentShadowOpacity);
+        }
     }
 
     private double GetOpenWidth()
@@ -1835,10 +1844,17 @@ public partial class NotchWindow : Window
         }
     }
 
+    private long _lastBackdropCaptureTicks;
+
     private void OnRenderBackdrop(object? sender, EventArgs e)
     {
         if (!_isLiquidGlassActive || _isDragging) return;
         if (_currentWidth < 10 || _currentHeight < 10) return;
+
+        // 30fps is indistinguishable under the blur and halves the capture cost
+        long now = Environment.TickCount64;
+        if (now - _lastBackdropCaptureTicks < 33) return;
+        _lastBackdropCaptureTicks = now;
 
         try
         {
@@ -1871,7 +1887,8 @@ public partial class NotchWindow : Window
             }
 
             // Capture directly into the WriteableBitmap (zero alloc)
-            BackdropBlurHelper.CaptureInto(_backdropWb, px, py, pw, ph, padding: 4);
+            // Padding feeds the edge-lens: rim pixels sample from this outside band
+            BackdropBlurHelper.CaptureInto(_backdropWb, px, py, pw, ph, padding: 8);
         }
         catch
         {

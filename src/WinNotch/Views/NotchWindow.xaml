@@ -34,50 +34,56 @@
                 </Path.Effect>
             </Path>
 
-            <!-- Liquid Glass: blurred + refracted backdrop (GPU blur via BlurEffect) -->
+            <!-- Liquid Glass: refracted + vibrancy-boosted backdrop; GPU blur on top.
+                 The capture itself already bends content around the rim (edge lens). -->
             <Path x:Name="BackdropBlurPath" Opacity="0" IsHitTestVisible="False">
                 <Path.Effect>
-                    <BlurEffect Radius="6" KernelType="Gaussian"/>
+                    <BlurEffect Radius="9" KernelType="Gaussian"/>
                 </Path.Effect>
             </Path>
 
-            <!-- Main notch shape — glass tint: V2 uses color-mix(glass 12%, transparent) -->
+            <!-- Main notch shape — in liquid glass the fill is a thin ~35% tint -->
             <Path x:Name="NotchPath"
                   Fill="{DynamicResource NotchFillBrush}"
                   Cursor="Hand"/>
 
-            <!-- Liquid Glass: top-edge specular highlight (V2 inset 1.8px 3px white 90%) -->
+            <!-- Liquid Glass: specular pass — bright top rim light falling off fast,
+                 a faint mid sheen, and a soft counter-light along the bottom edge -->
             <Path x:Name="GlassSpecularPath" Opacity="0" IsHitTestVisible="False">
                 <Path.Fill>
                     <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
-                        <GradientStop Color="#20FFFFFF" Offset="0.0"/>
-                        <GradientStop Color="#0CFFFFFF" Offset="0.12"/>
-                        <GradientStop Color="#00FFFFFF" Offset="0.35"/>
+                        <GradientStop Color="#55FFFFFF" Offset="0.0"/>
+                        <GradientStop Color="#1AFFFFFF" Offset="0.09"/>
+                        <GradientStop Color="#06FFFFFF" Offset="0.28"/>
+                        <GradientStop Color="#00FFFFFF" Offset="0.55"/>
+                        <GradientStop Color="#08FFFFFF" Offset="0.90"/>
+                        <GradientStop Color="#20FFFFFF" Offset="1.0"/>
                     </LinearGradientBrush>
                 </Path.Fill>
             </Path>
 
-            <!-- Liquid Glass: bright inner border (V2 multi-layer inset box-shadow) -->
+            <!-- Liquid Glass: glass ring — bright where light hits (top-left),
+                 dimmer through the middle, softly lit again bottom-right -->
             <Path x:Name="GlassBorderPath" Opacity="0" IsHitTestVisible="False"
-                  StrokeThickness="1.2" Fill="{x:Null}">
+                  StrokeThickness="1.4" Fill="{x:Null}">
                 <Path.Stroke>
                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                        <GradientStop Color="#80FFFFFF" Offset="0.0"/>
-                        <GradientStop Color="#30FFFFFF" Offset="0.25"/>
-                        <GradientStop Color="#10FFFFFF" Offset="0.55"/>
-                        <GradientStop Color="#45FFFFFF" Offset="1.0"/>
+                        <GradientStop Color="#B4FFFFFF" Offset="0.0"/>
+                        <GradientStop Color="#3CFFFFFF" Offset="0.30"/>
+                        <GradientStop Color="#1EFFFFFF" Offset="0.60"/>
+                        <GradientStop Color="#78FFFFFF" Offset="1.0"/>
                     </LinearGradientBrush>
                 </Path.Stroke>
             </Path>
 
-            <!-- Liquid Glass: dark inner shadow (V2 dark inset shadows for depth) -->
+            <!-- Liquid Glass: dark inner shadow for depth just inside the ring -->
             <Path x:Name="GlassInnerShadowPath" Opacity="0" IsHitTestVisible="False"
-                  StrokeThickness="2.0" Fill="{x:Null}">
+                  StrokeThickness="2.4" Fill="{x:Null}">
                 <Path.Stroke>
                     <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
                         <GradientStop Color="#00000000" Offset="0.0"/>
-                        <GradientStop Color="#18000000" Offset="0.5"/>
-                        <GradientStop Color="#0A000000" Offset="1.0"/>
+                        <GradientStop Color="#20000000" Offset="0.55"/>
+                        <GradientStop Color="#10000000" Offset="1.0"/>
                     </LinearGradientBrush>
                 </Path.Stroke>
             </Path>

@@ -56,30 +56,6 @@ public static class ScreenHelper
         return Screen.PrimaryScreen!;
     }
 
-    /// <summary>
-    /// Whether a screen's left/right edge borders another monitor. Docking the notch
-    /// into an interior seam of the virtual desktop looks broken, so such edges are
-    /// excluded as dock targets.
-    /// </summary>
-    public static bool IsEdgeSharedWithAnotherScreen(Screen screen, NotchDock side)
-    {
-        const int tolerance = 4; // physical px
-
-        var b = screen.Bounds;
-        foreach (var other in Screen.AllScreens)
-        {
-            if (other.DeviceName == screen.DeviceName) continue;
-
-            var o = other.Bounds;
-            bool verticalOverlap = o.Top < b.Bottom && o.Bottom > b.Top;
-            if (!verticalOverlap) continue;
-
-            if (side == NotchDock.Left && Math.Abs(o.Right - b.Left) <= tolerance) return true;
-            if (side == NotchDock.Right && Math.Abs(o.Left - b.Right) <= tolerance) return true;
-        }
-        return false;
-    }
-
     /// <summary>Gets the native monitor handle the window currently sits on.</summary>
     public static IntPtr GetMonitorHandle(Window window)
     {
