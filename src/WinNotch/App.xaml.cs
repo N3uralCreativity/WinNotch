@@ -28,6 +28,7 @@ public partial class App : Application
         // Global exception handler for diagnostics
         DispatcherUnhandledException += (_, args) =>
         {
+            LogCrash(args.Exception);
             System.Windows.MessageBox.Show(args.Exception.ToString(), "WinNotch Error",
                 MessageBoxButton.OK, MessageBoxImage.Error);
             args.Handled = true;
@@ -84,6 +85,52 @@ public partial class App : Application
         // Launch the notch window
         _notchWindow = new NotchWindow(_settings, _themeService);
         _notchWindow.Show();
+
+        // Silent update check shortly after startup (network failures are ignored)
+        if (_settings.AutoCheckForUpdates)
+            _ = CheckForUpdatesSilentlyAsync();
+    }
+
+    private async System.Threading.Tasks.Task CheckForUpdatesSilentlyAsync()
+    {
+        try
+        {
+            await System.Threading.Tasks.Task.Delay(TimeSpan.FromSeconds(15));
+
+            var updateService = new UpdateService();
+            var result = await updateService.CheckForUpdateAsync();
+
+            if (result == UpdateCheckResult.UpdateAvailable && _trayIcon != null)
+            {
+                _trayIcon.ShowBalloonTip(
+                    5000,
+                    "WinNotch update available",
+                    $"Version {updateService.LatestVersion} is ready. Open Settings → Check for Updates to install.",
+                    Forms.ToolTipIcon.Info);
+            }
+        }
+        catch
+        {
+            // Never let a background check surface an error.
+        }
+    }
+
+    private static void LogCrash(Exception exception)
+    {
+        try
+        {
+            var logDir = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "WinNotch", "Logs");
+            System.IO.Directory.CreateDirectory(logDir);
+            System.IO.File.AppendAllText(
+                System.IO.Path.Combine(logDir, "crash.log"),
+                $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} {exception}{Environment.NewLine}{Environment.NewLine}");
+        }
+        catch
+        {
+            // Diagnostics must never crash the handler.
+        }
     }
 
     private void SetupTrayIcon()

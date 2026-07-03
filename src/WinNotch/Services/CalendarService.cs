@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using WinNotch.Models;
 
@@ -10,13 +12,14 @@ namespace WinNotch.Services;
 /// Provides calendar events. Currently reads from Outlook COM if available,
 /// otherwise returns an empty list. Can be extended for Microsoft Graph, .ics files, etc.
 /// </summary>
-public class CalendarService
+public class CalendarService : IDisposable
 {
     public event Action? EventsUpdated;
 
     public List<CalendarEvent> TodayEvents { get; private set; } = new();
 
     private System.Windows.Threading.DispatcherTimer? _refreshTimer;
+    private int _refreshing;
 
     public void Initialize()
     {
@@ -33,35 +36,66 @@ public class CalendarService
 
     public void RefreshEvents()
     {
-        TodayEvents = FetchOutlookEvents();
-        EventsUpdated?.Invoke();
+        // COM interop can take seconds — never block the UI thread, never overlap.
+        if (Interlocked.CompareExchange(ref _refreshing, 1, 0) != 0) return;
+
+        // Outlook COM prefers an STA apartment; thread-pool threads are MTA.
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                var events = FetchOutlookEvents();
+                TodayEvents = events;
+                EventsUpdated?.Invoke();
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _refreshing, 0);
+            }
+        })
+        {
+            IsBackground = true,
+            Name = "WinNotch.CalendarRefresh"
+        };
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
     }
 
     private static List<CalendarEvent> FetchOutlookEvents()
     {
+        object? outlook = null;
+        object? ns = null;
+        object? calFolder = null;
+        object? items = null;
+        object? restricted = null;
+
         try
         {
-            // Try Outlook COM interop (works if Outlook is installed)
-            var outlookType = Type.GetTypeFromProgID("Outlook.Application");
-            if (outlookType == null) return new List<CalendarEvent>();
+            // Attach to a RUNNING Outlook instance only. CreateInstance would
+            // silently launch Outlook in the background on every refresh.
+            outlook = GetActiveOutlook();
+            if (outlook == null) return new List<CalendarEvent>();
 
-            dynamic outlook = Activator.CreateInstance(outlookType)!;
-            dynamic ns = outlook.GetNamespace("MAPI");
+            dynamic ol = outlook;
+            ns = ol.GetNamespace("MAPI");
+            dynamic dns = ns!;
             // olFolderCalendar = 9
-            dynamic calFolder = ns.GetDefaultFolder(9);
-            dynamic items = calFolder.Items;
-            items.Sort("[Start]");
-            items.IncludeRecurrences = true;
+            calFolder = dns.GetDefaultFolder(9);
+            dynamic dcal = calFolder!;
+            items = dcal.Items;
+            dynamic ditems = items!;
+            ditems.Sort("[Start]");
+            ditems.IncludeRecurrences = true;
 
             var now = DateTime.Now;
             var endOfDay = now.Date.AddDays(1).AddSeconds(-1);
 
-            // Restrict to today's events
+            // Restrict to today's events (Outlook expects locale-formatted dates)
             string filter = $"[Start] >= '{now:g}' AND [Start] <= '{endOfDay:g}'";
-            dynamic restricted = items.Restrict(filter);
+            restricted = ditems.Restrict(filter);
 
             var events = new List<CalendarEvent>();
-            foreach (dynamic item in restricted)
+            foreach (dynamic item in (dynamic)restricted!)
             {
                 try
                 {
@@ -83,5 +117,54 @@ public class CalendarService
         {
             return new List<CalendarEvent>();
         }
+        finally
+        {
+            ReleaseCom(restricted);
+            ReleaseCom(items);
+            ReleaseCom(calFolder);
+            ReleaseCom(ns);
+            ReleaseCom(outlook);
+        }
+    }
+
+    private static void ReleaseCom(object? com)
+    {
+        try
+        {
+            if (com != null && Marshal.IsComObject(com))
+                Marshal.ReleaseComObject(com);
+        }
+        catch { }
+    }
+
+    /// <summary>
+    /// Equivalent of Marshal.GetActiveObject (removed in .NET Core+):
+    /// returns the running Outlook.Application or null if Outlook isn't open.
+    /// </summary>
+    private static object? GetActiveOutlook()
+    {
+        try
+        {
+            if (CLSIDFromProgID("Outlook.Application", out var clsid) != 0)
+                return null;
+
+            return GetActiveObject(ref clsid, IntPtr.Zero, out var obj) == 0 ? obj : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    [DllImport("ole32.dll", CharSet = CharSet.Unicode)]
+    private static extern int CLSIDFromProgID(string lpszProgID, out Guid pclsid);
+
+    [DllImport("oleaut32.dll")]
+    private static extern int GetActiveObject(ref Guid rclsid, IntPtr pvReserved,
+        [MarshalAs(UnmanagedType.IUnknown)] out object ppunk);
+
+    public void Dispose()
+    {
+        _refreshTimer?.Stop();
     }
 }

@@ -83,6 +83,13 @@ public class MediaService : IDisposable
         {
             MediaInfo.HasMedia = false;
             MediaInfo.IsPlaying = false;
+            // Clear stale metadata so nothing from the old session lingers
+            MediaInfo.Title = string.Empty;
+            MediaInfo.Artist = string.Empty;
+            MediaInfo.AlbumTitle = string.Empty;
+            MediaInfo.AlbumArt = null;
+            MediaInfo.Position = TimeSpan.Zero;
+            MediaInfo.Duration = TimeSpan.Zero;
             _positionTimer.Stop();
         }
     }
@@ -209,10 +216,9 @@ public class MediaService : IDisposable
             var interpolatedPosition = _basePosition + TimeSpan.FromSeconds(elapsed);
 
             // Clamp to duration to prevent overflow
-            if (interpolatedPosition <= MediaInfo.Duration)
-            {
-                MediaInfo.Position = interpolatedPosition;
-            }
+            MediaInfo.Position = interpolatedPosition <= MediaInfo.Duration
+                ? interpolatedPosition
+                : MediaInfo.Duration;
         }
 
         // Query actual timeline every second to resync and prevent drift

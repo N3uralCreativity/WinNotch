@@ -19,7 +19,10 @@ public partial class ClockWidget : UserControl
 
     private void OnLoaded(object? sender, RoutedEventArgs e)
     {
-        _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(10) };
+        if (_timer != null) return; // Loaded can fire again on re-attach
+
+        // 1s tick so the minute flips on time (a 10s tick can lag the clock)
+        _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         _timer.Tick += (_, _) => UpdateTime();
         _timer.Start();
     }

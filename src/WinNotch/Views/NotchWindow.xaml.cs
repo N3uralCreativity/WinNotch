@@ -260,12 +260,12 @@ public partial class NotchWindow : Window
             Dispatcher.Invoke(() => UpdateSideMediaContent(_mediaService.MediaInfo, null));
         };
 
-        // Side visualizer
+        // Side visualizer (skip work while it isn't on screen, e.g. top dock)
         _audioCaptureService.SpectrumUpdated += () =>
         {
             Dispatcher.BeginInvoke(() =>
             {
-                if (_audioCaptureService.SpectrumData != null)
+                if (SideVisualizer.IsVisible && _audioCaptureService.SpectrumData != null)
                     SideVisualizer.UpdateSpectrum(_audioCaptureService.SpectrumData);
             });
         };
@@ -304,15 +304,14 @@ public partial class NotchWindow : Window
             {
                 LiveActivity.Visibility = Visibility.Collapsed;
                 ClockWidget.Visibility = Visibility.Collapsed;
-                BatteryIndicator.Visibility = Visibility.Collapsed;
+                BatteryIndicator.Suppressed = true;
                 _widthSpring.AnimateTo(NotchConstants.HudWidth, _currentWidth);
             }
         });
         HudOverlay.HudDismissed += () => Dispatcher.Invoke(() =>
         {
             UpdateClosedContentVisibility();
-            if (_settings.ShowBattery)
-                BatteryIndicator.Visibility = Visibility.Visible;
+            BatteryIndicator.Suppressed = false;
             if (_vm.NotchState != NotchState.Open)
             {
                 _widthSpring.AnimateTo(NotchConstants.ClosedWidth, _currentWidth);
@@ -336,6 +335,11 @@ public partial class NotchWindow : Window
                 _heightSpring.AnimateTo(NotchConstants.ClosedWidth, _currentHeight);
             }
         });
+
+        // Apply all persisted settings now that every component is bound —
+        // without this, toggles like ShowMusicControls or ShowBattery only
+        // take effect after the user touches a setting.
+        ApplySettings(_settings);
     }
 
     private async System.Threading.Tasks.Task InitializePluginsAsync()
@@ -484,7 +488,7 @@ public partial class NotchWindow : Window
     private void UpdateClosedContentVisibility()
     {
         var info = _mediaService.MediaInfo;
-        bool hasMusic = info.HasMedia && info.IsPlaying;
+        bool hasMusic = _settings.ShowMusicControls && info.HasMedia && info.IsPlaying;
         LiveActivity.Visibility = hasMusic ? Visibility.Visible : Visibility.Collapsed;
         ClockWidget.Visibility = hasMusic ? Visibility.Collapsed : Visibility.Visible;
     }
@@ -937,6 +941,12 @@ public partial class NotchWindow : Window
             VerticalClosedContent.Opacity = 0;
         }
 
+        // Invisible layers must not swallow clicks (WPF hit-tests opacity-0 elements)
+        OpenContent.IsHitTestVisible = OpenContent.Opacity > 0.5;
+        ClosedContent.IsHitTestVisible = ClosedContent.Opacity > 0.5;
+        VerticalOpenContent.IsHitTestVisible = VerticalOpenContent.Opacity > 0.5;
+        VerticalClosedContent.IsHitTestVisible = VerticalClosedContent.Opacity > 0.5;
+
         // Canvas covers the full window
         NotchCanvas.Width = windowW;
         NotchCanvas.Height = windowH;
@@ -1061,7 +1071,7 @@ public partial class NotchWindow : Window
                 // Peek mode: slight expand on hover, click to fully open
                 _hoverOpenTimer = new DispatcherTimer
                 {
-                    Interval = TimeSpan.FromMilliseconds(100)
+                    Interval = TimeSpan.FromMilliseconds(Math.Max(50, _settings.HoverOpenDelayMs))
                 };
                 _hoverOpenTimer.Tick += (_, _) =>
                 {
@@ -1106,7 +1116,7 @@ public partial class NotchWindow : Window
             _hoverCloseTimer = new DispatcherTimer
             {
                 Interval = TimeSpan.FromMilliseconds(
-                    _vm.NotchState == NotchState.Peeking ? 80 : NotchConstants.HoverCloseDelayMs)
+                    _vm.NotchState == NotchState.Peeking ? 80 : Math.Max(50, _settings.HoverCloseDelayMs))
             };
             _hoverCloseTimer.Tick += (_, _) =>
             {
@@ -1398,7 +1408,8 @@ public partial class NotchWindow : Window
         // Only adjust volume in closed/peeking state (open state scrolls content normally)
         if (_vm.NotchState == NotchState.Open) return;
 
-        if (_settings.ShowVolumeHud && _volumeService != null)
+        // ShowVolumeHud only gates the HUD display (inside HudOverlay), not the volume change itself
+        if (_volumeService != null)
         {
             float current = _volumeService.Volume;
             // e.Delta is typically 120 per notch; scale to ~5% per scroll tick
@@ -1453,7 +1464,7 @@ public partial class NotchWindow : Window
                 _hoverCloseTimer?.Stop();
                 _hoverCloseTimer = new DispatcherTimer
                 {
-                    Interval = TimeSpan.FromMilliseconds(NotchConstants.HoverCloseDelayMs)
+                    Interval = TimeSpan.FromMilliseconds(Math.Max(50, _settings.HoverCloseDelayMs))
                 };
                 _hoverCloseTimer.Tick += (_, _) =>
                 {
@@ -1563,6 +1574,9 @@ public partial class NotchWindow : Window
     {
         CompositionTarget.Rendering -= OnRenderBackdrop;
         CompositionTarget.Rendering -= OnRendering;
+        _hoverOpenTimer?.Stop();
+        _hoverCloseTimer?.Stop();
+        _calendarService.Dispose();
         _pluginManager?.Dispose();
         _audioCaptureService.Dispose();
         _mediaService.Dispose();
@@ -1584,11 +1598,18 @@ public partial class NotchWindow : Window
         ApplyLiquidGlassEffect(settings.UseLiquidGlassTheme);
 
         // Toggle visibility of components based on settings
-        LiveActivity.Visibility = settings.ShowMusicControls ? Visibility.Visible : Visibility.Collapsed;
+        LiveActivity.UserEnabled = settings.ShowMusicControls;
         MusicPlayer.Visibility = settings.ShowMusicControls ? Visibility.Visible : Visibility.Collapsed;
-        BatteryIndicator.Visibility = settings.ShowBattery ? Visibility.Visible : Visibility.Collapsed;
+        BatteryIndicator.UserEnabled = settings.ShowBattery;
         CalendarPanel.Visibility = settings.ShowCalendar ? Visibility.Visible : Visibility.Collapsed;
         CompactVisualizer_SetVisible(settings.ShowVisualizer);
+        UpdateClosedContentVisibility();
+
+        // HUD gates (external volume/brightness changes must respect these too)
+        HudOverlay.VolumeHudEnabled = settings.ShowVolumeHud;
+        HudOverlay.BrightnessHudEnabled = settings.ShowBrightnessHud;
+        VerticalHudOverlay.VolumeHudEnabled = settings.ShowVolumeHud;
+        VerticalHudOverlay.BrightnessHudEnabled = settings.ShowBrightnessHud;
 
         // Webcam
         _webcamService.SetTargetFps(settings.WebcamFps);
@@ -1664,6 +1685,8 @@ public partial class NotchWindow : Window
             GlassInnerShadowPath.Opacity = 1.0;
             BackdropBlurPath.Opacity = 1.0;
 
+            // Idempotent: remove first so repeated enables never double-subscribe
+            CompositionTarget.Rendering -= OnRenderBackdrop;
             CompositionTarget.Rendering += OnRenderBackdrop;
         }
         else
@@ -1748,6 +1771,9 @@ public partial class NotchWindow : Window
 
     private void OnDragEnter(object sender, DragEventArgs e)
     {
+        // The file shelf lives in the horizontal (top dock) layout only
+        if (_dock != NotchDock.Top) return;
+
         if (e.Data.GetDataPresent(DataFormats.FileDrop))
         {
             e.Effects = DragDropEffects.Copy;
@@ -1771,6 +1797,8 @@ public partial class NotchWindow : Window
 
     private void OnDragOver(object sender, DragEventArgs e)
     {
+        if (_dock != NotchDock.Top) return;
+
         if (e.Data.GetDataPresent(DataFormats.FileDrop))
         {
             e.Effects = DragDropEffects.Copy;
@@ -1795,6 +1823,8 @@ public partial class NotchWindow : Window
 
     private void OnDrop(object sender, DragEventArgs e)
     {
+        if (_dock != NotchDock.Top) return;
+
         ShelfPanel.HideDropZone();
 
         if (e.Data.GetDataPresent(DataFormats.FileDrop))

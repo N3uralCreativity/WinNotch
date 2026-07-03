@@ -10,10 +10,26 @@ namespace WinNotch.Views;
 public partial class BatteryIndicator : UserControl
 {
     private BatteryService? _batteryService;
+    private bool _userEnabled = true;
+    private bool _suppressed;
 
     public BatteryIndicator()
     {
         InitializeComponent();
+    }
+
+    /// <summary>Reflects the ShowBattery setting; battery updates never override it.</summary>
+    public bool UserEnabled
+    {
+        get => _userEnabled;
+        set { _userEnabled = value; UpdateUI(); }
+    }
+
+    /// <summary>Temporarily hidden (e.g. while the HUD occupies the closed notch).</summary>
+    public bool Suppressed
+    {
+        get => _suppressed;
+        set { _suppressed = value; UpdateUI(); }
     }
 
     public void Bind(BatteryService service)
@@ -33,7 +49,7 @@ public partial class BatteryIndicator : UserControl
     {
         if (_batteryService == null) return;
 
-        if (!_batteryService.HasBattery)
+        if (!_userEnabled || _suppressed || !_batteryService.HasBattery)
         {
             Visibility = Visibility.Collapsed;
             return;
@@ -50,34 +66,28 @@ public partial class BatteryIndicator : UserControl
         double maxFillWidth = 12.0;
         BatteryFill.Width = Math.Max(0, (percent / 100.0) * maxFillWidth);
 
-        // Color based on level
-        Color fillColor;
+        // Assign the shared theme brushes directly — ThemeService mutates them
+        // in place, so colors stay live across theme switches.
         if (charging)
-            fillColor = GetThemeColor("SuccessBrush", Color.FromRgb(0x4C, 0xAF, 0x50));
+            BatteryFill.Background = GetThemeBrush("SuccessBrush", Color.FromRgb(0x4C, 0xAF, 0x50));
         else if (percent <= 10)
-            fillColor = GetThemeColor("DangerBrush", Color.FromRgb(0xF4, 0x43, 0x36));
+            BatteryFill.Background = GetThemeBrush("DangerBrush", Color.FromRgb(0xF4, 0x43, 0x36));
         else if (percent <= 20)
-            fillColor = GetThemeColor("WarningBrush", Color.FromRgb(0xFF, 0x98, 0x00));
-        else if (TryFindResource("BatteryNormalFillBrush") is SolidColorBrush normalBrush)
-            fillColor = normalBrush.Color;
+            BatteryFill.Background = GetThemeBrush("WarningBrush", Color.FromRgb(0xFF, 0x98, 0x00));
         else
-            fillColor = Colors.White;
+            BatteryFill.Background = GetThemeBrush("BatteryNormalFillBrush", Colors.White);
 
-        BatteryFill.Background = new SolidColorBrush(fillColor);
-
-        // Percent text color
         if (percent <= 10)
-            PercentText.Foreground = new SolidColorBrush(GetThemeColor("DangerBrush", Color.FromRgb(0xF4, 0x43, 0x36)));
+            PercentText.Foreground = GetThemeBrush("DangerBrush", Color.FromRgb(0xF4, 0x43, 0x36));
         else if (percent <= 20)
-            PercentText.Foreground = new SolidColorBrush(GetThemeColor("WarningBrush", Color.FromRgb(0xFF, 0x98, 0x00)));
-        else if (TryFindResource("BatteryTextBrush") is SolidColorBrush textBrush)
-            PercentText.Foreground = textBrush;
+            PercentText.Foreground = GetThemeBrush("WarningBrush", Color.FromRgb(0xFF, 0x98, 0x00));
         else
-            PercentText.Foreground = new SolidColorBrush(Color.FromRgb(0x99, 0x99, 0x99));
+            PercentText.Foreground = GetThemeBrush("BatteryTextBrush", Color.FromRgb(0x99, 0x99, 0x99));
     }
 
-    private Color GetThemeColor(string resourceKey, Color fallback)
+    private System.Windows.Media.Brush GetThemeBrush(string resourceKey, Color fallback)
     {
-        return TryFindResource(resourceKey) is SolidColorBrush brush ? brush.Color : fallback;
+        return TryFindResource(resourceKey) as System.Windows.Media.Brush
+            ?? new SolidColorBrush(fallback);
     }
 }

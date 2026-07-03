@@ -25,6 +25,8 @@ public class WebcamService : IDisposable
 
     private double _targetFps = 15;
     private long _lastFrameTicks;
+    private byte[]? _frameBuffer;
+    private int _uiFramePending;
 
     public void SetTargetFps(int fps)
     {
@@ -162,40 +164,61 @@ public class WebcamService : IDisposable
         if (now - last < minInterval) return;
         Interlocked.Exchange(ref _lastFrameTicks, now);
 
-        using var frameRef = sender.TryAcquireLatestFrame();
-        var bitmap = frameRef?.VideoMediaFrame?.SoftwareBitmap;
-        if (bitmap == null) return;
+        // Skip this frame if the UI thread hasn't consumed the previous one —
+        // this also lets us reuse a single pixel buffer (no per-frame ~1 MB alloc)
+        if (Interlocked.CompareExchange(ref _uiFramePending, 1, 0) != 0) return;
 
-        // Convert to Bgra8 if needed
-        SoftwareBitmap converted;
-        if (bitmap.BitmapPixelFormat != BitmapPixelFormat.Bgra8 ||
-            bitmap.BitmapAlphaMode != BitmapAlphaMode.Premultiplied)
+        bool dispatched = false;
+        try
         {
-            converted = SoftwareBitmap.Convert(bitmap, BitmapPixelFormat.Bgra8, BitmapAlphaMode.Premultiplied);
-        }
-        else
-        {
-            converted = SoftwareBitmap.Copy(bitmap);
-        }
+            using var frameRef = sender.TryAcquireLatestFrame();
+            var bitmap = frameRef?.VideoMediaFrame?.SoftwareBitmap;
+            if (bitmap == null) return;
 
-        int w = converted.PixelWidth;
-        int h = converted.PixelHeight;
-        var buffer = new byte[w * h * 4];
-
-        converted.CopyToBuffer(buffer.AsBuffer());
-        converted.Dispose();
-
-        // Create WPF ImageSource on the UI thread
-        Application.Current?.Dispatcher?.BeginInvoke(() =>
-        {
-            try
+            // Convert to Bgra8 if needed
+            SoftwareBitmap converted;
+            if (bitmap.BitmapPixelFormat != BitmapPixelFormat.Bgra8 ||
+                bitmap.BitmapAlphaMode != BitmapAlphaMode.Premultiplied)
             {
-                var bmp = BitmapSource.Create(w, h, 96, 96, PixelFormats.Pbgra32, null, buffer, w * 4);
-                bmp.Freeze();
-                FrameReady?.Invoke(bmp);
+                converted = SoftwareBitmap.Convert(bitmap, BitmapPixelFormat.Bgra8, BitmapAlphaMode.Premultiplied);
             }
-            catch { }
-        });
+            else
+            {
+                converted = SoftwareBitmap.Copy(bitmap);
+            }
+
+            int w = converted.PixelWidth;
+            int h = converted.PixelHeight;
+            int byteCount = w * h * 4;
+            if (_frameBuffer == null || _frameBuffer.Length != byteCount)
+                _frameBuffer = new byte[byteCount];
+            var buffer = _frameBuffer;
+
+            converted.CopyToBuffer(buffer.AsBuffer());
+            converted.Dispose();
+
+            // Create WPF ImageSource on the UI thread (BitmapSource.Create copies
+            // the buffer synchronously, after which it is safe to reuse)
+            dispatched = Application.Current?.Dispatcher?.BeginInvoke(() =>
+            {
+                try
+                {
+                    var bmp = BitmapSource.Create(w, h, 96, 96, PixelFormats.Pbgra32, null, buffer, w * 4);
+                    bmp.Freeze();
+                    FrameReady?.Invoke(bmp);
+                }
+                catch { }
+                finally
+                {
+                    Interlocked.Exchange(ref _uiFramePending, 0);
+                }
+            }) != null;
+        }
+        finally
+        {
+            if (!dispatched)
+                Interlocked.Exchange(ref _uiFramePending, 0);
+        }
     }
 
     public async Task StopAsync()

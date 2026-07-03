@@ -13,9 +13,16 @@ public partial class HudOverlay : UserControl
     private BrightnessService? _brightnessService;
     private DispatcherTimer? _dismissTimer;
     private HudType _currentType;
+    private float _lastFraction;
 
     /// <summary>When false, Show() is a no-op (prevents dual-instance conflicts).</summary>
     public bool IsActive { get; set; } = true;
+
+    /// <summary>Reflects the ShowVolumeHud setting.</summary>
+    public bool VolumeHudEnabled { get; set; } = true;
+
+    /// <summary>Reflects the ShowBrightnessHud setting.</summary>
+    public bool BrightnessHudEnabled { get; set; } = true;
 
     private enum HudType { None, Volume, Brightness }
 
@@ -25,6 +32,11 @@ public partial class HudOverlay : UserControl
     public HudOverlay()
     {
         InitializeComponent();
+
+        // The fill is proportional to the track width, which is 0 while the HUD
+        // is collapsed — re-apply once layout produces a real width.
+        if (SliderFill.Parent is Border track)
+            track.SizeChanged += (_, _) => UpdateSliderFill(_lastFraction);
     }
 
     public void Bind(VolumeService volumeService, BrightnessService brightnessService)
@@ -32,16 +44,25 @@ public partial class HudOverlay : UserControl
         _volumeService = volumeService;
         _brightnessService = brightnessService;
 
+        // Callbacks arrive on non-UI threads (CoreAudio/WMI) — never block them.
         volumeService.VolumeChanged += (volume, muted) =>
         {
-            Dispatcher.Invoke(() => ShowVolume(volume, muted));
+            Dispatcher.BeginInvoke(() =>
+            {
+                if (VolumeHudEnabled)
+                    ShowVolume(volume, muted);
+            });
         };
 
         if (brightnessService.IsSupported)
         {
             brightnessService.BrightnessChanged += brightness =>
             {
-                Dispatcher.Invoke(() => ShowBrightness(brightness));
+                Dispatcher.BeginInvoke(() =>
+                {
+                    if (BrightnessHudEnabled)
+                        ShowBrightness(brightness);
+                });
             };
         }
     }
@@ -84,6 +105,7 @@ public partial class HudOverlay : UserControl
 
     private void UpdateSliderFill(float fraction)
     {
+        _lastFraction = fraction;
         if (SliderFill.Parent is Border parent && parent.ActualWidth > 0)
         {
             SliderFill.Width = Math.Max(0, fraction * parent.ActualWidth);
@@ -98,13 +120,16 @@ public partial class HudOverlay : UserControl
         HudShown?.Invoke();
 
         // Auto-dismiss after 2 seconds
-        _dismissTimer?.Stop();
-        _dismissTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
-        _dismissTimer.Tick += (_, _) =>
+        if (_dismissTimer == null)
         {
-            _dismissTimer.Stop();
-            Dismiss();
-        };
+            _dismissTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+            _dismissTimer.Tick += (_, _) =>
+            {
+                _dismissTimer!.Stop();
+                Dismiss();
+            };
+        }
+        _dismissTimer.Stop();
         _dismissTimer.Start();
     }
 
@@ -117,7 +142,7 @@ public partial class HudOverlay : UserControl
 
     private void OnSliderClick(object sender, MouseButtonEventArgs e)
     {
-        if (sender is not Border bar) return;
+        if (sender is not Border bar || bar.ActualWidth <= 0) return;
         var pos = e.GetPosition(bar);
         float fraction = (float)Math.Clamp(pos.X / bar.ActualWidth, 0, 1);
 

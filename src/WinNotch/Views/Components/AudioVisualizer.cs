@@ -55,6 +55,9 @@ public class AudioVisualizer : FrameworkElement
     private float[] _display = new float[4];
     // Auto-gain: tracks recent peak per bar for normalization
     private float[] _peak = new float[4];
+    // Cached frozen brush — OnRender runs every spectrum frame
+    private SolidColorBrush? _barBrush;
+    private Color _barBrushColor;
 
     public void UpdateSpectrum(float[] data)
     {
@@ -121,8 +124,14 @@ public class AudioVisualizer : FrameworkElement
         double startX = (ActualWidth - totalW) / 2.0;
         double centerY = h / 2.0;
 
-        var brush = new SolidColorBrush(BarColor);
-        brush.Freeze();
+        var color = BarColor;
+        if (_barBrush == null || _barBrushColor != color)
+        {
+            _barBrush = new SolidColorBrush(color);
+            _barBrush.Freeze();
+            _barBrushColor = color;
+        }
+        var brush = _barBrush;
 
         for (int i = 0; i < count; i++)
         {

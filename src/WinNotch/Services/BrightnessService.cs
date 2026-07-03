@@ -25,7 +25,15 @@ public class BrightnessService : IDisposable
     {
         try
         {
-            Brightness = GetCurrentBrightness();
+            int current = GetCurrentBrightness();
+            if (current < 0)
+            {
+                // WMI query returned no rows — no brightness-capable display (desktop)
+                _isSupported = false;
+                return;
+            }
+
+            Brightness = current;
             _isSupported = true;
 
             // Watch for brightness change events
@@ -61,7 +69,7 @@ public class BrightnessService : IDisposable
         {
             return Convert.ToInt32(obj["CurrentBrightness"]);
         }
-        return 50;
+        return -1; // no brightness-capable display
     }
 
     public void SetBrightness(int level)

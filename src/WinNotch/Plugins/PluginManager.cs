@@ -18,7 +18,10 @@ public class PluginManager : IDisposable
     private readonly IPluginContext _context;
     private readonly List<IPlugin> _loadedPlugins = new();
     private readonly Dictionary<string, bool> _pluginEnabledState = new();
+    private readonly Dictionary<string, string> _pluginSourceFiles = new();
     private readonly string _pluginsDirectory;
+
+    private const string UninstallMarkerExtension = ".uninstall";
 
     public IReadOnlyList<IPlugin> LoadedPlugins => _loadedPlugins.AsReadOnly();
 
@@ -46,7 +49,9 @@ public class PluginManager : IDisposable
     {
         _context.Log("Starting plugin discovery...", PluginLogLevel.Info);
 
-        // Apply any pending plugin updates (downloaded while previous DLL was locked)
+        // Remove plugins queued for uninstall, then apply any pending updates
+        // (both were blocked by file locks while the previous instance ran)
+        ApplyQueuedUninstalls();
         ApplyPendingUpdates();
 
         var pluginFiles = Directory.GetFiles(_pluginsDirectory, "*.dll", SearchOption.AllDirectories);
@@ -100,6 +105,9 @@ public class PluginManager : IDisposable
                 return null;
             }
 
+            IPlugin? firstLoaded = null;
+
+            // Load every plugin type in the assembly, not just the first one
             foreach (var type in pluginTypes)
             {
                 var plugin = Activator.CreateInstance(type) as IPlugin;
@@ -122,6 +130,7 @@ public class PluginManager : IDisposable
                 // Initialize the plugin
                 await plugin.InitializeAsync(_context);
                 _loadedPlugins.Add(plugin);
+                _pluginSourceFiles[plugin.Id] = filePath;
 
                 // Auto-enable if previously enabled or first time
                 if (!_pluginEnabledState.ContainsKey(plugin.Id))
@@ -137,16 +146,16 @@ public class PluginManager : IDisposable
                 PluginLoaded?.Invoke(plugin);
                 _context.Log($"Successfully loaded plugin: {plugin.Name} v{plugin.Version}", PluginLogLevel.Info);
 
-                return plugin;
+                firstLoaded ??= plugin;
             }
+
+            return firstLoaded;
         }
         catch (Exception ex)
         {
             _context.Log($"Error loading plugin from {filePath}: {ex.Message}", PluginLogLevel.Error);
             throw;
         }
-
-        return null;
     }
 
     /// <summary>
@@ -305,6 +314,91 @@ public class PluginManager : IDisposable
         }
     }
 
+    /// <summary>
+    /// Queue a plugin for removal on next restart (the loaded DLL is file-locked).
+    /// Writes a marker next to the DLL; ApplyPendingUpdates deletes both at startup.
+    /// </summary>
+    public bool QueueUninstall(string pluginId)
+    {
+        if (!_pluginSourceFiles.TryGetValue(pluginId, out var sourceFile))
+            return false;
+
+        try
+        {
+            File.WriteAllText(sourceFile + UninstallMarkerExtension, pluginId);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _context.Log($"Failed to queue uninstall for {pluginId}: {ex.Message}", PluginLogLevel.Error);
+            return false;
+        }
+    }
+
+    /// <summary>Cancel a queued removal.</summary>
+    public bool CancelUninstall(string pluginId)
+    {
+        if (!_pluginSourceFiles.TryGetValue(pluginId, out var sourceFile))
+            return false;
+
+        try
+        {
+            var marker = sourceFile + UninstallMarkerExtension;
+            if (File.Exists(marker))
+                File.Delete(marker);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _context.Log($"Failed to cancel uninstall for {pluginId}: {ex.Message}", PluginLogLevel.Error);
+            return false;
+        }
+    }
+
+    /// <summary>Whether the plugin is queued for removal on next restart.</summary>
+    public bool IsUninstallQueued(string pluginId)
+    {
+        return _pluginSourceFiles.TryGetValue(pluginId, out var sourceFile)
+            && File.Exists(sourceFile + UninstallMarkerExtension);
+    }
+
+    private void ApplyQueuedUninstalls()
+    {
+        try
+        {
+            var markers = Directory.GetFiles(_pluginsDirectory, "*" + UninstallMarkerExtension, SearchOption.AllDirectories);
+            foreach (var marker in markers)
+            {
+                var dllPath = marker[..^UninstallMarkerExtension.Length];
+                try
+                {
+                    if (File.Exists(dllPath))
+                        File.Delete(dllPath);
+                    File.Delete(marker);
+
+                    // Remove the plugin's directory if nothing meaningful is left
+                    var dir = Path.GetDirectoryName(dllPath);
+                    if (dir != null && dir != _pluginsDirectory && Directory.Exists(dir) &&
+                        !Directory.EnumerateFiles(dir, "*.dll", SearchOption.AllDirectories).Any() &&
+                        !Directory.EnumerateFiles(dir, "*.pending", SearchOption.AllDirectories).Any())
+                    {
+                        Directory.Delete(dir, recursive: true);
+                    }
+
+                    _context.Log($"Removed plugin file: {Path.GetFileName(dllPath)}", PluginLogLevel.Info);
+                }
+                catch (Exception ex)
+                {
+                    _context.Log($"Failed to remove {dllPath}: {ex.Message}", PluginLogLevel.Warning);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _context.Log($"Failed to scan for queued uninstalls: {ex.Message}", PluginLogLevel.Warning);
+        }
+    }
+
     private void ApplyPendingUpdates()
     {
         try
@@ -349,13 +443,17 @@ public class PluginManager : IDisposable
         }
     }
 
-    public async void Dispose()
+    public void Dispose()
     {
+        // Synchronous, bounded shutdown: `async void` here would let the process
+        // exit before plugins finish (or crash it on a plugin exception).
         foreach (var plugin in _loadedPlugins.ToList())
         {
             try
             {
-                await plugin.ShutdownAsync();
+                var shutdown = plugin.ShutdownAsync();
+                if (!shutdown.Wait(TimeSpan.FromSeconds(2)))
+                    _context.Log($"Plugin {plugin.Id} shutdown timed out", PluginLogLevel.Warning);
                 plugin.Dispose();
             }
             catch (Exception ex)

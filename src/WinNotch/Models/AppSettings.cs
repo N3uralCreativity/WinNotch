@@ -33,9 +33,12 @@ public class AppSettings
     // General
     public bool StartOnBoot { get; set; }
     public HoverMode HoverMode { get; set; } = HoverMode.HoverPeekClickOpen;
-    public int HoverOpenDelayMs { get; set; } = 200;
+    public int HoverOpenDelayMs { get; set; } = 100;
     public int HoverCloseDelayMs { get; set; } = 150;
     public int LongHoverDelayMs { get; set; } = 600;
+
+    // Updates
+    public bool AutoCheckForUpdates { get; set; } = true;
 
     // Appearance
     public AppTheme Theme { get; set; } = AppTheme.Auto;
@@ -68,10 +71,11 @@ public class AppSettings
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "WinNotch");
     private static readonly string SettingsPath = Path.Combine(SettingsDir, "settings.json");
 
+    // Write every property: skipping CLR-default values (0/false) would make
+    // settings like "HoverCloseDelayMs = 0" silently revert on next load.
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
-        WriteIndented = true,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault
+        WriteIndented = true
     };
 
     public static AppSettings Load()
@@ -105,7 +109,11 @@ public class AppSettings
         {
             Directory.CreateDirectory(SettingsDir);
             var json = JsonSerializer.Serialize(this, JsonOptions);
-            File.WriteAllText(SettingsPath, json);
+
+            // Atomic write: a crash mid-write must never corrupt settings.json
+            var tempPath = SettingsPath + ".tmp";
+            File.WriteAllText(tempPath, json);
+            File.Move(tempPath, SettingsPath, overwrite: true);
         }
         catch { }
     }

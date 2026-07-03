@@ -10,6 +10,19 @@ public partial class MusicLiveActivity : UserControl
 {
     private MediaService? _mediaService;
     private AudioCaptureService? _audioCaptureService;
+    private bool _userEnabled = true;
+
+    /// <summary>Reflects the ShowMusicControls setting; gates self-show on media changes.</summary>
+    public bool UserEnabled
+    {
+        get => _userEnabled;
+        set
+        {
+            _userEnabled = value;
+            if (_mediaService != null)
+                UpdateCompact(_mediaService.MediaInfo, null);
+        }
+    }
 
     public MusicLiveActivity()
     {
@@ -31,7 +44,7 @@ public partial class MusicLiveActivity : UserControl
         {
             Dispatcher.BeginInvoke(() =>
             {
-                if (audioCaptureService.SpectrumData != null)
+                if (CompactVisualizer.IsVisible && audioCaptureService.SpectrumData != null)
                     CompactVisualizer.UpdateSpectrum(audioCaptureService.SpectrumData);
             });
         };
@@ -41,13 +54,11 @@ public partial class MusicLiveActivity : UserControl
 
     private void UpdateCompact(MediaInfo info, string? propertyName)
     {
-        if (!info.HasMedia || !info.IsPlaying)
-        {
-            Visibility = Visibility.Collapsed;
-            return;
-        }
-
-        Visibility = Visibility.Visible;
+        // Gate visibility, but keep content in sync even while hidden —
+        // otherwise a title change during pause shows stale text on resume.
+        Visibility = _userEnabled && info.HasMedia && info.IsPlaying
+            ? Visibility.Visible
+            : Visibility.Collapsed;
 
         if (propertyName == null || propertyName == nameof(info.AlbumArt))
             CompactAlbumArt.Source = info.AlbumArt;

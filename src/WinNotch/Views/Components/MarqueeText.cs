@@ -35,11 +35,19 @@ public class MarqueeText : Control
     private TextBlock? _textBlock;
     private Canvas? _canvas;
     private Storyboard? _storyboard;
+    private double _lastTextWidth = -1;
+    private double _lastContainerWidth = -1;
 
     static MarqueeText()
     {
         DefaultStyleKeyProperty.OverrideMetadata(typeof(MarqueeText),
             new FrameworkPropertyMetadata(typeof(MarqueeText)));
+    }
+
+    public MarqueeText()
+    {
+        // Subscribe once here — OnApplyTemplate can run more than once
+        SizeChanged += (_, _) => UpdateAnimation();
     }
 
     public override void OnApplyTemplate()
@@ -54,7 +62,7 @@ public class MarqueeText : Control
             _textBlock.Text = Text;
         }
 
-        SizeChanged += (_, _) => UpdateAnimation();
+        _lastTextWidth = -1;
         UpdateAnimation();
     }
 
@@ -70,14 +78,22 @@ public class MarqueeText : Control
 
     private void UpdateAnimation()
     {
-        _storyboard?.Stop();
-        _storyboard = null;
-
         if (_textBlock == null || _canvas == null) return;
 
         _textBlock.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
         double textWidth = _textBlock.DesiredSize.Width;
         double containerWidth = ActualWidth;
+
+        // The container resizes every frame while the notch spring-animates;
+        // restarting the storyboard each frame would freeze the marquee.
+        if (Math.Abs(textWidth - _lastTextWidth) < 0.5 &&
+            Math.Abs(containerWidth - _lastContainerWidth) < 0.5)
+            return;
+        _lastTextWidth = textWidth;
+        _lastContainerWidth = containerWidth;
+
+        _storyboard?.Stop();
+        _storyboard = null;
 
         if (textWidth <= containerWidth)
         {

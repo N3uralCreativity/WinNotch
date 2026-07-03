@@ -16,6 +16,8 @@ public class AudioCaptureService : IDisposable
     private readonly int _fftSize;
     private int _fftPos;
     private bool _isCapturing;
+    private bool _disposed;
+    private readonly object _captureLock = new();
 
     /// <summary>
     /// Spectrum levels (0..1) for each frequency band.
@@ -38,32 +40,38 @@ public class AudioCaptureService : IDisposable
 
     public void Start()
     {
-        if (_isCapturing) return;
+        lock (_captureLock)
+        {
+            if (_isCapturing || _disposed) return;
 
-        try
-        {
-            _capture = new WasapiLoopbackCapture();
-            _capture.DataAvailable += OnDataAvailable;
-            _capture.RecordingStopped += OnRecordingStopped;
-            _capture.StartRecording();
-            _isCapturing = true;
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"AudioCapture start failed: {ex.Message}");
+            try
+            {
+                _capture = new WasapiLoopbackCapture();
+                _capture.DataAvailable += OnDataAvailable;
+                _capture.RecordingStopped += OnRecordingStopped;
+                _capture.StartRecording();
+                _isCapturing = true;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"AudioCapture start failed: {ex.Message}");
+            }
         }
     }
 
     public void Stop()
     {
-        if (!_isCapturing) return;
-        _isCapturing = false;
-
-        try
+        lock (_captureLock)
         {
-            _capture?.StopRecording();
+            if (!_isCapturing) return;
+            _isCapturing = false;
+
+            try
+            {
+                _capture?.StopRecording();
+            }
+            catch { }
         }
-        catch { }
     }
 
     private void OnDataAvailable(object? sender, WaveInEventArgs e)
@@ -147,10 +155,44 @@ public class AudioCaptureService : IDisposable
         // Clear spectrum
         Array.Clear(SpectrumData, 0, SpectrumData.Length);
         SpectrumUpdated?.Invoke();
+
+        // If capture stopped without Stop() being called (default device changed,
+        // device unplugged), restart on the new default device after a short delay.
+        bool unexpected;
+        lock (_captureLock)
+        {
+            unexpected = _isCapturing && !_disposed;
+            if (unexpected)
+                _isCapturing = false;
+        }
+
+        if (unexpected)
+        {
+            _ = System.Threading.Tasks.Task.Run(async () =>
+            {
+                await System.Threading.Tasks.Task.Delay(1500);
+                lock (_captureLock)
+                {
+                    if (_disposed || _isCapturing) return;
+                    try
+                    {
+                        _capture?.Dispose();
+                    }
+                    catch { }
+                    _capture = null;
+                }
+                Start();
+            });
+        }
     }
 
     public void Dispose()
     {
+        lock (_captureLock)
+        {
+            if (_disposed) return;
+            _disposed = true;
+        }
         Stop();
         _capture?.Dispose();
     }

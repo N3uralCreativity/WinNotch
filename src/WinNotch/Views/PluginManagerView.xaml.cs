@@ -88,6 +88,7 @@ public partial class PluginManagerView : UserControl
         var configurablePlugin = plugin as IConfigurablePlugin;
         var configDefinition = configurablePlugin?.GetConfigurationDefinition();
         var requiresSetup = configDefinition is { RequiresConfiguration: true, IsConfigured: false };
+        var uninstallQueued = _pluginManager?.IsUninstallQueued(plugin.Id) == true;
 
         var card = new Border
         {
@@ -158,6 +159,10 @@ public partial class PluginManagerView : UserControl
         AddPluginTag(tags, plugin is IServicePlugin ? "Service" : null);
         AddPluginTag(tags, plugin is IAnimationPlugin ? "Animation" : null);
         AddPluginTag(tags, $"ID {plugin.Id}");
+        if (uninstallQueued)
+        {
+            AddPluginTag(tags, "Removes on restart", GetAccentSoftBrush(), GetErrorBrush());
+        }
         if (requiresSetup)
         {
             AddPluginTag(tags, "Setup required", GetAccentSoftBrush(), GetAccentBrush());
@@ -300,6 +305,16 @@ public partial class PluginManagerView : UserControl
         };
 
         controlStack.Children.Add(switchToggle);
+
+        var uninstallButton = new Button
+        {
+            Content = uninstallQueued ? "Cancel removal" : "Uninstall",
+            MinWidth = 94,
+            Margin = new Thickness(0, 14, 0, 0),
+            Style = TryGetStyle("PluginGhostButton")
+        };
+        uninstallButton.Click += async (_, _) => await ToggleUninstallAsync(plugin);
+        controlStack.Children.Add(uninstallButton);
 
         Grid.SetColumn(controlStack, 1);
         layout.Children.Add(controlStack);
@@ -712,6 +727,39 @@ public partial class PluginManagerView : UserControl
             updateButton.IsEnabled = true;
             updateButton.Content = originalContent;
         }
+    }
+
+    private async System.Threading.Tasks.Task ToggleUninstallAsync(IPlugin plugin)
+    {
+        if (_pluginManager == null)
+            return;
+
+        if (_pluginManager.IsUninstallQueued(plugin.Id))
+        {
+            _pluginManager.CancelUninstall(plugin.Id);
+            LoadPlugins();
+            return;
+        }
+
+        var confirm = MessageBox.Show(
+            $"Uninstall {plugin.Name}?\n\nThe plugin is disabled immediately and its files are removed the next time WinNotch starts.",
+            "Uninstall Plugin",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+
+        if (confirm != MessageBoxResult.Yes)
+            return;
+
+        if (!_pluginManager.QueueUninstall(plugin.Id))
+        {
+            MessageBox.Show($"Couldn't queue {plugin.Name} for removal — see plugin.log.",
+                "Plugin Manager", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        await _pluginManager.DisablePluginAsync(plugin.Id);
+        LoadPlugins();
+        PluginBrowserWindow.ShowRestartPopup($"{plugin.Name} will be removed.");
     }
 
     private bool HasAvailableUpdate(IPlugin plugin)

@@ -50,6 +50,15 @@ public class FullscreenService : IDisposable
         IntPtr shell = GetShellWindow();
         if (foreground == desktop || foreground == shell) return false;
 
+        // Clicking the desktop can foreground Progman/WorkerW, which are
+        // monitor-sized — without this check the notch hides on desktop clicks.
+        var className = new System.Text.StringBuilder(64);
+        if (GetClassName(foreground, className, className.Capacity) > 0)
+        {
+            var cls = className.ToString();
+            if (cls is "Progman" or "WorkerW") return false;
+        }
+
         if (GetWindowRect(foreground, out RECT windowRect))
         {
             // Get the monitor info for the foreground window
@@ -83,6 +92,9 @@ public class FullscreenService : IDisposable
 
     [DllImport("user32.dll")]
     private static extern IntPtr GetShellWindow();
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern int GetClassName(IntPtr hWnd, System.Text.StringBuilder lpClassName, int nMaxCount);
 
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
