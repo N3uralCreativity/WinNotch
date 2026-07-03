@@ -56,9 +56,12 @@ public partial class NotchWindow : Window
     private double _dragVelocityX;
     private double _dragVelocityY;
 
-    // Multi-screen: which monitor this island lives on (WinForms device name)
+    // Multi-screen: which monitor this island lives on (WinForms device name).
+    // All window placement is done in PHYSICAL pixels (Per-Monitor V2) — DIPs
+    // are only used inside the window, scaled by the screen's own DPI.
     private string? _screenDevice;
-    private Rect _screenBounds;
+    private System.Drawing.Rectangle _screenPhysical;
+    private double _screenScale = 1.0;
 
     // Opt-in reserved screen strip (shell AppBar, like the taskbar)
     private readonly AppBarHelper _appBar = new();
@@ -181,8 +184,8 @@ public partial class NotchWindow : Window
         if (_settings.ReserveSpaceAtTop && _dock == NotchDock.Top && !_isDragging)
         {
             var screen = ScreenHelper.FindScreenByDevice(_screenDevice);
-            var dpi = ScreenHelper.GetDpiScale(this);
-            int strip = (int)Math.Ceiling((NotchConstants.ClosedHeight + 2) * dpi);
+            double scale = ScreenHelper.GetScaleForScreen(screen);
+            int strip = (int)Math.Ceiling((NotchConstants.ClosedHeight + 2) * scale);
             _appBar.ReserveTop(screen.Bounds, strip);
         }
         else
@@ -421,6 +424,9 @@ public partial class NotchWindow : Window
             // Inject UI plugin elements into the notch
             InjectPluginUI();
 
+            // Enable/disable now applies live — re-inject without a restart
+            _pluginManager.PluginStateChanged += () => Dispatcher.Invoke(InjectPluginUI);
+
             // Wire settings "Manage Plugins" button
             InlineSettings.ManagePluginsRequested += OpenPluginManager;
             VerticalInlineSettings.ManagePluginsRequested += OpenPluginManager;
@@ -546,9 +552,9 @@ public partial class NotchWindow : Window
 
     // A resting shadow keeps the island visible on same-color wallpapers
     // (e.g. a white notch on a white background). ShowShadow disables all of it.
-    private double ClosedShadowOpacity => _settings.ShowShadow ? 0.5 : 0.0;
-    private double OpenShadowOpacity => _settings.ShowShadow ? 0.85 : 0.0;
-    private double DragShadowOpacity => _settings.ShowShadow ? 0.6 : 0.0;
+    private double ClosedShadowOpacity => _settings.ShowShadow ? 0.6 : 0.0;
+    private double OpenShadowOpacity => _settings.ShowShadow ? 0.95 : 0.0;
+    private double DragShadowOpacity => _settings.ShowShadow ? 0.7 : 0.0;
 
     private void UpdateClosedContentVisibility()
     {
@@ -735,21 +741,23 @@ public partial class NotchWindow : Window
         UpdateFixedWindowBounds();
         RefreshScreenBounds();
 
-        Width = _fixedWindowWidth;
-        Height = _fixedWindowHeight;
-        Left = _screenBounds.Left + (_screenBounds.Width - _fixedWindowWidth) / 2;
-        Top = _screenBounds.Top - 2;
+        int w = (int)Math.Round(_fixedWindowWidth * _screenScale);
+        int h = (int)Math.Round(_fixedWindowHeight * _screenScale);
+        int x = _screenPhysical.Left + (_screenPhysical.Width - w) / 2;
+        int y = _screenPhysical.Top - (int)Math.Round(2 * _screenScale);
+        WindowHelper.SetWindowRectPhysical(this, x, y, w, h);
     }
 
     /// <summary>
-    /// Resolves this island's screen device to DIP bounds. Falls back to the
-    /// primary screen when the device is missing (monitor unplugged).
+    /// Resolves this island's screen device to physical bounds + DPI scale.
+    /// Falls back to the primary screen when the device is missing.
     /// </summary>
     private void RefreshScreenBounds()
     {
         var screen = ScreenHelper.FindScreenByDevice(_screenDevice);
         _screenDevice = screen.DeviceName;
-        _screenBounds = ScreenHelper.GetScreenBounds(screen, this);
+        _screenPhysical = screen.Bounds;
+        _screenScale = ScreenHelper.GetScaleForScreen(screen);
     }
 
     /// <summary>
@@ -936,11 +944,10 @@ public partial class NotchWindow : Window
 
         if (_isDragging)
         {
-            // During drag: use fixed drag pill size to prevent window resize glitches
+            // During drag the mouse handler sizes the window (physical px);
+            // here we only lay content out against the DIP pill size
             double dragW = NotchConstants.ClosedWidth * 0.8;
             double dragH = NotchConstants.ClosedHeight * 0.8;
-            Width = dragW;
-            Height = dragH;
             windowW = dragW;
             windowH = dragH;
             offsetX = 0;
@@ -1300,12 +1307,15 @@ public partial class NotchWindow : Window
         _dragLastScreen = currentScreen;
         _dragLastTime = now;
 
-        // Move window: use target drag pill size (not animated current size) to prevent drift
-        var dpi = ScreenHelper.GetDpiScale(this);
-        double pillW = NotchConstants.ClosedWidth * 0.8;
-        double pillH = NotchConstants.ClosedHeight * 0.8;
-        Left = currentScreen.X / dpi - pillW / 2;
-        Top = currentScreen.Y / dpi - pillH / 2;
+        // Move window in physical px, sized for the cursor's current screen DPI
+        double dragScale = ScreenHelper.GetScaleForScreen(ScreenHelper.ScreenFromPhysicalPoint(
+            new System.Drawing.Point((int)currentScreen.X, (int)currentScreen.Y)));
+        int pillW = (int)Math.Round(NotchConstants.ClosedWidth * 0.8 * dragScale);
+        int pillH = (int)Math.Round(NotchConstants.ClosedHeight * 0.8 * dragScale);
+        WindowHelper.SetWindowRectPhysical(this,
+            (int)currentScreen.X - pillW / 2,
+            (int)currentScreen.Y - pillH / 2,
+            pillW, pillH);
     }
 
     private void OnNotchMouseUp(object sender, MouseButtonEventArgs e)
@@ -1347,14 +1357,14 @@ public partial class NotchWindow : Window
             _currentHeight = pillH;
         }
 
-        // Set window to drag pill size immediately to prevent resize glitches
-        Width = pillW;
-        Height = pillH;
-
-        // Center window on cursor immediately
-        var dpi = ScreenHelper.GetDpiScale(this);
-        Left = currentScreenPos.X / dpi - pillW / 2;
-        Top = currentScreenPos.Y / dpi - pillH / 2;
+        // Set window to drag pill size and center on cursor, in physical px
+        double beginScale = ScreenHelper.GetScaleForScreen(ScreenHelper.ScreenFromPhysicalPoint(
+            new System.Drawing.Point((int)currentScreenPos.X, (int)currentScreenPos.Y)));
+        WindowHelper.SetWindowRectPhysical(this,
+            (int)(currentScreenPos.X - pillW * beginScale / 2),
+            (int)(currentScreenPos.Y - pillH * beginScale / 2),
+            (int)Math.Round(pillW * beginScale),
+            (int)Math.Round(pillH * beginScale));
 
         // Switch to horizontal content during drag
         ClosedContent.Visibility = Visibility.Visible;
@@ -1389,16 +1399,17 @@ public partial class NotchWindow : Window
         var dropScreen = ScreenHelper.ScreenFromPhysicalPoint(
             new System.Drawing.Point((int)_dragLastScreen.X, (int)_dragLastScreen.Y));
         _screenDevice = dropScreen.DeviceName;
-        var screenBounds = ScreenHelper.GetScreenBounds(dropScreen, this);
+        var screenBounds = dropScreen.Bounds; // physical px
+        double dropScale = ScreenHelper.GetScaleForScreen(dropScreen);
 
-        var dpi = ScreenHelper.GetDpiScale(this);
-        double cursorX = _dragLastScreen.X / dpi;
-        double cursorY = _dragLastScreen.Y / dpi;
+        double cursorX = _dragLastScreen.X;
+        double cursorY = _dragLastScreen.Y;
 
-        // Determine target dock based on position + velocity
+        // Determine target dock based on position + velocity (thresholds are DIP
+        // constants — scale them to this screen's physical pixels)
         NotchDock targetDock = NotchDock.Top;
-        double edgeDist = NotchConstants.EdgeSnapDistance;
-        double throwV = NotchConstants.ThrowVelocityThreshold;
+        double edgeDist = NotchConstants.EdgeSnapDistance * dropScale;
+        double throwV = NotchConstants.ThrowVelocityThreshold * dropScale;
 
         // Any edge of the cursor's screen is a valid dock target — including edges
         // facing another monitor (drag past the seam to dock on the far screen).
@@ -1486,31 +1497,35 @@ public partial class NotchWindow : Window
     private void RepositionForDock()
     {
         RefreshScreenBounds();
-        var screenBounds = _screenBounds;
+
+        // Physical dimensions for THIS screen's DPI
+        int longAxis = (int)Math.Round(_fixedWindowWidth * _screenScale);
+        int shortAxis = (int)Math.Round(_fixedWindowHeight * _screenScale);
+        int inset = (int)Math.Round(2 * _screenScale);
 
         switch (_dock)
         {
             case NotchDock.Top:
-                Width = _fixedWindowWidth;
-                Height = _fixedWindowHeight;
-                Left = screenBounds.Left + (screenBounds.Width - _fixedWindowWidth) / 2;
-                Top = screenBounds.Top - 2;
+                WindowHelper.SetWindowRectPhysical(this,
+                    _screenPhysical.Left + (_screenPhysical.Width - longAxis) / 2,
+                    _screenPhysical.Top - inset,
+                    longAxis, shortAxis);
                 break;
 
             case NotchDock.Left:
                 // Vertical window on the left edge
-                Width = _fixedWindowHeight;
-                Height = _fixedWindowWidth;
-                Left = screenBounds.Left - 2;
-                Top = screenBounds.Top + (screenBounds.Height - _fixedWindowWidth) / 2;
+                WindowHelper.SetWindowRectPhysical(this,
+                    _screenPhysical.Left - inset,
+                    _screenPhysical.Top + (_screenPhysical.Height - longAxis) / 2,
+                    shortAxis, longAxis);
                 break;
 
             case NotchDock.Right:
                 // Vertical window on the right edge
-                Width = _fixedWindowHeight;
-                Height = _fixedWindowWidth;
-                Left = screenBounds.Right - _fixedWindowHeight + 2;
-                Top = screenBounds.Top + (screenBounds.Height - _fixedWindowWidth) / 2;
+                WindowHelper.SetWindowRectPhysical(this,
+                    _screenPhysical.Right - shortAxis + inset,
+                    _screenPhysical.Top + (_screenPhysical.Height - longAxis) / 2,
+                    shortAxis, longAxis);
                 break;
         }
     }
@@ -1706,6 +1721,14 @@ public partial class NotchWindow : Window
 
     #endregion
 
+    protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
+    {
+        base.OnDpiChanged(oldDpi, newDpi);
+        _cachedDpiX = newDpi.DpiScaleX;
+        _cachedDpiY = newDpi.DpiScaleY;
+        _dpiCached = true;
+    }
+
     protected override void OnClosed(EventArgs e)
     {
         // Shared services are owned and disposed by App — a secondary island
@@ -1863,8 +1886,9 @@ public partial class NotchWindow : Window
             if (double.IsNaN(canvasLeft)) canvasLeft = 0;
             if (double.IsNaN(canvasTop)) canvasTop = 0;
 
-            int px = (int)((Left + canvasLeft) * _cachedDpiX);
-            int py = (int)((Top + canvasTop) * _cachedDpiY);
+            var winRect = WindowHelper.GetWindowRectPhysical(this);
+            int px = winRect.Left + (int)(canvasLeft * _cachedDpiX);
+            int py = winRect.Top + (int)(canvasTop * _cachedDpiY);
             int pw = (int)(_currentWidth * _cachedDpiX);
             int ph = (int)(_currentHeight * _cachedDpiY);
 

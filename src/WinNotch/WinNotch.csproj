@@ -10,6 +10,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <RootNamespace>WinNotch</RootNamespace>
     <AssemblyName>WinNotch</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
 
     <!-- App metadata -->
     <ApplicationIcon>Assets\Icons\WinNotch.ico</ApplicationIcon>

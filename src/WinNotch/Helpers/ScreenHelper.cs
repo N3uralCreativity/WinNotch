@@ -64,6 +64,33 @@ public static class ScreenHelper
     }
 
     /// <summary>
+    /// DPI scale of a specific monitor (1.0 = 96 dpi). Under Per-Monitor V2 this
+    /// returns each screen's true scale, letting each island size itself for the
+    /// monitor it lives on.
+    /// </summary>
+    public static double GetScaleForScreen(Screen screen)
+    {
+        try
+        {
+            var center = new POINT
+            {
+                x = screen.Bounds.Left + screen.Bounds.Width / 2,
+                y = screen.Bounds.Top + screen.Bounds.Height / 2
+            };
+            var monitor = MonitorFromPoint(center, MONITOR_DEFAULTTONEAREST);
+            if (GetDpiForMonitor(monitor, MDT_EFFECTIVE_DPI, out uint dpiX, out _) == 0 && dpiX > 0)
+                return dpiX / 96.0;
+        }
+        catch
+        {
+            // shcore unavailable — fall through to system scale
+        }
+
+        using var g = System.Drawing.Graphics.FromHwnd(nint.Zero);
+        return g.DpiX / 96.0;
+    }
+
+    /// <summary>
     /// Gets the DPI scale factor from a specific visual element.
     /// </summary>
     public static double GetDpiScale(Visual visual)
@@ -78,7 +105,20 @@ public static class ScreenHelper
     }
 
     private const uint MONITOR_DEFAULTTONEAREST = 2;
+    private const int MDT_EFFECTIVE_DPI = 0;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct POINT
+    {
+        public int x, y;
+    }
 
     [DllImport("user32.dll")]
     private static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint dwFlags);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr MonitorFromPoint(POINT pt, uint dwFlags);
+
+    [DllImport("shcore.dll")]
+    private static extern int GetDpiForMonitor(IntPtr hmonitor, int dpiType, out uint dpiX, out uint dpiY);
 }

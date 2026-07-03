@@ -60,7 +60,7 @@ public sealed class ThemePalette
     {
         var readabilityBackground = isLight
             ? Color.FromRgb(0xF6, 0xF8, 0xFB)
-            : Color.FromRgb(0x0B, 0x10, 0x16);
+            : Color.FromRgb(0x0D, 0x0D, 0x0F);
 
         // Liquid glass: a thin tint (~35-40%) over the blurred backdrop — iOS-style
         // glass is mostly the refracted background, not a solid fill. Non-glass
@@ -69,15 +69,15 @@ public sealed class ThemePalette
         var background = useLiquidGlass
             ? (isLight
                 ? Mix(Color.FromArgb(0x59, 0xEC, 0xEE, 0xF2), accentSeed, 0.03)
-                : Mix(Color.FromArgb(0x66, 0x10, 0x15, 0x1D), accentSeed, 0.08))
+                : Mix(Color.FromArgb(0x66, 0x12, 0x12, 0x15), accentSeed, 0.03))
             : (isLight
                 ? Mix(Color.FromRgb(0xF3, 0xF5, 0xF8), accentSeed, 0.05)
-                : Mix(readabilityBackground, accentSeed, 0.08));
+                : Mix(readabilityBackground, accentSeed, 0.02));
 
         var surface = useLiquidGlass
             ? (isLight
                 ? Mix(Color.FromArgb(0xB8, 0xFF, 0xFF, 0xFF), accentSeed, 0.05)
-                : Mix(Color.FromArgb(0xB8, 0x13, 0x19, 0x22), accentSeed, 0.10))
+                : Mix(Color.FromArgb(0xB8, 0x16, 0x16, 0x19), accentSeed, 0.03))
             : (isLight
                 ? Color.FromRgb(0xFF, 0xFF, 0xFF)
                 : Mix(readabilityBackground, Colors.White, 0.09));
@@ -85,7 +85,7 @@ public sealed class ThemePalette
         var surfaceRaised = useLiquidGlass
             ? (isLight
                 ? Mix(Color.FromArgb(0xE0, 0xFF, 0xFF, 0xFF), accentSeed, 0.02)
-                : Mix(Color.FromArgb(0xE0, 0x18, 0x1F, 0x29), Colors.White, 0.06))
+                : Mix(Color.FromArgb(0xE0, 0x1B, 0x1B, 0x1F), Colors.White, 0.05))
             : (isLight
                 ? Mix(Color.FromRgb(0xFF, 0xFF, 0xFF), accentSeed, 0.015)
                 : Mix(surface, Colors.White, 0.04));
@@ -117,7 +117,7 @@ public sealed class ThemePalette
         var scrollThumb = WithAlpha(textPrimary, (byte)(isLight ? 0x45 : 0x55));
         var scrollThumbHover = WithAlpha(textPrimary, (byte)(isLight ? 0x66 : 0x72));
         var scrollThumbDrag = WithAlpha(textPrimary, (byte)(isLight ? 0x88 : 0x92));
-        var shadow = WithAlpha(Colors.Black, (byte)(useLiquidGlass ? 0x38 : (isLight ? 0x40 : 0x44)));
+        var shadow = WithAlpha(Colors.Black, (byte)(useLiquidGlass ? 0x50 : (isLight ? 0x5A : 0x62)));
 
         return new ThemePalette
         {

@@ -26,6 +26,9 @@ public class PluginManager : IDisposable
     public IReadOnlyList<IPlugin> LoadedPlugins => _loadedPlugins.AsReadOnly();
 
     public event Action<IPlugin>? PluginLoaded;
+
+    /// <summary>Fired after a plugin is enabled or disabled (for live UI refresh).</summary>
+    public event Action? PluginStateChanged;
     public event Action<IPlugin>? PluginUnloaded;
     public event Action<IPlugin, Exception>? PluginError;
 
@@ -171,6 +174,7 @@ public class PluginManager : IDisposable
             await plugin.OnEnableAsync();
             _pluginEnabledState[pluginId] = true;
             SavePluginStates();
+            PluginStateChanged?.Invoke();
             return true;
         }
         catch (Exception ex)
@@ -194,6 +198,7 @@ public class PluginManager : IDisposable
             await plugin.OnDisableAsync();
             _pluginEnabledState[pluginId] = false;
             SavePluginStates();
+            PluginStateChanged?.Invoke();
             return true;
         }
         catch (Exception ex)

@@ -62,4 +62,74 @@ public static class WindowHelper
 
     private const uint WDA_NONE = 0x00000000;
     private const uint WDA_EXCLUDEFROMCAPTURE = 0x00000011;
+
+    /// <summary>
+    /// Positions and sizes the window in PHYSICAL pixels, bypassing WPF's DIP
+    /// coordinate conversion. Under Per-Monitor V2 this is the only unambiguous
+    /// way to place a window on an arbitrary monitor; WPF rescales the content
+    /// automatically after the resulting WM_DPICHANGED.
+    /// </summary>
+    public static void SetWindowRectPhysical(Window window, int x, int y, int width, int height)
+    {
+        var hwnd = new WindowInteropHelper(window).Handle;
+        if (hwnd == IntPtr.Zero) return;
+
+        // Crossing to a different-DPI monitor makes WM_DPICHANGED rescale the
+        // window, overriding the size we pass. Move first so the DPI transition
+        // settles, then apply the size on the destination monitor.
+        var target = MonitorFromPoint(new POINT { x = x + width / 2, y = y + height / 2 }, MONITOR_DEFAULTTONEAREST);
+        var current = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+        if (target != current)
+            SetWindowPos(hwnd, IntPtr.Zero, x, y, 0, 0, SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOSIZE);
+
+        SetWindowPos(hwnd, IntPtr.Zero, x, y, width, height, SWP_NOZORDER | SWP_NOACTIVATE);
+    }
+
+    /// <summary>Moves the window (physical pixels) without resizing.</summary>
+    public static void MoveWindowPhysical(Window window, int x, int y)
+    {
+        var hwnd = new WindowInteropHelper(window).Handle;
+        if (hwnd == IntPtr.Zero) return;
+        SetWindowPos(hwnd, IntPtr.Zero, x, y, 0, 0, SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOSIZE);
+    }
+
+    /// <summary>Gets the window rect in physical pixels.</summary>
+    public static System.Drawing.Rectangle GetWindowRectPhysical(Window window)
+    {
+        var hwnd = new WindowInteropHelper(window).Handle;
+        if (hwnd == IntPtr.Zero || !GetWindowRect(hwnd, out var r))
+            return System.Drawing.Rectangle.Empty;
+        return System.Drawing.Rectangle.FromLTRB(r.Left, r.Top, r.Right, r.Bottom);
+    }
+
+    private const uint SWP_NOSIZE = 0x0001;
+    private const uint SWP_NOZORDER = 0x0004;
+    private const uint SWP_NOACTIVATE = 0x0010;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RECT
+    {
+        public int Left, Top, Right, Bottom;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter,
+        int x, int y, int cx, int cy, uint uFlags);
+
+    [DllImport("user32.dll")]
+    private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
+    private const uint MONITOR_DEFAULTTONEAREST = 2;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct POINT
+    {
+        public int x, y;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint dwFlags);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr MonitorFromPoint(POINT pt, uint dwFlags);
 }
